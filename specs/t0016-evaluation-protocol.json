@@ -1,0 +1,125 @@
+{
+  "protocol_version": "1.0",
+  "frozen_before_inference": true,
+  "case_scope": "one authorized math exam page",
+  "matrix": [
+    {
+      "provider": "monkey",
+      "variant_id": "jpg",
+      "repeat_index": 1
+    },
+    {
+      "provider": "monkey",
+      "variant_id": "png",
+      "repeat_index": 1
+    },
+    {
+      "provider": "monkey",
+      "variant_id": "png",
+      "repeat_index": 2
+    },
+    {
+      "provider": "monkey",
+      "variant_id": "jpg",
+      "repeat_index": 2
+    },
+    {
+      "provider": "monkey",
+      "variant_id": "jpg",
+      "repeat_index": 3
+    },
+    {
+      "provider": "monkey",
+      "variant_id": "png",
+      "repeat_index": 3
+    },
+    {
+      "provider": "pp",
+      "variant_id": "jpg",
+      "repeat_index": 1
+    },
+    {
+      "provider": "pp",
+      "variant_id": "png",
+      "repeat_index": 1
+    },
+    {
+      "provider": "pp",
+      "variant_id": "png",
+      "repeat_index": 2
+    },
+    {
+      "provider": "pp",
+      "variant_id": "jpg",
+      "repeat_index": 2
+    },
+    {
+      "provider": "pp",
+      "variant_id": "jpg",
+      "repeat_index": 3
+    },
+    {
+      "provider": "pp",
+      "variant_id": "png",
+      "repeat_index": 3
+    },
+    {
+      "provider": "ovis",
+      "variant_id": "jpg",
+      "repeat_index": 1
+    },
+    {
+      "provider": "ovis",
+      "variant_id": "png",
+      "repeat_index": 1
+    }
+  ],
+  "iou_thresholds": [
+    0.5,
+    0.75
+  ],
+  "matching": "same-class descending IoU greedy; ties opaque IDs; one-to-one",
+  "merge_split_diagnostic": "intersection over enclosed region area >=0.5; never additional TP",
+  "coordinate_space": "raster_pixel top-left xyxy; no PDF point conversion",
+  "normalization": [
+    "remove whitespace",
+    "remove $, \\(, \\), \\[, \\] display wrappers only"
+  ],
+  "content_scoring": "confirmed-reference presence; PP localized parsing blocks, Ovis page presence only; formula candidates not counted again",
+  "order_scoring": "paragraph same-class IoU>=0.50 anchor matching; null order remains missing",
+  "uncertain_policy": "excluded from exact GT denominator; no current-model-derived annotation",
+  "retries": 0,
+  "warmup": 0,
+  "providers": {
+    "monkey": {
+      "prompt": "Please output the categories and coordinates of the document elements in reading order.",
+      "parameters": {
+        "max_tokens": 2048
+      }
+    },
+    "ovis": {
+      "prompt": "Extract readable content in reading order as Markdown. Preserve original text, numbers, units and symbols. Do not translate, correct, summarize or infer.",
+      "parameters": {
+        "max_tokens": 8192
+      }
+    },
+    "pp": {
+      "prompt": "",
+      "parameters": {
+        "fileType": 1,
+        "useDocOrientationClassify": false,
+        "useDocUnwarping": false,
+        "useTextlineOrientation": false,
+        "useSealRecognition": false,
+        "useTableRecognition": false,
+        "useFormulaRecognition": true,
+        "useChartRecognition": false,
+        "returnMarkdownImages": false,
+        "visualize": false
+      }
+    }
+  },
+  "unspecified_parameters": "service defaults, identical across formats; temperature omitted as in accepted T0015",
+  "pp_scope": "aggregate Pipeline only; record model_settings; no independent submodel claims",
+  "input_limit": "JPEG-decoded PNG cannot restore previously lost detail; not electronic PDF validation"
+}
