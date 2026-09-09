@@ -1,0 +1,444 @@
+{
+  "fixture_kind": "sanitized_observed_wire",
+  "contract_status": "verified",
+  "generated_by": "scripts/model_contract_discovery.py",
+  "source_run_id": "t0015-mac-20260909T061855Z",
+  "source_response_fingerprint": "0ee4751ebfeea777d64574356f4ac601359d66cbab4bef4ac3097bca8eb56f15",
+  "source_response_fingerprints": [
+    "0ee4751ebfeea777d64574356f4ac601359d66cbab4bef4ac3097bca8eb56f15"
+  ],
+  "source_fingerprint_algorithm": "sha256_http_response_bytes_or_canonical_digest_list",
+  "generated_at": "2026-09-09T06:19:08.469757+00:00",
+  "input_file_sha256": "fe608629ae8af60890684c77437b3d62facd3a0c27b9fa019692890f96cbcf52",
+  "access_mode": "frp_stcp_loopback",
+  "observation": {
+    "endpoint_path": "/layout-parsing",
+    "transport": "json_base64",
+    "wire_shape": {
+      "type": "object",
+      "properties": {
+        "logId": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "layoutParsingResults": {
+              "type": "array",
+              "count": 1,
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "prunedResult": {
+                      "type": "object",
+                      "properties": {
+                        "page_count": {
+                          "type": "null"
+                        },
+                        "width": {
+                          "type": "number"
+                        },
+                        "height": {
+                          "type": "number"
+                        },
+                        "model_settings": {
+                          "type": "object",
+                          "properties": {
+                            "use_doc_preprocessor": {
+                              "type": "boolean"
+                            },
+                            "use_seal_recognition": {
+                              "type": "boolean"
+                            },
+                            "use_table_recognition": {
+                              "type": "boolean"
+                            },
+                            "use_formula_recognition": {
+                              "type": "boolean"
+                            },
+                            "use_chart_recognition": {
+                              "type": "boolean"
+                            },
+                            "use_region_detection": {
+                              "type": "boolean"
+                            },
+                            "format_block_content": {
+                              "type": "boolean"
+                            },
+                            "markdown_ignore_labels": {
+                              "type": "array",
+                              "count": 7,
+                              "items": [
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "parsing_res_list": {
+                          "type": "array",
+                          "count": 30,
+                          "items": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "block_label": {
+                                  "type": "string"
+                                },
+                                "block_content": {
+                                  "type": "string"
+                                },
+                                "block_bbox": {
+                                  "type": "array",
+                                  "count": 4,
+                                  "items": [
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                },
+                                "block_id": {
+                                  "type": "number"
+                                },
+                                "block_order": {
+                                  "type": "number"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "block_label": {
+                                  "type": "string"
+                                },
+                                "block_content": {
+                                  "type": "string"
+                                },
+                                "block_bbox": {
+                                  "type": "array",
+                                  "count": 4,
+                                  "items": [
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                },
+                                "block_id": {
+                                  "type": "number"
+                                },
+                                "block_order": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "doc_preprocessor_res": {
+                          "type": "object",
+                          "properties": {
+                            "model_settings": {
+                              "type": "object",
+                              "properties": {
+                                "use_doc_orientation_classify": {
+                                  "type": "boolean"
+                                },
+                                "use_doc_unwarping": {
+                                  "type": "boolean"
+                                }
+                              }
+                            },
+                            "angle": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "layout_det_res": {
+                          "type": "object",
+                          "properties": {
+                            "boxes": {
+                              "type": "array",
+                              "count": 62,
+                              "items": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "cls_id": {
+                                      "type": "number"
+                                    },
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "score": {
+                                      "type": "number"
+                                    },
+                                    "coordinate": {
+                                      "type": "array",
+                                      "count": 4,
+                                      "items": [
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "overall_ocr_res": {
+                          "type": "object",
+                          "properties": {
+                            "model_settings": {
+                              "type": "object",
+                              "properties": {
+                                "use_doc_preprocessor": {
+                                  "type": "boolean"
+                                },
+                                "use_textline_orientation": {
+                                  "type": "boolean"
+                                }
+                              }
+                            },
+                            "dt_polys": {
+                              "type": "array",
+                              "count": 82,
+                              "items": [
+                                {
+                                  "type": "array",
+                                  "count": 4,
+                                  "items": [
+                                    {
+                                      "type": "array",
+                                      "count": 2,
+                                      "items": [
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "text_det_params": {
+                              "type": "object",
+                              "properties": {
+                                "limit_side_len": {
+                                  "type": "number"
+                                },
+                                "limit_type": {
+                                  "type": "string"
+                                },
+                                "thresh": {
+                                  "type": "number"
+                                },
+                                "max_side_limit": {
+                                  "type": "number"
+                                },
+                                "box_thresh": {
+                                  "type": "number"
+                                },
+                                "unclip_ratio": {
+                                  "type": "number"
+                                }
+                              }
+                            },
+                            "text_type": {
+                              "type": "string"
+                            },
+                            "textline_orientation_angles": {
+                              "type": "array",
+                              "count": 67,
+                              "items": [
+                                {
+                                  "type": "number"
+                                }
+                              ]
+                            },
+                            "text_rec_score_thresh": {
+                              "type": "number"
+                            },
+                            "return_word_box": {
+                              "type": "boolean"
+                            },
+                            "rec_texts": {
+                              "type": "array",
+                              "count": 82,
+                              "items": [
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "rec_scores": {
+                              "type": "array",
+                              "count": 82,
+                              "items": [
+                                {
+                                  "type": "number"
+                                }
+                              ]
+                            },
+                            "rec_polys": {
+                              "type": "array",
+                              "count": 82,
+                              "items": [
+                                {
+                                  "type": "array",
+                                  "count": 4,
+                                  "items": [
+                                    {
+                                      "type": "array",
+                                      "count": 2,
+                                      "items": [
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "rec_boxes": {
+                              "type": "array",
+                              "count": 82,
+                              "items": [
+                                {
+                                  "type": "array",
+                                  "count": 4,
+                                  "items": [
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "formula_res_list": {
+                          "type": "array",
+                          "count": 14,
+                          "items": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "rec_formula": {
+                                  "type": "string"
+                                },
+                                "formula_region_id": {
+                                  "type": "number"
+                                },
+                                "dt_polys": {
+                                  "type": "array",
+                                  "count": 4,
+                                  "items": [
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "markdown": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "isStart": {
+                          "type": "boolean"
+                        },
+                        "isEnd": {
+                          "type": "boolean"
+                        },
+                        "images": {
+                          "type": "object",
+                          "properties": {
+                            "imgs/img_in_image_box_128_276_197_349.jpg": {
+                              "type": "string"
+                            },
+                            "imgs/img_in_image_box_307_270_374_354.jpg": {
+                              "type": "string"
+                            },
+                            "imgs/img_in_image_box_488_290_564_361.jpg": {
+                              "type": "string"
+                            },
+                            "imgs/img_in_image_box_662_292_734_365.jpg": {
+                              "type": "string"
+                            },
+                            "imgs/img_in_image_box_88_795_279_915.jpg": {
+                              "type": "string"
+                            },
+                            "imgs/img_in_image_box_316_779_496_916.jpg": {
+                              "type": "string"
+                            },
+                            "imgs/img_in_chart_box_534_780_766_914.jpg": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "outputImages": {
+                      "type": "object",
+                      "properties": {
+                        "preprocessed_img": {
+                          "type": "string"
+                        },
+                        "layout_det_res": {
+                          "type": "string"
+                        },
+                        "region_det_res": {
+                          "type": "string"
+                        },
+                        "overall_ocr_res": {
+                          "type": "string"
+                        },
+                        "layout_order_res": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "inputImage": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            },
+            "dataInfo": {
+              "type": "object",
+              "properties": {
+                "width": {
+                  "type": "number"
+                },
+                "height": {
+                  "type": "number"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "errorCode": {
+          "type": "number"
+        },
+        "errorMsg": {
+          "type": "string"
+        }
+      }
+    },
+    "alternatives": []
+  }
+}

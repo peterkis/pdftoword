@@ -17,6 +17,7 @@ dev = [
     "mypy>=1.14",
     "jsonschema>=4.26.0",
     "httpx>=0.27.0",
+    "types-jsonschema>=4.26.0.20260518",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -24,7 +25,7 @@ packages = ["packages/core-domain/src/pdf2word_core_domain"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["packages/core-domain/src"]
+pythonpath = ["packages/core-domain/src", ".", "scripts"]
 addopts = "-ra"
 
 [tool.ruff]

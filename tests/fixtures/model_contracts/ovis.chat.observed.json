@@ -1,0 +1,65 @@
+{
+  "fixture_kind": "sanitized_observed_wire",
+  "contract_status": "verified",
+  "generated_by": "scripts/model_contract_discovery.py",
+  "source_run_id": "t0015-mac-20260909T061855Z",
+  "source_response_fingerprint": "5c62eada1db6bd9994e78407b83eef43b6a0981b1388c2893c24b85e83118c73",
+  "source_response_fingerprints": [
+    "b1fc315a113ccef221eaf651d33937a85bde4acab386ae3d7deaf66a70384419",
+    "86078475d629b919e8a7762100e02312a379a264173227fdedbd3cf0b4aac1b2"
+  ],
+  "source_fingerprint_algorithm": "sha256_http_response_bytes_or_canonical_digest_list",
+  "generated_at": "2026-09-09T06:19:08.469757+00:00",
+  "input_file_sha256": "fe608629ae8af60890684c77437b3d62facd3a0c27b9fa019692890f96cbcf52",
+  "access_mode": "frp_stcp_loopback",
+  "observation": {
+    "response_object": "chat.completion",
+    "model": "ovis-ocr2",
+    "wire_contract": {
+      "wire_type": "string",
+      "serialization": "markdown",
+      "content_length": 1171,
+      "content_sha256": "3e88be25c2b4a2d20fe98622582fb719aecb67fbc623a627de533588230c86ab"
+    },
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 943,
+      "total_tokens": 1675,
+      "completion_tokens": 732,
+      "prompt_tokens_details": null
+    },
+    "system_fingerprint": "vllm-0.26.0-1a9933c7",
+    "error_probe": {
+      "http_status": 404,
+      "application_error_code": null,
+      "error_msg_wire_type": "null",
+      "response_content_type": "application/json",
+      "response_fingerprint": "86078475d629b919e8a7762100e02312a379a264173227fdedbd3cf0b4aac1b2",
+      "request_id": "dda022a1-9256-4607-aee8-05a76a632aa4",
+      "duration_ms": 47.929,
+      "wire_shape": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "param": {
+                "type": "string"
+              },
+              "code": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "error_observed": true
+    }
+  }
+}

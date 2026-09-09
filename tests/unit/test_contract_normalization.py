@@ -1,318 +1,189 @@
-"""
-Unit tests for model contract normalization.
-
-These tests verify the contract normalization logic without making network calls.
-"""
+"""Observed contracts are normalized by real core functions; examples are not evidence."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-# ============================================================================
-# Test fixtures paths
-# ============================================================================
-
-FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "model_contracts"
-
-
-# ============================================================================
-# OpenAI /v1/models Response Tests
-# ============================================================================
-
-
-def test_monkey_models_response_structure() -> None:
-    """Test that MonkeyOCRv2 models response has expected structure."""
-    fixture_path = FIXTURES_DIR / "monkey.models.normalized.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    assert data["contract_status"] == "verified"
-    assert data["model_id"] == "MonkeyOCRv2"
-
-    response = data["response"]
-    assert response["object"] == "list"
-    assert "data" in response
-    assert isinstance(response["data"], list)
-
-    # Check model structure
-    model = response["data"][0]
-    assert model["id"] == "MonkeyOCRv2"
-    assert model["object"] == "model"
+from model_contract_discovery import (
+    RequestMetadata,
+    build_pp_error_probes,
+    build_pp_json_payload,
+    error_observation,
+    observe_chat,
+    pp_success,
+    wire_shape,
+)
 
 
-def test_ovis_models_response_structure() -> None:
-    """Test that OvisOCR2 models response has expected structure."""
-    fixture_path = FIXTURES_DIR / "ovis.models.normalized.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    assert data["contract_status"] == "verified"
-    assert data["model_id"] == "ovis-ocr2"
-
-    response = data["response"]
-    assert response["object"] == "list"
-    assert "data" in response
-
-    model = response["data"][0]
-    assert model["id"] == "ovis-ocr2"
-
-
-def test_model_id_mismatch_detection() -> None:
-    """Test that model ID mismatch can be detected."""
-    expected_model = "MonkeyOCRv2"
-
-    # Simulate response with wrong model
-    response = {
-        "object": "list",
-        "data": [{"id": "OtherModel", "object": "model"}],
+def chat(content: Any, model: str = "MonkeyOCRv2", finish: str = "stop") -> dict[str, Any]:
+    """Synthetic chat envelope used to exercise normalization failures and success."""
+    return {
+        "object": "chat.completion",
+        "model": model,
+        "choices": [{"message": {"content": content}, "finish_reason": finish}],
+        "usage": {"total_tokens": 5},
+        "system_fingerprint": None,
     }
 
-    model_ids = [m["id"] for m in response["data"]]
-    assert expected_model not in model_ids
-    assert "OtherModel" in model_ids
+
+def test_monkey_wire_string_is_preserved() -> None:
+    """Parsed arrays are never misrepresented as wire arrays or pixel coordinates."""
+    result = observe_chat(chat("[{'bbox': [0, 0, 900, 950], 'label': 'text'}]"), "monkey")
+    wire = result["wire_contract"]
+    assert wire["wire_type"] == "string"
+    assert wire["serialization"] == "python_literal_list"
+    assert wire["strict_json"] is False
+    assert wire["parsed_type"] == "array<object>"
+    assert wire["safe_parser"] == "ast.literal_eval"
+    assert wire["coordinate_space"] == "normalized_1000"
+    assert wire["parsed_block_count"] == 1
+    assert result["system_fingerprint"] is None
 
 
-# ============================================================================
-# OpenAI Chat Completions Response Tests
-# ============================================================================
+@pytest.mark.parametrize(
+    "content",
+    [
+        [{"bbox": [0, 0, 900, 950], "label": "text"}],
+        '[{"bbox": [0, 0, 900, 950], "label": "text"}]',
+        "[{'bbox': [0, 0, 900, 1500], 'label': 'text'}]",
+        "[]",
+        "PRIVATE OCR TEXT",
+        None,
+    ],
+)
+def test_invalid_monkey_contract_does_not_verify(content: Any) -> None:
+    """Wrong wire type, serialization, units/range and empty output are blocked."""
+    with pytest.raises(ValueError):
+        observe_chat(chat(content), "monkey")
 
 
-def test_monkey_chat_response_structure() -> None:
-    """Test that MonkeyOCRv2 chat response has expected structure."""
-    fixture_path = FIXTURES_DIR / "monkey.chat.schema.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    response = data["response"]
-
-    # Standard OpenAI fields
-    assert "id" in response
-    assert response["object"] == "chat.completion"
-    assert "model" in response
-    assert "choices" in response
-    assert "usage" in response
-    assert "system_fingerprint" in response
-
-    # Check choices structure
-    choices = response["choices"]
-    assert len(choices) > 0
-    assert choices[0]["finish_reason"] == "stop"
-
-    message = choices[0]["message"]
-    assert message["role"] == "assistant"
-
-    # Monkey-specific: content is list of objects
-    content = message["content"]
-    assert isinstance(content, list)
-    assert all("bbox" in item for item in content)
-    assert all("label" in item for item in content)
+def test_ovis_markdown_metadata_without_body() -> None:
+    """Ovis is treated as Markdown, not routed through the Monkey literal parser."""
+    result = observe_chat(chat("# PRIVATE OCR TEXT", "ovis-ocr2"), "ovis")
+    assert result["wire_contract"]["serialization"] == "markdown"
+    assert result["wire_contract"]["wire_type"] == "string"
+    assert len(result["wire_contract"]["content_sha256"]) == 64
+    assert "PRIVATE OCR TEXT" not in json.dumps(result)
 
 
-def test_ovis_chat_response_structure() -> None:
-    """Test that OvisOCR2 chat response has expected structure."""
-    fixture_path = FIXTURES_DIR / "ovis.chat.schema.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    response = data["response"]
-
-    # Standard OpenAI fields
-    assert response["object"] == "chat.completion"
-    assert "choices" in response
-    assert "usage" in response
-
-    # Ovis-specific: content is markdown
-    content = response["choices"][0]["message"]["content"]
-    assert isinstance(content, str)
-    # Markdown typically starts with # for headers
-    assert content.strip().startswith("#")
+@pytest.mark.parametrize("content", [None, [], "", "   "])
+def test_invalid_ovis_contract(content: Any) -> None:
+    """Empty or non-string Ovis content cannot be verified."""
+    with pytest.raises(ValueError):
+        observe_chat(chat(content, "ovis-ocr2"), "ovis")
 
 
-# ============================================================================
-# PP-StructureV3 Response Tests
-# ============================================================================
+@pytest.mark.parametrize("finish", ["length", None, "error"])
+def test_incomplete_finish_reason(finish: Any) -> None:
+    """Truncated responses do not count as successful contract evidence."""
+    with pytest.raises(ValueError):
+        observe_chat(chat("# Text", "ovis-ocr2", finish), "ovis")
 
 
-def test_pp_success_response_structure() -> None:
-    """Test that PP-StructureV3 success response has expected structure."""
-    fixture_path = FIXTURES_DIR / "pp.success.pruned.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    assert data["contract_status"] == "verified"
-    assert data["endpoint"] == "/layout-parsing"
-    assert data["method"] == "POST"
-    assert data["transport"] == "json_base64"
-
-    response = data["response"]
-
-    # Top-level fields
-    assert "logId" in response
-    assert "result" in response
-    assert "errorCode" in response
-    assert "errorMsg" in response
-
-    # Success indicators
-    assert response["errorCode"] == 0
-    assert response["errorMsg"] == "Success"
-
-    # Result structure
-    result = response["result"]
-    assert "layoutParsingResults" in result
-    assert "dataInfo" in result
-
-    # Layout parsing results
-    layout_results = result["layoutParsingResults"]
-    assert len(layout_results) > 0
-
-    first_page = layout_results[0]
-    assert "prunedResult" in first_page
-
-    # Block structure
-    pruned_result = first_page["prunedResult"]
-    assert "parsing_res_list" in pruned_result
-
-    blocks = pruned_result["parsing_res_list"]
-    assert len(blocks) > 0
-
-    # Each block has required fields
-    for block in blocks:
-        assert "block_label" in block
-        assert "block_content" in block
-        assert "block_bbox" in block
-        assert "block_id" in block
-        assert "block_order" in block
-
-        # bbox format: [x0, y0, x1, y1]
-        bbox = block["block_bbox"]
-        assert len(bbox) == 4
-        assert all(isinstance(v, int) for v in bbox)
+def test_pp_success_predicate() -> None:
+    """PP must have both application success and a nonempty layout result list."""
+    assert pp_success(200, {"errorCode": 0, "result": {"layoutParsingResults": [{}]}})
+    assert not pp_success(200, {"errorCode": 9, "result": {"layoutParsingResults": [{}]}})
+    assert not pp_success(200, {"errorCode": 0, "result": {}})
+    assert not pp_success(200, {"errorCode": 0, "result": {"layoutParsingResults": []}})
+    assert not pp_success(500, {"errorCode": 0, "result": {"layoutParsingResults": [{}]}})
 
 
-def test_pp_error_response_structure() -> None:
-    """Test that PP-StructureV3 error responses have expected structure."""
-    fixture_path = FIXTURES_DIR / "pp.error.normalized.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    errors = data["error_responses"]
-
-    # Test missing file error
-    missing_file = errors["missing_file"]
-    assert missing_file["status_code"] == 422
-    assert missing_file["response"]["errorCode"] == 422
-    assert "errorMsg" in missing_file["response"]
-
-    # Test invalid file type error
-    invalid_type = errors["invalid_file_type"]
-    assert invalid_type["status_code"] == 422
-    assert invalid_type["response"]["errorCode"] == 422
-
-    # Test invalid file error
-    invalid_file = errors["invalid_file"]
-    assert invalid_file["status_code"] == 422
+@pytest.mark.parametrize("code", [1002, 422, None])
+def test_http_and_application_codes_independent(code: int | None) -> None:
+    """Validation must retain an observed body code, including absence."""
+    meta = RequestMetadata(
+        "test-request",
+        "test-time",
+        response_content_type="application/json",
+        response_fingerprint="a" * 64,
+    )
+    result = error_observation(422, {"errorCode": code, "errorMsg": []}, meta)
+    assert result["http_status"] == 422
+    assert result["application_error_code"] == code
+    assert result["error_msg_wire_type"] == "array"
 
 
-def test_pp_openapi_not_available() -> None:
-    """Test that PP OpenAPI unavailability is documented."""
-    fixture_path = FIXTURES_DIR / "pp.openapi.status.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    assert data["openapi_available"] is False
-    assert data["contract_status"] == "verified"
-
-
-# ============================================================================
-# JSON Schema Validation Tests
-# ============================================================================
-
-
-def test_monkey_models_json_schema() -> None:
-    """Test MonkeyOCRv2 models response against JSON schema."""
-    fixture_path = FIXTURES_DIR / "monkey.models.normalized.json"
-    with open(fixture_path, encoding="utf-8") as f:
-        data = json.load(f)
-
-    response = data["response"]
-
-    # Required fields
-    assert "object" in response
-    assert "data" in response
-
-    # data must be array
-    assert isinstance(response["data"], list)
-
-    # Each model must have id and object
-    for model in response["data"]:
-        assert "id" in model
-        assert "object" in model
-
-
-def test_pp_request_schema() -> None:
-    """Test PP-StructureV3 request schema validation."""
-    # Valid request
-    valid_request = {
-        "file": "base64_encoded_string",
-        "fileType": 1,
-    }
-
-    assert "file" in valid_request
-    assert "fileType" in valid_request
-    assert valid_request["fileType"] in [0, 1]
-
-    # Invalid fileType
-    invalid_request = {
-        "file": "base64_encoded_string",
-        "fileType": 99,
-    }
-    assert invalid_request["fileType"] not in [0, 1]
-
-
-# ============================================================================
-# Fixture Integrity Tests
-# ============================================================================
-
-
-def test_all_fixtures_exist() -> None:
-    """Test that all required fixture files exist."""
-    required_fixtures = [
-        "monkey.models.normalized.json",
-        "monkey.chat.schema.json",
-        "ovis.models.normalized.json",
-        "ovis.chat.schema.json",
-        "pp.openapi.status.json",
-        "pp.success.pruned.json",
-        "pp.error.normalized.json",
+def test_error_probes_preserve_valid_full_image() -> None:
+    """Invalid fileType does not accidentally truncate the unrelated file field."""
+    image = "synthetic-complete-image"
+    probes = build_pp_error_probes(image)
+    assert [probe["name"] for probe in probes] == [
+        "missing_file",
+        "invalid_file_type",
+        "invalid_file",
     ]
-
-    for fixture_name in required_fixtures:
-        fixture_path = FIXTURES_DIR / fixture_name
-        assert fixture_path.exists(), f"Missing fixture: {fixture_name}"
-
-
-def test_fixtures_are_valid_json() -> None:
-    """Test that all fixture files are valid JSON."""
-    fixture_files = list(FIXTURES_DIR.glob("*.json"))
-
-    for fixture_path in fixture_files:
-        with open(fixture_path, encoding="utf-8") as f:
-            try:
-                json.load(f)
-            except json.JSONDecodeError as e:
-                pytest.fail(f"Invalid JSON in {fixture_path.name}: {e}")
+    assert "file" not in probes[0]["payload"]
+    assert probes[1]["payload"] == {"file": image, "fileType": 99}
+    assert probes[2]["payload"]["fileType"] == 1
+    assert build_pp_json_payload(image) == {"file": image, "fileType": 1}
 
 
-def test_fixtures_have_required_metadata() -> None:
-    """Test that fixtures have required metadata fields."""
-    fixture_files = list(FIXTURES_DIR.glob("*.json"))
+def test_unknown_shape_fields_preserved() -> None:
+    """New wire fields remain visible for contract review without their values."""
+    result = wire_shape({"new_field": {"nested": "PRIVATE OCR TEXT"}})
+    assert result["properties"]["new_field"]["properties"]["nested"]["type"] == "string"
 
-    for fixture_path in fixture_files:
-        with open(fixture_path, encoding="utf-8") as f:
-            data = json.load(f)
 
-        assert "description" in data, f"Missing description in {fixture_path.name}"
-        assert "contract_status" in data, f"Missing contract_status in {fixture_path.name}"
+def test_fixture_metadata_is_honest() -> None:
+    """Synthetic examples must never carry a verified observed-evidence label."""
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures/model_contracts"
+    for path in fixtures.glob("*.json"):
+        data = json.loads(path.read_text())
+        assert data["fixture_kind"] in {"synthetic_example", "sanitized_observed_wire"}
+        if data["fixture_kind"] == "synthetic_example":
+            assert data["contract_status"] != "verified"
+        else:
+            for key in (
+                "source_run_id",
+                "source_response_fingerprint",
+                "generated_by",
+                "generated_at",
+                "input_file_sha256",
+                "access_mode",
+            ):
+                assert data[key]
+            assert data["access_mode"] == "frp_stcp_loopback"
+
+
+def test_observed_artifacts_share_live_provenance() -> None:
+    """Committed artifacts must reference actual requests from the same accepted live run."""
+    from model_contract_discovery import compute_json_fingerprint
+
+    root = Path(__file__).resolve().parents[2]
+    spec = json.loads((root / "specs/discovered-model-contracts.json").read_text())
+    assert spec["execution_mode"] == "live"
+    assert spec["overall_status"] == "ACCEPTED"
+    fingerprints = {request["response_fingerprint"] for request in spec["requests"]}
+    names = [
+        "monkey.models.observed.json",
+        "monkey.chat.observed.json",
+        "ovis.models.observed.json",
+        "ovis.chat.observed.json",
+        "pp.openapi.normalized.json",
+        "pp.success.observed.pruned.json",
+        "pp.errors.observed.json",
+        "run.provenance.json",
+    ]
+    for name in names:
+        value = json.loads((root / "tests/fixtures/model_contracts" / name).read_text())
+        assert value["fixture_kind"] == "sanitized_observed_wire"
+        assert value["source_run_id"] == spec["run_id"]
+        assert value["input_file_sha256"] == spec["input_file_sha256"]
+        sources = value["source_response_fingerprints"]
+        assert set(sources).issubset(fingerprints)
+        assert value["source_response_fingerprint"] == (
+            sources[0] if len(sources) == 1 else compute_json_fingerprint(sources)
+        )
+    services = spec["services"]
+    assert services["monkey"]["wire_contract"]["wire_type"] == "string"
+    assert services["monkey"]["wire_contract"]["coordinate_space"] == "normalized_1000"
+    assert services["ovis"]["model_id"] == "ovis-ocr2"
+    assert services["paddle"]["contract_status"] in {
+        "verified_from_openapi",
+        "verified_runtime_without_openapi",
+    }

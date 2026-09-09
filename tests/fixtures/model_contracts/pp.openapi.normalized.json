@@ -1,0 +1,836 @@
+{
+  "fixture_kind": "sanitized_observed_wire",
+  "contract_status": "verified",
+  "generated_by": "scripts/model_contract_discovery.py",
+  "source_run_id": "t0015-mac-20260909T061855Z",
+  "source_response_fingerprint": "d8fa7c68be55a2ff12e5d01b47e60c15535170318d51814985cf542df3f1a885",
+  "source_response_fingerprints": [
+    "d8fa7c68be55a2ff12e5d01b47e60c15535170318d51814985cf542df3f1a885"
+  ],
+  "source_fingerprint_algorithm": "sha256_http_response_bytes_or_canonical_digest_list",
+  "generated_at": "2026-09-09T06:19:08.469757+00:00",
+  "input_file_sha256": "fe608629ae8af60890684c77437b3d62facd3a0c27b9fa019692890f96cbcf52",
+  "access_mode": "frp_stcp_loopback",
+  "observation": {
+    "available": true,
+    "openapi_version": "3.1.0",
+    "info": {
+      "title": "FastAPI",
+      "version": "0.1.0"
+    },
+    "paths": {
+      "/health": {
+        "get": {
+          "operationId": "checkHealth",
+          "requestBody": {},
+          "parameters": [],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "logId": {
+                        "type": "string",
+                        "title": "Logid"
+                      },
+                      "errorCode": {
+                        "type": "integer",
+                        "title": "Errorcode"
+                      },
+                      "errorMsg": {
+                        "type": "string",
+                        "title": "Errormsg"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "logId",
+                      "errorCode",
+                      "errorMsg"
+                    ],
+                    "title": "AIStudioNoResultResponse"
+                  }
+                }
+              }
+            }
+          },
+          "deprecated": false
+        }
+      },
+      "/layout-parsing": {
+        "post": {
+          "operationId": "infer",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "file": {
+                      "type": "string",
+                      "title": "File"
+                    },
+                    "fileType": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "enum": [
+                            0,
+                            1
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Filetype"
+                    },
+                    "outputFormats": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Outputformats"
+                    },
+                    "useDocOrientationClassify": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Usedocorientationclassify"
+                    },
+                    "useDocUnwarping": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Usedocunwarping"
+                    },
+                    "useTextlineOrientation": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Usetextlineorientation"
+                    },
+                    "useSealRecognition": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Usesealrecognition"
+                    },
+                    "useTableRecognition": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Usetablerecognition"
+                    },
+                    "useFormulaRecognition": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Useformularecognition"
+                    },
+                    "useChartRecognition": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Usechartrecognition"
+                    },
+                    "useRegionDetection": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Useregiondetection"
+                    },
+                    "formatBlockContent": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Formatblockcontent"
+                    },
+                    "layoutThreshold": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "additionalProperties": true,
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Layoutthreshold"
+                    },
+                    "layoutNms": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Layoutnms"
+                    },
+                    "layoutUnclipRatio": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "prefixItems": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ],
+                          "type": "array",
+                          "maxItems": 2,
+                          "minItems": 2
+                        },
+                        {
+                          "additionalProperties": true,
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Layoutunclipratio"
+                    },
+                    "layoutMergeBboxesMode": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "additionalProperties": true,
+                          "type": "object"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Layoutmergebboxesmode"
+                    },
+                    "textDetLimitSideLen": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Textdetlimitsidelen"
+                    },
+                    "textDetLimitType": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Textdetlimittype"
+                    },
+                    "textDetThresh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Textdetthresh"
+                    },
+                    "textDetBoxThresh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Textdetboxthresh"
+                    },
+                    "textDetUnclipRatio": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Textdetunclipratio"
+                    },
+                    "textRecScoreThresh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Textrecscorethresh"
+                    },
+                    "sealDetLimitSideLen": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Sealdetlimitsidelen"
+                    },
+                    "sealDetLimitType": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Sealdetlimittype"
+                    },
+                    "sealDetThresh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Sealdetthresh"
+                    },
+                    "sealDetBoxThresh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Sealdetboxthresh"
+                    },
+                    "sealDetUnclipRatio": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Sealdetunclipratio"
+                    },
+                    "sealRecScoreThresh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Sealrecscorethresh"
+                    },
+                    "useWiredTableCellsTransToHtml": {
+                      "type": "boolean",
+                      "title": "Usewiredtablecellstranstohtml",
+                      "default": false
+                    },
+                    "useWirelessTableCellsTransToHtml": {
+                      "type": "boolean",
+                      "title": "Usewirelesstablecellstranstohtml",
+                      "default": false
+                    },
+                    "useTableOrientationClassify": {
+                      "type": "boolean",
+                      "title": "Usetableorientationclassify",
+                      "default": true
+                    },
+                    "useOcrResultsWithTableCells": {
+                      "type": "boolean",
+                      "title": "Useocrresultswithtablecells",
+                      "default": true
+                    },
+                    "useE2eWiredTableRecModel": {
+                      "type": "boolean",
+                      "title": "Usee2Ewiredtablerecmodel",
+                      "default": false
+                    },
+                    "useE2eWirelessTableRecModel": {
+                      "type": "boolean",
+                      "title": "Usee2Ewirelesstablerecmodel",
+                      "default": true
+                    },
+                    "markdownIgnoreLabels": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Markdownignorelabels"
+                    },
+                    "prettifyMarkdown": {
+                      "type": "boolean",
+                      "title": "Prettifymarkdown",
+                      "default": true
+                    },
+                    "showFormulaNumber": {
+                      "type": "boolean",
+                      "title": "Showformulanumber",
+                      "default": false
+                    },
+                    "returnMarkdownImages": {
+                      "type": "boolean",
+                      "title": "Returnmarkdownimages",
+                      "default": true
+                    },
+                    "visualize": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Visualize"
+                    },
+                    "logId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "title": "Logid"
+                    }
+                  },
+                  "type": "object",
+                  "required": [
+                    "file"
+                  ],
+                  "title": "InferRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "parameters": [],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "logId": {
+                        "type": "string",
+                        "title": "Logid"
+                      },
+                      "result": {
+                        "properties": {
+                          "layoutParsingResults": {
+                            "items": {
+                              "properties": {
+                                "prunedResult": {
+                                  "additionalProperties": true,
+                                  "type": "object",
+                                  "title": "Prunedresult"
+                                },
+                                "markdown": {
+                                  "properties": {
+                                    "text": {
+                                      "type": "string",
+                                      "title": "Text"
+                                    },
+                                    "isStart": {
+                                      "type": "boolean",
+                                      "title": "Isstart"
+                                    },
+                                    "isEnd": {
+                                      "type": "boolean",
+                                      "title": "Isend"
+                                    },
+                                    "images": {
+                                      "anyOf": [
+                                        {
+                                          "additionalProperties": {
+                                            "type": "string"
+                                          },
+                                          "type": "object"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "title": "Images"
+                                    }
+                                  },
+                                  "type": "object",
+                                  "required": [
+                                    "text",
+                                    "isStart",
+                                    "isEnd"
+                                  ],
+                                  "title": "MarkdownData"
+                                },
+                                "outputImages": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": {
+                                        "type": "string"
+                                      },
+                                      "type": "object"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "title": "Outputimages"
+                                },
+                                "inputImage": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "title": "Inputimage"
+                                },
+                                "exports": {
+                                  "anyOf": [
+                                    {
+                                      "properties": {
+                                        "docx": {
+                                          "anyOf": [
+                                            {
+                                              "properties": {
+                                                "content": {
+                                                  "type": "string",
+                                                  "title": "Content"
+                                                },
+                                                "fileName": {
+                                                  "type": "string",
+                                                  "title": "Filename"
+                                                }
+                                              },
+                                              "type": "object",
+                                              "required": [
+                                                "content",
+                                                "fileName"
+                                              ],
+                                              "title": "ExportContent"
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "title": "DocumentExports"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "type": "object",
+                              "required": [
+                                "prunedResult",
+                                "markdown"
+                              ],
+                              "title": "LayoutParsingResult"
+                            },
+                            "type": "array",
+                            "title": "Layoutparsingresults"
+                          },
+                          "dataInfo": {
+                            "anyOf": [
+                              {
+                                "properties": {
+                                  "width": {
+                                    "type": "integer",
+                                    "title": "Width"
+                                  },
+                                  "height": {
+                                    "type": "integer",
+                                    "title": "Height"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "const": "image",
+                                    "title": "Type",
+                                    "default": "image"
+                                  }
+                                },
+                                "type": "object",
+                                "required": [
+                                  "width",
+                                  "height"
+                                ],
+                                "title": "ImageInfo"
+                              },
+                              {
+                                "properties": {
+                                  "numPages": {
+                                    "type": "integer",
+                                    "title": "Numpages"
+                                  },
+                                  "pages": {
+                                    "items": {
+                                      "properties": {
+                                        "width": {
+                                          "type": "integer",
+                                          "title": "Width"
+                                        },
+                                        "height": {
+                                          "type": "integer",
+                                          "title": "Height"
+                                        }
+                                      },
+                                      "type": "object",
+                                      "required": [
+                                        "width",
+                                        "height"
+                                      ],
+                                      "title": "PDFPageInfo"
+                                    },
+                                    "type": "array",
+                                    "title": "Pages"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "const": "pdf",
+                                    "title": "Type",
+                                    "default": "pdf"
+                                  }
+                                },
+                                "type": "object",
+                                "required": [
+                                  "numPages",
+                                  "pages"
+                                ],
+                                "title": "PDFInfo"
+                              },
+                              {
+                                "properties": {
+                                  "numPages": {
+                                    "type": "integer",
+                                    "title": "Numpages"
+                                  },
+                                  "pages": {
+                                    "items": {
+                                      "properties": {
+                                        "width": {
+                                          "type": "integer",
+                                          "title": "Width"
+                                        },
+                                        "height": {
+                                          "type": "integer",
+                                          "title": "Height"
+                                        }
+                                      },
+                                      "type": "object",
+                                      "required": [
+                                        "width",
+                                        "height"
+                                      ],
+                                      "title": "PDFPageInfo"
+                                    },
+                                    "type": "array",
+                                    "title": "Pages"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "const": "tiff",
+                                    "title": "Type",
+                                    "default": "tiff"
+                                  }
+                                },
+                                "type": "object",
+                                "required": [
+                                  "numPages",
+                                  "pages"
+                                ],
+                                "title": "TIFFInfo"
+                              }
+                            ],
+                            "title": "Datainfo"
+                          }
+                        },
+                        "type": "object",
+                        "required": [
+                          "layoutParsingResults",
+                          "dataInfo"
+                        ],
+                        "title": "InferResult"
+                      },
+                      "errorCode": {
+                        "type": "integer",
+                        "const": 0,
+                        "title": "Errorcode",
+                        "default": 0
+                      },
+                      "errorMsg": {
+                        "type": "string",
+                        "const": "Success",
+                        "title": "Errormsg",
+                        "default": "Success"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "logId",
+                      "result"
+                    ],
+                    "title": "AIStudioResultResponse[InferResult]"
+                  }
+                }
+              }
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "logId": {
+                        "type": "string",
+                        "title": "Logid"
+                      },
+                      "errorCode": {
+                        "type": "integer",
+                        "title": "Errorcode"
+                      },
+                      "errorMsg": {
+                        "type": "string",
+                        "title": "Errormsg"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "logId",
+                      "errorCode",
+                      "errorMsg"
+                    ],
+                    "title": "AIStudioNoResultResponse"
+                  }
+                }
+              }
+            },
+            "500": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "logId": {
+                        "type": "string",
+                        "title": "Logid"
+                      },
+                      "errorCode": {
+                        "type": "integer",
+                        "title": "Errorcode"
+                      },
+                      "errorMsg": {
+                        "type": "string",
+                        "title": "Errormsg"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "logId",
+                      "errorCode",
+                      "errorMsg"
+                    ],
+                    "title": "AIStudioNoResultResponse"
+                  }
+                }
+              }
+            }
+          },
+          "deprecated": false
+        }
+      }
+    },
+    "incomplete": false
+  }
+}

@@ -7,15 +7,9 @@ not synthetic fixtures.
 
 from __future__ import annotations
 
-import ast
-import sys
 from pathlib import Path
 
 import pytest
-
-# Add scripts directory to path for import
-scripts_dir = Path(__file__).parent.parent.parent / "scripts"
-sys.path.insert(0, str(scripts_dir))
 
 from model_contract_discovery import (
     Timeouts,
@@ -28,7 +22,6 @@ from model_contract_discovery import (
     safe_parse_monkey_content,
     validate_monkey_block,
 )
-
 
 # ============================================================================
 # URL Normalization Tests
@@ -109,13 +102,13 @@ class TestRedactUrl:
 
     def test_redact_ip_address(self) -> None:
         """Should redact IP addresses."""
-        result = redact_url("http://192.168.1.100:9000/v1/models")
-        assert "192.168.1.100" not in result
+        result = redact_url("http://server.invalid:9000/v1/models")
+        assert "server.invalid" not in result
         assert "MODEL_SERVER_IP" in result
 
     def test_preserve_path(self) -> None:
         """Should preserve path after redaction."""
-        result = redact_url("http://192.168.1.100:9000/v1/models")
+        result = redact_url("http://server.invalid:9000/v1/models")
         assert "/v1/models" in result
 
     def test_preserve_localhost(self) -> None:
@@ -172,7 +165,7 @@ class TestSafeParseMonkeyContent:
     def test_parse_valid_python_literal(self) -> None:
         """Should parse valid Python literal list."""
         content = "[{'bbox': [0, 0, 100, 100], 'label': 'text'}]"
-        result, raw = safe_parse_monkey_content(content)
+        result, _raw = safe_parse_monkey_content(content)
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["label"] == "text"
@@ -284,7 +277,6 @@ class TestComputeJsonFingerprint:
 
     def test_order_independent(self) -> None:
         """Key order should not affect fingerprint."""
-        import json
 
         # Create same data with different key order
         data1 = {"a": 1, "b": 2, "c": 3}
@@ -315,3 +307,16 @@ class TestDiscoveryConfig:
         timeouts = Timeouts(connect=30, request=1200)
         assert timeouts.connect == 30
         assert timeouts.request == 1200
+
+
+def test_literal_parser_never_executes_code(tmp_path: Path) -> None:
+    """A malicious expression cannot execute or create a sentinel file."""
+    sentinel = tmp_path / "sentinel"
+    with pytest.raises(ValueError, match="PARSE_FAILED"):
+        safe_parse_monkey_content("[__import__('os').system('touch sentinel')]")
+    assert not sentinel.exists()
+
+
+def test_v10_is_not_v1() -> None:
+    """Version normalization matches a segment, not the start of another version."""
+    assert normalize_openai_base_url("http://host:9000/v10") == "http://host:9000/v10/v1"

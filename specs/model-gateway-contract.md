@@ -4,7 +4,7 @@
 
 - 当前直接服务：Monkey :9000 / Ovis :8000 / PP :8080
 - 目标统一网关：8100（尚未部署）
-- PP HTTP 契约：**✅ 已冻结**（T0015 / P0-GATE-001A）
+- PP HTTP 契约：**verified_from_openapi**（T0015 / P0-GATE-001A）
 
 ## 通用
 
@@ -22,7 +22,7 @@
 
 返回区域 bbox、标签、置信度和模型元数据。
 
-**注意**：PP HTTP 契约尚未冻结，端点路径和 Transport 待 T0015 验证。
+**注意**：此处为目标网关业务接口；当前 PP 直连契约见下方 Gate 小节。
 
 ### POST /layout/complex
 
@@ -52,103 +52,20 @@ OvisOCR2。返回 Markdown、HTML 表格、LaTeX 和图片区域候选；不返�
 
 模型 ID、revision、hash、loaded、device、服务版本。
 
-## PP-StructureV3 直连契约（已冻结）
+## PP-StructureV3 Gate 直连契约
 
-**端点**：`POST /layout-parsing`
+状态：**verified_from_openapi**。来源 run_id：`t0015-mac-20260909T061855Z`；接入 `frp_stcp_loopback`。
 
-**Transport**：`application/json`
+- primary：`POST /layout-parsing`；operationId=`infer`；Transport=`json_base64`，Content-Type=`application/json`。
+- OpenAPI 可用，3.1.0，FastAPI / 0.1.0；paths=`/health`、`/layout-parsing`。
+- Schema required 为 `file`。`fileType` 允许 0/1/null；本工具图片请求始终明确传 `fileType=1`。
+- query 参数为空；成功 200 与错误 422/500 Schema 由 OpenAPI 自动解析。实际成功响应通过 Schema 验证。
+- alternatives=`[]`：没有文档化 multipart 或 `/PP-StructureV3`，本轮未额外探测，不声明不存在兼容端点。
+- OpenAPI 响应 SHA-256：`d8fa7c68be55a2ff12e5d01b47e60c15535170318d51814985cf542df3f1a885`。
+- 三类 PP 错误实测均 HTTP 422、body.errorCode=422、errorMsg string；二者独立记录。
 
-**请求格式**：
-```json
-{
-  "file": "<base64_encoded_file>",
-  "fileType": 0
-}
-```
+Monkey Wire 为 string / python_literal_list，strict_json=false，经 ast.literal_eval 解析为 array<object>，坐标 normalized_1000；Ovis 为 string / markdown。
 
-**fileType 值**：
-- `0`：PDF 文件
-- `1`：图片文件（JPG/PNG）
+完整规范和请求来源见 [生成契约](discovered-model-contracts.json) 与 [报告](../tasks/reports/T0015_REPORT.md)。原始详细证据仅留在忽略的 tmp 目录。服务指纹不等同于权重 revision 锁定；未暴露字段为 unknown/null。
 
-**成功响应**（HTTP 200）：
-```json
-{
-  "logId": "<uuid>",
-  "result": {
-    "layoutParsingResults": [
-      {
-        "prunedResult": {
-          "width": 800,
-          "height": 1159,
-          "model_settings": {
-            "use_doc_preprocessor": true,
-            "use_seal_recognition": false,
-            "use_table_recognition": true,
-            "use_formula_recognition": true,
-            "use_chart_recognition": false,
-            "use_region_detection": true
-          },
-          "parsing_res_list": [
-            {
-              "block_label": "text",
-              "block_content": "...",
-              "block_bbox": [x0, y0, x1, y1],
-              "block_id": 0,
-              "block_order": 1
-            }
-          ],
-          "overall_ocr_res": {},
-          "formula_res_list": []
-        },
-        "markdown": "...",
-        "outputImages": {},
-        "inputImage": "<base64>"
-      }
-    ],
-    "dataInfo": {
-      "width": 800,
-      "height": 1159,
-      "type": "image"
-    }
-  },
-  "errorCode": 0,
-  "errorMsg": "Success"
-}
-```
-
-**错误响应**（HTTP 422）：
-```json
-{
-  "logId": "<uuid>",
-  "errorCode": 422,
-  "errorMsg": "[{\"type\": \"missing\", \"loc\": [\"body\", \"file\"], \"msg\": \"Field required\"}]"
-}
-```
-
-**验证信息**：
-- 验证任务：T0015 / P0-GATE-001A
-- 验证日期：2026-08-29
-- 验证方法：手动 HTTP 探测
-- OpenAPI：服务未暴露
-
-## 通用响应
-
-```json
-{
-  "request_id": "req-...",
-  "task": "layout.complex",
-  "status": "ok",
-  "model": {
-    "id": "zenosai/MonkeyOCRv2-B-Parsing",
-    "revision": "pinned-revision",
-    "service_version": "..."
-  },
-  "timing_ms": {"queue": 12, "inference": 1430, "total": 1468},
-  "result": {},
-  "warnings": []
-}
-```
-
-## 错误
-
-使用统一代码：认证、限流、队列满、模型未加载、OOM、超时、输入过大、格式错误、内部模型失败。客户端不得根据 HTTP 文本猜测错误类型。
+原 2026-08-29 Windows 静态冻结声明属于 Historical，不能覆盖当前自动生成契约。

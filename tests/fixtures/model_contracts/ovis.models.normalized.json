@@ -1,6 +1,6 @@
 {
-  "description": "Normalized OvisOCR2 /v1/models response fixture",
-  "contract_status": "verified",
+  "description": "Historical synthetic example; not current service evidence. Normalized OvisOCR2 /v1/models response fixture",
+  "contract_status": "synthetic",
   "model_id": "ovis-ocr2",
   "response": {
     "object": "list",
@@ -12,5 +12,6 @@
         "owned_by": "organization"
       }
     ]
-  }
+  },
+  "fixture_kind": "synthetic_example"
 }

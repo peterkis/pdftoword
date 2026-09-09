@@ -1,6 +1,6 @@
 {
-  "description": "Normalized OvisOCR2 chat completions response fixture",
-  "contract_status": "verified",
+  "description": "Historical synthetic example; not current service evidence. Normalized OvisOCR2 chat completions response fixture",
+  "contract_status": "synthetic",
   "model_id": "ovis-ocr2",
   "response": {
     "id": "chatcmpl-test",
@@ -26,5 +26,6 @@
   },
   "notes": [
     "content is markdown-formatted text"
-  ]
+  ],
+  "fixture_kind": "synthetic_example"
 }
