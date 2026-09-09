@@ -1,0 +1,1954 @@
+{
+  "version": "1.1.0",
+  "phases": [
+    {
+      "id": "P0",
+      "name": "工程基础与契约",
+      "goal": "建立可测试、可替换、可追溯的工程骨架，冻结 Layout IR 1.1、作业状态机、Adapter 和模型网关契约。",
+      "exit": [
+        "所有 JSON Schema 与样例验证通过",
+        "CLI 可创建模拟作业并完成状态流转",
+        "Mock 模型网关可被客户端调用",
+        "日志不包含正文",
+        "单元测试与 CI 基线通过"
+      ]
+    },
+    {
+      "id": "P1",
+      "name": "纯电子 PDF MVP",
+      "goal": "在完全不依赖 OCR/VLM 的情况下，将正常电子 PDF 转换为基本可编辑 DOCX。",
+      "exit": [
+        "黄金电子 PDF 文本和图片完整",
+        "正常原生文字 OCR 调用次数为 0",
+        "DOCX 可打开",
+        "基本标题、段落、列表和图片顺序正确",
+        "无模型机时可运行"
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "混合 PDF 与局部 OCR",
+      "goal": "完成页面/区域分流、Paddle 布局能力、局部 PP-OCRv6_medium、隐藏层去重和配图保留。",
+      "exit": [
+        "混合 PDF 原生文字未被替换",
+        "局部扫描文字可编辑",
+        "普通配图整体保留",
+        "隐藏层无重复",
+        "所有区域有来源和路由记录"
+      ]
+    },
+    {
+      "id": "P3",
+      "name": "扫描 PDF 专项模型",
+      "goal": "完成纯扫描页面的文字、表格、公式和图片分区处理，以及安全降级。",
+      "exit": [
+        "扫描正文可编辑",
+        "表格可重建或图片降级",
+        "公式可 OMML 或图片降级",
+        "图形区域不被误拆",
+        "专项模型失败不破坏作业"
+      ]
+    },
+    {
+      "id": "P4",
+      "name": "MonkeyOCRv2 与多模型融合",
+      "goal": "接入 MonkeyOCRv2 复杂版面主链路，加入 Ovis 内容复核和候选融合。",
+      "exit": [
+        "Monkey 经 8100 网关调用",
+        "坐标和标签归一化通过",
+        "engine/system confidence 分离",
+        "复杂页阅读顺序改善",
+        "Ovis 只按策略复核",
+        "影子评测报告完成"
+      ]
+    },
+    {
+      "id": "P5",
+      "name": "题目结构与高保真 DOCX",
+      "goal": "恢复题目层级、题图关系、表格/公式输出和稳定 Word 布局。",
+      "exit": [
+        "QuestionBlock 可用",
+        "题图自动/审校关系可用",
+        "右侧题图稳定",
+        "表格和公式按策略输出",
+        "长短题分页规则通过"
+      ]
+    },
+    {
+      "id": "P6",
+      "name": "QA 与人工审校",
+      "goal": "建立问题检测、回渲染、区域重识别、人工修正和审计闭环。",
+      "exit": [
+        "Issue 体系完整",
+        "DOCX 完整性和回渲染可运行",
+        "审校修改有审计",
+        "区域可重识别",
+        "输出质量报告可下载"
+      ]
+    },
+    {
+      "id": "P7",
+      "name": "性能、安全、部署与发布",
+      "goal": "完成性能优化、模型机安全、打包、SBOM、运行手册和发布资格验证。",
+      "exit": [
+        "性能基线达标",
+        "取消/恢复与清理通过",
+        "模型网关安全检查通过",
+        "模型/镜像版本固定",
+        "SBOM/许可证完成",
+        "发布回归通过"
+      ]
+    }
+  ],
+  "tickets": [
+    {
+      "id": "T0014",
+      "phase": "P0",
+      "title": "模型部署基线与架构文档对齐",
+      "priority": "P0",
+      "dependencies": [
+        "T0001"
+      ],
+      "goal": "将仓库中的产品文档、架构文档、ADR、模型角色矩阵、路由配置、阶段计划和任务目录，与当前真实部署基线对齐。",
+      "deliverables": [
+        "部署基线文档（docs/23_MODEL_DEPLOYMENT_BASELINE_V1_1.md）",
+        "修订后的 ADR-003 和新增 ADR-006",
+        "更新后的核心文档和配置样例",
+        "更新后的任务目录（T0014-T0017）"
+      ],
+      "acceptance": [
+        "文档与当前部署事实一致",
+        "旧模型名称已标注为历史或更新",
+        "目标架构与当前部署明确区分",
+        "待验证事项清晰列出",
+        "四个前置任务已加入任务目录"
+      ]
+    },
+    {
+      "id": "T0015",
+      "phase": "P0",
+      "title": "服务契约发现",
+      "priority": "P0",
+      "dependencies": [
+        "T0014"
+      ],
+      "goal": "通过实测服务器 /openapi.json 冻结 PP HTTP 端点、Transport、请求参数和响应 Schema；确认 Monkey 和 Ovis 的模型元数据。",
+      "deliverables": [
+        "冻结的 PP 端点和 Transport 配置",
+        "冻结的请求/响应 Schema",
+        "模型版本和 revision 记录",
+        "Multipart 与 JSON-Base64 差异说明"
+      ],
+      "acceptance": [
+        "所有端点已通过实测验证",
+        "Schema 与服务器 /openapi.json 一致",
+        "模型版本已锁定",
+        "不依赖文档猜测"
+      ]
+    },
+    {
+      "id": "T0016",
+      "phase": "P0",
+      "title": "JPG/PNG 与数学试卷回归",
+      "priority": "P0",
+      "dependencies": [
+        "T0015"
+      ],
+      "goal": "验证 JPG/PNG 输入一致性；对比 PP 新版布局与 MonkeyOCRv2 在数学试卷上的几何质量；决定是否形成新的几何权威 ADR。",
+      "deliverables": [
+        "JPG/PNG 一致性报告",
+        "PP vs Monkey 几何质量对比报告",
+        "新的几何权威 ADR（如适用）",
+        "决策记录"
+      ],
+      "acceptance": [
+        "JPG/PNG 默认策略已确定",
+        "几何质量对比完成",
+        "是否形成终局 ADR 已决策"
+      ]
+    },
+    {
+      "id": "T0017",
+      "phase": "P0",
+      "title": "旋转、UVDoc、多栏、表格和公式专项能力矩阵",
+      "priority": "P0",
+      "dependencies": [
+        "T0015"
+      ],
+      "goal": "验证 PP-LCNet_x1_0_doc_ori、UVDoc、多栏布局、有线/无线表格、公式密集页等专项能力，建立能力矩阵。",
+      "deliverables": [
+        "专项能力验证报告",
+        "能力矩阵文档",
+        "启用策略建议"
+      ],
+      "acceptance": [
+        "所有专项能力已验证",
+        "能力矩阵已完成",
+        "启用策略已确定"
+      ]
+    },
+    {
+      "id": "T0001",
+      "phase": "P0",
+      "title": "初始化 Monorepo 与工具链",
+      "priority": "P0",
+      "dependencies": [],
+      "goal": "建立 Python、Tauri/React、测试和文档基础。",
+      "deliverables": [
+        "仓库目录",
+        "pyproject.toml/uv.lock",
+        "前端 workspace",
+        "基础 README"
+      ],
+      "acceptance": [
+        "Python/TS 构建通过",
+        "格式化和 lint 可运行",
+        "无业务模型耦合"
+      ]
+    },
+    {
+      "id": "T0002",
+      "phase": "P0",
+      "title": "建立 CI 与质量门禁",
+      "priority": "P0",
+      "dependencies": [
+        "T0001"
+      ],
+      "goal": "自动执行 lint、typecheck、unit、schema validation。",
+      "deliverables": [
+        "CI 配置",
+        "本地 quality 脚本"
+      ],
+      "acceptance": [
+        "失败会阻断",
+        "输出清晰报告"
+      ]
+    },
+    {
+      "id": "T0003",
+      "phase": "P0",
+      "title": "配置与秘密管理",
+      "priority": "P0",
+      "dependencies": [
+        "T0001"
+      ],
+      "goal": "实现 YAML+环境变量配置、API Key 脱敏和配置版本。",
+      "deliverables": [
+        "Config 模型",
+        "example.env",
+        "配置加载测试"
+      ],
+      "acceptance": [
+        "秘密不入日志",
+        "未知字段拒绝",
+        "三档配置可加载"
+      ]
+    },
+    {
+      "id": "T0004",
+      "phase": "P0",
+      "title": "作业状态机",
+      "priority": "P0",
+      "dependencies": [
+        "T0001"
+      ],
+      "goal": "实现 created/preflight/extracting/routing/recognizing/fusing/structuring/building/qa/completed/failed/cancelled/waiting_model。",
+      "deliverables": [
+        "状态机",
+        "转换规则",
+        "持久化模型"
+      ],
+      "acceptance": [
+        "非法转换拒绝",
+        "重试和取消有测试"
+      ]
+    },
+    {
+      "id": "T0005",
+      "phase": "P0",
+      "title": "作业目录与资产存储",
+      "priority": "P0",
+      "dependencies": [
+        "T0001",
+        "T0003"
+      ],
+      "goal": "输入只读副本、页面图、区域图、原始响应、IR 和输出隔离。",
+      "deliverables": [
+        "WorkspaceManager",
+        "AssetStore",
+        "清理策略"
+      ],
+      "acceptance": [
+        "防路径穿越",
+        "哈希验证",
+        "并发作业隔离"
+      ]
+    },
+    {
+      "id": "T0006",
+      "phase": "P0",
+      "title": "定义引擎 Adapter 协议",
+      "priority": "P0",
+      "dependencies": [
+        "T0001"
+      ],
+      "goal": "冻结 Layout/OCR/Table/Formula/Reviewer 协议。",
+      "deliverables": [
+        "Protocol/Pydantic DTO",
+        "Mock Adapter"
+      ],
+      "acceptance": [
+        "核心层不依赖模型 SDK",
+        "Mock 可替换"
+      ]
+    },
+    {
+      "id": "T0007",
+      "phase": "P0",
+      "title": "实现 Layout IR 1.1 域模型",
+      "priority": "P0",
+      "dependencies": [
+        "T0001"
+      ],
+      "goal": "实现 Schema 对应模型、序列化和校验。",
+      "deliverables": [
+        "IR 模型",
+        "Schema validator",
+        "迁移入口"
+      ],
+      "acceptance": [
+        "样例验证通过",
+        "非法 bbox/候选拒绝"
+      ]
+    },
+    {
+      "id": "T0008",
+      "phase": "P0",
+      "title": "候选、来源与证据模型",
+      "priority": "P0",
+      "dependencies": [
+        "T0007"
+      ],
+      "goal": "实现 content_candidates、geometry_source、provenance 和选择理由。",
+      "deliverables": [
+        "Candidate 模型",
+        "Provenance 记录器"
+      ],
+      "acceptance": [
+        "engine_confidence 可空",
+        "system_confidence 独立"
+      ]
+    },
+    {
+      "id": "T0009",
+      "phase": "P0",
+      "title": "错误码与 Issue 分类",
+      "priority": "P0",
+      "dependencies": [
+        "T0004"
+      ],
+      "goal": "统一错误、严重度、建议动作和可重试属性。",
+      "deliverables": [
+        "Error 基类",
+        "Issue 工厂",
+        "错误映射"
+      ],
+      "acceptance": [
+        "不出现通用吞错",
+        "API 返回稳定错误码"
+      ]
+    },
+    {
+      "id": "T0010",
+      "phase": "P0",
+      "title": "模型网关客户端骨架",
+      "priority": "P0",
+      "dependencies": [
+        "T0003",
+        "T0006",
+        "T0009"
+      ],
+      "goal": "实现 8100 客户端、鉴权、超时、重试、幂等和取消。",
+      "deliverables": [
+        "GatewayClient",
+        "Mock Server",
+        "连接健康检查"
+      ],
+      "acceptance": [
+        "不直连内部端口",
+        "错误映射正确",
+        "API Key 脱敏"
+      ]
+    },
+    {
+      "id": "T0011",
+      "phase": "P0",
+      "title": "CLI 与本地 API 骨架",
+      "priority": "P0",
+      "dependencies": [
+        "T0004",
+        "T0005"
+      ],
+      "goal": "提供 create/status/cancel/export 命令和本地 API。",
+      "deliverables": [
+        "CLI",
+        "FastAPI routes",
+        "请求 ID"
+      ],
+      "acceptance": [
+        "模拟作业完整流转",
+        "取消幂等"
+      ]
+    },
+    {
+      "id": "T0012",
+      "phase": "P0",
+      "title": "黄金测试框架",
+      "priority": "P0",
+      "dependencies": [
+        "T0002",
+        "T0007"
+      ],
+      "goal": "建立 fixture manifest、期望 IR、文本/结构比较器。",
+      "deliverables": [
+        "Golden harness",
+        "fixture metadata schema"
+      ],
+      "acceptance": [
+        "可新增样本",
+        "不硬编码业务文本"
+      ]
+    },
+    {
+      "id": "T0013",
+      "phase": "P0",
+      "title": "日志与指标基础",
+      "priority": "P0",
+      "dependencies": [
+        "T0003",
+        "T0004"
+      ],
+      "goal": "结构化日志、阶段计时、模型调用计数、无正文策略。",
+      "deliverables": [
+        "Logger",
+        "Metrics DTO",
+        "脱敏测试"
+      ],
+      "acceptance": [
+        "正文不会写日志",
+        "request/job/page 可关联"
+      ]
+    },
+    {
+      "id": "T0101",
+      "phase": "P1",
+      "title": "PDF 文件预检",
+      "priority": "P0",
+      "dependencies": [
+        "T0005",
+        "T0009"
+      ],
+      "goal": "读取文件信息、加密、页数、尺寸、旋转、损坏和哈希。",
+      "deliverables": [
+        "PreflightService",
+        "报告模型"
+      ],
+      "acceptance": [
+        "源文件不修改",
+        "损坏/加密有明确错误"
+      ]
+    },
+    {
+      "id": "T0102",
+      "phase": "P1",
+      "title": "PDFium 页面几何与渲染",
+      "priority": "P0",
+      "dependencies": [
+        "T0101"
+      ],
+      "goal": "实现 MediaBox/CropBox/旋转和像素↔PDF point 转换。",
+      "deliverables": [
+        "PageGeometry",
+        "Renderer"
+      ],
+      "acceptance": [
+        "旋转四方向测试",
+        "区域裁剪误差在阈值内"
+      ]
+    },
+    {
+      "id": "T0103",
+      "phase": "P1",
+      "title": "pdf-inspector Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0101",
+        "T0006"
+      ],
+      "goal": "封装页面分类、文字、字体和编码信息。",
+      "deliverables": [
+        "PdfInspectorAdapter",
+        "版本探测"
+      ],
+      "acceptance": [
+        "原始输出不泄露到核心",
+        "异常映射"
+      ]
+    },
+    {
+      "id": "T0104",
+      "phase": "P1",
+      "title": "原生文字质量评分",
+      "priority": "P0",
+      "dependencies": [
+        "T0102",
+        "T0103"
+      ],
+      "goal": "计算 Unicode、乱码、覆盖、顺序、重复和隐藏层指标。",
+      "deliverables": [
+        "NativeTextQualityScorer",
+        "阈值配置"
+      ],
+      "acceptance": [
+        "已知乱码样本可识别",
+        "正常文本不过度拒绝"
+      ]
+    },
+    {
+      "id": "T0105",
+      "phase": "P1",
+      "title": "原生文字转 Layout IR",
+      "priority": "P0",
+      "dependencies": [
+        "T0007",
+        "T0103",
+        "T0104"
+      ],
+      "goal": "生成文字块、run、样式、来源和阅读顺序候选。",
+      "deliverables": [
+        "NativeTextExtractor",
+        "IR writer"
+      ],
+      "acceptance": [
+        "字体/字号/上下标保留",
+        "所有 run 有来源"
+      ]
+    },
+    {
+      "id": "T0106",
+      "phase": "P1",
+      "title": "图片和矢量对象提取",
+      "priority": "P0",
+      "dependencies": [
+        "T0102",
+        "T0005"
+      ],
+      "goal": "提取原图；复杂矢量组合区域渲染。",
+      "deliverables": [
+        "ImageExtractor",
+        "VectorRegionRenderer",
+        "Asset records"
+      ],
+      "acceptance": [
+        "透明/裁剪/旋转图片正确",
+        "资产去重"
+      ]
+    },
+    {
+      "id": "T0107",
+      "phase": "P1",
+      "title": "简单阅读顺序与段落聚合",
+      "priority": "P0",
+      "dependencies": [
+        "T0105"
+      ],
+      "goal": "基于坐标、基线、间距和样式合并行/段落。",
+      "deliverables": [
+        "ReadingOrderSimple",
+        "ParagraphGrouper"
+      ],
+      "acceptance": [
+        "单栏/双栏基础样本正确",
+        "页眉页脚可分离"
+      ]
+    },
+    {
+      "id": "T0108",
+      "phase": "P1",
+      "title": "样式归一化与字体映射",
+      "priority": "P0",
+      "dependencies": [
+        "T0105"
+      ],
+      "goal": "建立 Word 样式候选和字体回退。",
+      "deliverables": [
+        "StyleNormalizer",
+        "FontMap"
+      ],
+      "acceptance": [
+        "中英文字体分开处理",
+        "输出字体替换报告"
+      ]
+    },
+    {
+      "id": "T0109",
+      "phase": "P1",
+      "title": "基础 DOCX Planner/Builder",
+      "priority": "P0",
+      "dependencies": [
+        "T0106",
+        "T0107",
+        "T0108"
+      ],
+      "goal": "输出标题、段落、列表和行内图片。",
+      "deliverables": [
+        "DocxPlan",
+        "BasicBuilder"
+      ],
+      "acceptance": [
+        "DOCX ZIP 有效",
+        "可重新打开",
+        "无绝对定位滥用"
+      ]
+    },
+    {
+      "id": "T0110",
+      "phase": "P1",
+      "title": "电子 PDF 端到端作业",
+      "priority": "P0",
+      "dependencies": [
+        "T0109",
+        "T0011"
+      ],
+      "goal": "串联预检、提取、IR、DOCX、报告。",
+      "deliverables": [
+        "Pipeline native",
+        "CLI command"
+      ],
+      "acceptance": [
+        "无模型机可完成",
+        "正常文字模型调用=0"
+      ]
+    },
+    {
+      "id": "T0111",
+      "phase": "P1",
+      "title": "电子 PDF 黄金回归",
+      "priority": "P0",
+      "dependencies": [
+        "T0110",
+        "T0012"
+      ],
+      "goal": "建设并验证普通报告、标准、中英混排、图片文档。",
+      "deliverables": [
+        "Golden set P1",
+        "回归报告"
+      ],
+      "acceptance": [
+        "内容/图片/顺序通过",
+        "DOCX 可打开率100%"
+      ]
+    },
+    {
+      "id": "T0201",
+      "phase": "P2",
+      "title": "Paddle 布局能力 Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0102"
+      ],
+      "goal": "实现 paddle.layout_global、paddle.layout_block 任务和归一化。",
+      "deliverables": [
+        "PaddleLayoutAdapter",
+        "label map"
+      ],
+      "acceptance": [
+        "通过8100（或 Gate 阶段直连 8080）",
+        "bbox 转换正确",
+        "未知标签保留"
+      ]
+    },
+    {
+      "id": "T0202",
+      "phase": "P2",
+      "title": "页面复杂度与路由评分",
+      "priority": "P0",
+      "dependencies": [
+        "T0104",
+        "T0201"
+      ],
+      "goal": "计算何时 native、fast、complex、specialist。",
+      "deliverables": [
+        "Router",
+        "RoutingDecision"
+      ],
+      "acceptance": [
+        "决策可解释",
+        "配置版本写入报告"
+      ]
+    },
+    {
+      "id": "T0203",
+      "phase": "P2",
+      "title": "区域切分与覆盖合并",
+      "priority": "P0",
+      "dependencies": [
+        "T0105",
+        "T0106",
+        "T0201"
+      ],
+      "goal": "融合原生对象、PP Layout 和图片对象形成区域。",
+      "deliverables": [
+        "RegionPartitioner",
+        "overlap resolver"
+      ],
+      "acceptance": [
+        "无明显空洞/重复",
+        "普通图不误判 raster_text"
+      ]
+    },
+    {
+      "id": "T0204",
+      "phase": "P2",
+      "title": "高质量区域裁剪",
+      "priority": "P0",
+      "dependencies": [
+        "T0102",
+        "T0203"
+      ],
+      "goal": "按任务选择 DPI、padding、颜色和去旋转。",
+      "deliverables": [
+        "RegionCropper",
+        "image metadata"
+      ],
+      "acceptance": [
+        "裁剪可逆映射",
+        "不过度裁掉上下标"
+      ]
+    },
+    {
+      "id": "T0205",
+      "phase": "P2",
+      "title": "Paddle 文字 OCR 能力 Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0204"
+      ],
+      "goal": "实现 paddle.text_ocr 任务、文字框、行和置信度。",
+      "deliverables": [
+        "TextOcrAdapter",
+        "normalizer"
+      ],
+      "acceptance": [
+        "中文英文正常",
+        "置信度保留",
+        "无自动纠错"
+      ]
+    },
+    {
+      "id": "T0206",
+      "phase": "P2",
+      "title": "OCR 坐标归一化",
+      "priority": "P0",
+      "dependencies": [
+        "T0204",
+        "T0205"
+      ],
+      "goal": "像素坐标映射回页面 PDF point。",
+      "deliverables": [
+        "CoordinateMapper tests"
+      ],
+      "acceptance": [
+        "旋转/裁剪/缩放属性测试通过"
+      ]
+    },
+    {
+      "id": "T0207",
+      "phase": "P2",
+      "title": "隐藏文字层检测与去重",
+      "priority": "P0",
+      "dependencies": [
+        "T0104",
+        "T0205",
+        "T0206"
+      ],
+      "goal": "对原生/OCR 几何和内容匹配。",
+      "deliverables": [
+        "HiddenTextResolver",
+        "supersedes relations"
+      ],
+      "acceptance": [
+        "无双层重复",
+        "损坏原生可被有证据替换"
+      ]
+    },
+    {
+      "id": "T0208",
+      "phase": "P2",
+      "title": "栅格文字替换为可编辑段落",
+      "priority": "P0",
+      "dependencies": [
+        "T0205",
+        "T0207"
+      ],
+      "goal": "将 raster_text OCR 内容聚合并插入 IR。",
+      "deliverables": [
+        "RasterTextAssembler"
+      ],
+      "acceptance": [
+        "与周围原生顺序正确",
+        "原裁剪图保留"
+      ]
+    },
+    {
+      "id": "T0209",
+      "phase": "P2",
+      "title": "普通配图与内部文字元数据",
+      "priority": "P0",
+      "dependencies": [
+        "T0203",
+        "T0205"
+      ],
+      "goal": "区分 figure_with_internal_text 和 raster_text。",
+      "deliverables": [
+        "FigureClassifier rules",
+        "metadata OCR policy"
+      ],
+      "acceptance": [
+        "实验图不拆",
+        "内部文字不进入正文重复"
+      ]
+    },
+    {
+      "id": "T0210",
+      "phase": "P2",
+      "title": "混合页面融合",
+      "priority": "P0",
+      "dependencies": [
+        "T0207",
+        "T0208",
+        "T0209"
+      ],
+      "goal": "合并原生、OCR、图片和布局证据。",
+      "deliverables": [
+        "MixedFusion v1"
+      ],
+      "acceptance": [
+        "来源完整",
+        "无重复块",
+        "阅读顺序合理"
+      ]
+    },
+    {
+      "id": "T0211",
+      "phase": "P2",
+      "title": "混合 PDF 端到端与回归",
+      "priority": "P0",
+      "dependencies": [
+        "T0210",
+        "T0110"
+      ],
+      "goal": "完成混合文档作业和黄金集。",
+      "deliverables": [
+        "Pipeline mixed",
+        "Golden set P2"
+      ],
+      "acceptance": [
+        "局部OCR准确",
+        "配图关系保留",
+        "不全文OCR"
+      ]
+    },
+    {
+      "id": "T0301",
+      "phase": "P3",
+      "title": "PP-OCRv6 Medium 升级策略",
+      "priority": "P0",
+      "dependencies": [
+        "T0205",
+        "T0008"
+      ],
+      "goal": "低置信度/高风险区域升级复识别。",
+      "deliverables": [
+        "EscalationPolicy",
+        "candidate compare"
+      ],
+      "acceptance": [
+        "旧候选保留",
+        "升级次数有限"
+      ]
+    },
+    {
+      "id": "T0302",
+      "phase": "P3",
+      "title": "PP-StructureV3 表格 Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0204"
+      ],
+      "goal": "实现表格识别、单元格、跨度和坐标。",
+      "deliverables": [
+        "TableAdapter",
+        "table normalizer"
+      ],
+      "acceptance": [
+        "简单/合并表格正确",
+        "错误可降级"
+      ]
+    },
+    {
+      "id": "T0303",
+      "phase": "P3",
+      "title": "表格质量与图片降级",
+      "priority": "P0",
+      "dependencies": [
+        "T0302"
+      ],
+      "goal": "计算网格、覆盖和内容质量，决定 native/review/image。",
+      "deliverables": [
+        "TableQuality",
+        "fallback asset"
+      ],
+      "acceptance": [
+        "低可信不强制输出表格",
+        "原因记录"
+      ]
+    },
+    {
+      "id": "T0304",
+      "phase": "P3",
+      "title": "PP-FormulaNet Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0204"
+      ],
+      "goal": "公式区域识别和候选。",
+      "deliverables": [
+        "FormulaAdapter",
+        "LaTeX result"
+      ],
+      "acceptance": [
+        "原图保留",
+        "异常不吞掉"
+      ]
+    },
+    {
+      "id": "T0305",
+      "phase": "P3",
+      "title": "公式 OMML 与回渲染",
+      "priority": "P0",
+      "dependencies": [
+        "T0304"
+      ],
+      "goal": "LaTeX/MathML/OMML 转换和视觉验证。",
+      "deliverables": [
+        "FormulaConverter",
+        "render comparator"
+      ],
+      "acceptance": [
+        "通过才输出OMML",
+        "失败自动图片"
+      ]
+    },
+    {
+      "id": "T0306",
+      "phase": "P3",
+      "title": "化学与复杂图形保留规则",
+      "priority": "P0",
+      "dependencies": [
+        "T0209",
+        "T0304"
+      ],
+      "goal": "区分纯文本化学式、结构图、装置图和流程图。",
+      "deliverables": [
+        "DomainFigurePolicy",
+        "fixtures"
+      ],
+      "acceptance": [
+        "结构图不误转公式",
+        "方程式可处理"
+      ]
+    },
+    {
+      "id": "T0307",
+      "phase": "P3",
+      "title": "扫描页快速流水线",
+      "priority": "P0",
+      "dependencies": [
+        "T0201",
+        "T0301",
+        "T0303",
+        "T0305",
+        "T0306"
+      ],
+      "goal": "PP Layout → OCR/Table/Formula/Figure。",
+      "deliverables": [
+        "ScannedFastPipeline"
+      ],
+      "acceptance": [
+        "正文可编辑",
+        "图片完整",
+        "区域无重复"
+      ]
+    },
+    {
+      "id": "T0308",
+      "phase": "P3",
+      "title": "扫描页专项融合",
+      "priority": "P0",
+      "dependencies": [
+        "T0303",
+        "T0305",
+        "T0307"
+      ],
+      "goal": "按任务权威合并表格、公式、文字和图。",
+      "deliverables": [
+        "SpecialistFusion"
+      ],
+      "acceptance": [
+        "表格/公式选择规则可解释"
+      ]
+    },
+    {
+      "id": "T0309",
+      "phase": "P3",
+      "title": "扫描 PDF 回归集",
+      "priority": "P0",
+      "dependencies": [
+        "T0308",
+        "T0012"
+      ],
+      "goal": "建立扫描、倾斜、公式、表格和中英样本。",
+      "deliverables": [
+        "Golden set P3",
+        "指标报告"
+      ],
+      "acceptance": [
+        "关键指标基线记录",
+        "降级正确"
+      ]
+    },
+    {
+      "id": "T0401",
+      "phase": "P4",
+      "title": "MonkeyOCRv2 网关 Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0006"
+      ],
+      "goal": "实现 layout.complex 请求、鉴权、超时和幂等。",
+      "deliverables": [
+        "MonkeyAdapter",
+        "mock fixtures"
+      ],
+      "acceptance": [
+        "只通过8100",
+        "原始响应引用保存"
+      ]
+    },
+    {
+      "id": "T0402",
+      "phase": "P4",
+      "title": "Monkey 标签与内容归一化",
+      "priority": "P0",
+      "dependencies": [
+        "T0401"
+      ],
+      "goal": "实现标签映射、未知标签和内容格式解析。",
+      "deliverables": [
+        "MonkeyNormalizer",
+        "mapping config"
+      ],
+      "acceptance": [
+        "未知标签不丢",
+        "HTML/LaTeX安全处理"
+      ]
+    },
+    {
+      "id": "T0403",
+      "phase": "P4",
+      "title": "Monkey 坐标归一化",
+      "priority": "P0",
+      "dependencies": [
+        "T0401",
+        "T0102"
+      ],
+      "goal": "归一化/像素/区域/PDF point 变换。",
+      "deliverables": [
+        "MonkeyCoordinateMapper"
+      ],
+      "acceptance": [
+        "属性测试通过",
+        "越界产生Issue"
+      ]
+    },
+    {
+      "id": "T0404",
+      "phase": "P4",
+      "title": "复杂页升级策略",
+      "priority": "P0",
+      "dependencies": [
+        "T0202",
+        "T0401"
+      ],
+      "goal": "基于复杂度、冲突、文档模式和准确档调用 Monkey。",
+      "deliverables": [
+        "ComplexLayoutPolicy"
+      ],
+      "acceptance": [
+        "简单页不调用",
+        "决策可解释"
+      ]
+    },
+    {
+      "id": "T0405",
+      "phase": "P4",
+      "title": "几何权威仲裁",
+      "priority": "P0",
+      "dependencies": [
+        "T0402",
+        "T0403",
+        "T0203"
+      ],
+      "goal": "原生对象、Monkey、PP Layout 和规则之间选择 geometry_source。",
+      "deliverables": [
+        "GeometryArbitrator"
+      ],
+      "acceptance": [
+        "PP 与 Monkey 作为并列候选",
+        "选择理由可解释",
+        "不得无实测证据固化固定主导关系",
+        "原生有效几何不被无证据覆盖"
+      ]
+    },
+    {
+      "id": "T0406",
+      "phase": "P4",
+      "title": "Monkey End-to-End 内容候选",
+      "priority": "P0",
+      "dependencies": [
+        "T0008",
+        "T0402"
+      ],
+      "goal": "将 Monkey 内容加入候选但不直接选择。",
+      "deliverables": [
+        "Candidate importer"
+      ],
+      "acceptance": [
+        "engine_confidence为空时保持null",
+        "来源版本完整"
+      ]
+    },
+    {
+      "id": "T0407",
+      "phase": "P4",
+      "title": "系统置信度计算",
+      "priority": "P0",
+      "dependencies": [
+        "T0405",
+        "T0406"
+      ],
+      "goal": "实现几何、覆盖、一致性和风险综合评分。",
+      "deliverables": [
+        "SystemConfidenceCalculator",
+        "weight config"
+      ],
+      "acceptance": [
+        "与模型置信度分离",
+        "权重版本化"
+      ]
+    },
+    {
+      "id": "T0408",
+      "phase": "P4",
+      "title": "OvisOCR2 内容复核 Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0006"
+      ],
+      "goal": "实现 review.content，解析 Markdown/HTML/LaTeX 候选。",
+      "deliverables": [
+        "OvisReviewer",
+        "safe parser"
+      ],
+      "acceptance": [
+        "不承担geometry_source",
+        "只按策略调用"
+      ]
+    },
+    {
+      "id": "T0409",
+      "phase": "P4",
+      "title": "复核触发和冲突融合",
+      "priority": "P0",
+      "dependencies": [
+        "T0308",
+        "T0407",
+        "T0408"
+      ],
+      "goal": "文字、表格、公式和覆盖冲突时调用 Ovis 并融合。",
+      "deliverables": [
+        "ReviewPolicy",
+        "FusionEngine v2"
+      ],
+      "acceptance": [
+        "候选全部保留",
+        "低可信可图片降级"
+      ]
+    },
+    {
+      "id": "T0410",
+      "phase": "P4",
+      "title": "GPU 队列与客户端背压",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0401",
+        "T0408"
+      ],
+      "goal": "限制 Monkey/Ovis 并发、处理429/503、退避。",
+      "deliverables": [
+        "Backpressure client",
+        "metrics"
+      ],
+      "acceptance": [
+        "不并发轰炸16GB GPU",
+        "取消可传播"
+      ]
+    },
+    {
+      "id": "T0411",
+      "phase": "P4",
+      "title": "Monkey/Ovis 影子模式",
+      "priority": "P0",
+      "dependencies": [
+        "T0409",
+        "T0309"
+      ],
+      "goal": "同一黄金集运行 A/B/C/D 路线并比较。",
+      "deliverables": [
+        "Shadow runner",
+        "comparison report"
+      ],
+      "acceptance": [
+        "不影响主输出",
+        "指标和显存/延迟记录"
+      ]
+    },
+    {
+      "id": "T0412",
+      "phase": "P4",
+      "title": "复杂页回归门禁",
+      "priority": "P0",
+      "dependencies": [
+        "T0411"
+      ],
+      "goal": "建立多栏、拍照、题图密集和低质量复杂页门禁。",
+      "deliverables": [
+        "Golden set P4",
+        "release thresholds"
+      ],
+      "acceptance": [
+        "阅读顺序/几何不低于基线",
+        "无新增静默纠正"
+      ]
+    },
+    {
+      "id": "T0501",
+      "phase": "P5",
+      "title": "文档层级聚合",
+      "priority": "P0",
+      "dependencies": [
+        "T0210",
+        "T0409"
+      ],
+      "goal": "从块和样式形成 section/heading/paragraph/list。",
+      "deliverables": [
+        "DocumentStructureBuilder"
+      ],
+      "acceptance": [
+        "层级稳定",
+        "原页来源保留"
+      ]
+    },
+    {
+      "id": "T0502",
+      "phase": "P5",
+      "title": "题号识别器",
+      "priority": "P0",
+      "dependencies": [
+        "T0501"
+      ],
+      "goal": "支持中英题号、圈号和层级上下文。",
+      "deliverables": [
+        "QuestionNumberParser",
+        "fixtures"
+      ],
+      "acceptance": [
+        "避免公式序号误判",
+        "可解释结果"
+      ]
+    },
+    {
+      "id": "T0503",
+      "phase": "P5",
+      "title": "大题/小题/子题层级",
+      "priority": "P0",
+      "dependencies": [
+        "T0502"
+      ],
+      "goal": "构建 major_question/question/subquestion。",
+      "deliverables": [
+        "QuestionHierarchyBuilder"
+      ],
+      "acceptance": [
+        "跨页可连接",
+        "层级无循环"
+      ]
+    },
+    {
+      "id": "T0504",
+      "phase": "P5",
+      "title": "选项识别与布局",
+      "priority": "P0",
+      "dependencies": [
+        "T0503"
+      ],
+      "goal": "识别文字选项和图片选项。",
+      "deliverables": [
+        "OptionParser",
+        "grid hints"
+      ],
+      "acceptance": [
+        "A-D顺序正确",
+        "图片选项不拆"
+      ]
+    },
+    {
+      "id": "T0505",
+      "phase": "P5",
+      "title": "图片去重与统一资产",
+      "priority": "P0",
+      "dependencies": [
+        "T0106",
+        "T0203",
+        "T0405"
+      ],
+      "goal": "融合 PDF 图片、PP/Monkey检测框和裁剪。",
+      "deliverables": [
+        "FigureDeduplicator"
+      ],
+      "acceptance": [
+        "同图不重复",
+        "选择最佳原始资产"
+      ]
+    },
+    {
+      "id": "T0506",
+      "phase": "P5",
+      "title": "题图锚定评分",
+      "priority": "P0",
+      "dependencies": [
+        "T0503",
+        "T0505"
+      ],
+      "goal": "实现 anchored_to 评分、阈值和证据。",
+      "deliverables": [
+        "FigureAnchorResolver"
+      ],
+      "acceptance": [
+        "自动/审校/未归属三态",
+        "跨下一题惩罚"
+      ]
+    },
+    {
+      "id": "T0507",
+      "phase": "P5",
+      "title": "图题和跨页关系",
+      "priority": "P0",
+      "dependencies": [
+        "T0506"
+      ],
+      "goal": "实现 caption_of、continuation_of 和本地组合。",
+      "deliverables": [
+        "CaptionResolver",
+        "CrossPageResolver"
+      ],
+      "acceptance": [
+        "图题不分离",
+        "跨页题可重组"
+      ]
+    },
+    {
+      "id": "T0508",
+      "phase": "P5",
+      "title": "高级 DOCX Layout Planner",
+      "priority": "P0",
+      "dependencies": [
+        "T0501",
+        "T0504",
+        "T0507",
+        "T0303",
+        "T0305"
+      ],
+      "goal": "根据结构和 render_policy 生成布局计划。",
+      "deliverables": [
+        "Planner v2"
+      ],
+      "acceptance": [
+        "无模型调用",
+        "每个块有输出决策"
+      ]
+    },
+    {
+      "id": "T0509",
+      "phase": "P5",
+      "title": "题图稳定容器",
+      "priority": "P0",
+      "dependencies": [
+        "T0508"
+      ],
+      "goal": "实现行内图、1×2、1×N、2×2 无边框布局。",
+      "deliverables": [
+        "LayoutTableBuilder"
+      ],
+      "acceptance": [
+        "图片不漂移到其他题",
+        "表格标记为布局容器"
+      ]
+    },
+    {
+      "id": "T0510",
+      "phase": "P5",
+      "title": "Word 原生表格输出",
+      "priority": "P0",
+      "dependencies": [
+        "T0303",
+        "T0508"
+      ],
+      "goal": "单元格跨度、列宽、边框、内容和分页。",
+      "deliverables": [
+        "NativeTableBuilder"
+      ],
+      "acceptance": [
+        "复杂样本通过",
+        "低可信仍图片"
+      ]
+    },
+    {
+      "id": "T0511",
+      "phase": "P5",
+      "title": "Word 公式输出",
+      "priority": "P0",
+      "dependencies": [
+        "T0305",
+        "T0508"
+      ],
+      "goal": "OMML 插入、回退和来源映射。",
+      "deliverables": [
+        "OmmlBuilder"
+      ],
+      "acceptance": [
+        "公式失败不阻断",
+        "原图可追溯"
+      ]
+    },
+    {
+      "id": "T0512",
+      "phase": "P5",
+      "title": "分页和 keep 规则",
+      "priority": "P0",
+      "dependencies": [
+        "T0509",
+        "T0510",
+        "T0511"
+      ],
+      "goal": "标题、短题、题图、图题和表头保持。",
+      "deliverables": [
+        "PaginationPolicy"
+      ],
+      "acceptance": [
+        "无大面积无意义空白",
+        "长题可跨页"
+      ]
+    },
+    {
+      "id": "T0513",
+      "phase": "P5",
+      "title": "页眉页脚与正式页码",
+      "priority": "P0",
+      "dependencies": [
+        "T0501",
+        "T0508"
+      ],
+      "goal": "识别并按配置保留正式页码，忽略扫描查看器页码。",
+      "deliverables": [
+        "HeaderFooterBuilder"
+      ],
+      "acceptance": [
+        "重复页眉不进正文",
+        "配置可关闭"
+      ]
+    },
+    {
+      "id": "T0514",
+      "phase": "P5",
+      "title": "完整 DOCX 端到端",
+      "priority": "P0",
+      "dependencies": [
+        "T0512",
+        "T0513"
+      ],
+      "goal": "构建所有文档类型并生成来源报告。",
+      "deliverables": [
+        "Builder v2",
+        "source map"
+      ],
+      "acceptance": [
+        "DOCX可打开",
+        "题图/表格/公式策略正确"
+      ]
+    },
+    {
+      "id": "T0515",
+      "phase": "P5",
+      "title": "试卷黄金回归",
+      "priority": "P0",
+      "dependencies": [
+        "T0514",
+        "T0412"
+      ],
+      "goal": "数学、英语、化学试卷的结构与 Word 回归。",
+      "deliverables": [
+        "Golden set P5",
+        "题图指标"
+      ],
+      "acceptance": [
+        "题图准确率达到阶段阈值",
+        "无静默纠错"
+      ]
+    },
+    {
+      "id": "T0601",
+      "phase": "P6",
+      "title": "Issue 生成器",
+      "priority": "P0",
+      "dependencies": [
+        "T0009",
+        "T0409",
+        "T0514"
+      ],
+      "goal": "从路由、候选、结构和 Builder 生成统一问题。",
+      "deliverables": [
+        "IssueRules",
+        "severity mapping"
+      ],
+      "acceptance": [
+        "每个问题有建议动作",
+        "可定位页/块"
+      ]
+    },
+    {
+      "id": "T0602",
+      "phase": "P6",
+      "title": "内容与结构 QA",
+      "priority": "P0",
+      "dependencies": [
+        "T0601"
+      ],
+      "goal": "遗漏、重复、顺序、覆盖、冲突和题图检查。",
+      "deliverables": [
+        "QaEngine core"
+      ],
+      "acceptance": [
+        "黄金故障样本可命中",
+        "误报可配置"
+      ]
+    },
+    {
+      "id": "T0603",
+      "phase": "P6",
+      "title": "DOCX 包和重新打开检查",
+      "priority": "P0",
+      "dependencies": [
+        "T0514"
+      ],
+      "goal": "验证 ZIP、XML、关系、图片和重新加载。",
+      "deliverables": [
+        "DocxIntegrityChecker"
+      ],
+      "acceptance": [
+        "损坏样本可发现",
+        "通过样本100%打开"
+      ]
+    },
+    {
+      "id": "T0604",
+      "phase": "P6",
+      "title": "DOCX 回渲染 Adapter",
+      "priority": "P0",
+      "dependencies": [
+        "T0603"
+      ],
+      "goal": "使用可配置后端生成回渲染页面。",
+      "deliverables": [
+        "RenderBackend protocol",
+        "implementation"
+      ],
+      "acceptance": [
+        "失败不破坏DOCX",
+        "后端可替换"
+      ]
+    },
+    {
+      "id": "T0605",
+      "phase": "P6",
+      "title": "结构化视觉比较",
+      "priority": "P0",
+      "dependencies": [
+        "T0604"
+      ],
+      "goal": "发现丢图、重叠、空白、方向、题图分离和表格崩坏。",
+      "deliverables": [
+        "VisualQa",
+        "metrics"
+      ],
+      "acceptance": [
+        "不以像素完全一致为目标",
+        "问题可定位"
+      ]
+    },
+    {
+      "id": "T0606",
+      "phase": "P6",
+      "title": "审校 API",
+      "priority": "P0",
+      "dependencies": [
+        "T0011",
+        "T0601"
+      ],
+      "goal": "读取页面/块/候选，修改内容、类型、关系和策略。",
+      "deliverables": [
+        "Review endpoints",
+        "audit records"
+      ],
+      "acceptance": [
+        "权限/路径安全",
+        "修改可重建"
+      ]
+    },
+    {
+      "id": "T0607",
+      "phase": "P6",
+      "title": "审校 UI",
+      "priority": "P0",
+      "dependencies": [
+        "T0606"
+      ],
+      "goal": "页面预览、候选对比、题图分配、问题列表。",
+      "deliverables": [
+        "React review screens"
+      ],
+      "acceptance": [
+        "不在UI实现业务规则",
+        "修改有确认"
+      ]
+    },
+    {
+      "id": "T0608",
+      "phase": "P6",
+      "title": "人工修正与锁定",
+      "priority": "P0",
+      "dependencies": [
+        "T0606",
+        "T0008"
+      ],
+      "goal": "创建 manual_correction 候选并防自动覆盖。",
+      "deliverables": [
+        "ManualCorrectionService"
+      ],
+      "acceptance": [
+        "审计完整",
+        "可撤销"
+      ]
+    },
+    {
+      "id": "T0609",
+      "phase": "P6",
+      "title": "区域重识别",
+      "priority": "P0",
+      "dependencies": [
+        "T0301",
+        "T0409",
+        "T0608"
+      ],
+      "goal": "选择模型、DPI和策略追加候选并重新融合。",
+      "deliverables": [
+        "Reprocess endpoint",
+        "UI action"
+      ],
+      "acceptance": [
+        "旧候选保留",
+        "有次数/资源限制"
+      ]
+    },
+    {
+      "id": "T0610",
+      "phase": "P6",
+      "title": "质量和转换报告",
+      "priority": "P0",
+      "dependencies": [
+        "T0602",
+        "T0603",
+        "T0605"
+      ],
+      "goal": "导出页类型、模型、降级、问题、字体和来源摘要。",
+      "deliverables": [
+        "JobReport",
+        "download artifact"
+      ],
+      "acceptance": [
+        "不泄露全文",
+        "数据与作业一致"
+      ]
+    },
+    {
+      "id": "T0701",
+      "phase": "P7",
+      "title": "性能基准与剖析",
+      "priority": "P0",
+      "dependencies": [
+        "T0515",
+        "T0610"
+      ],
+      "goal": "记录不同文档类型耗时、内存、显存、模型调用。",
+      "deliverables": [
+        "Benchmark suite",
+        "baseline report"
+      ],
+      "acceptance": [
+        "按阶段可复现",
+        "包含P50/P95"
+      ]
+    },
+    {
+      "id": "T0702",
+      "phase": "P7",
+      "title": "缓存和去重",
+      "priority": "P0",
+      "dependencies": [
+        "T0005",
+        "T0010"
+      ],
+      "goal": "页面/区域/模型结果按输入和版本哈希缓存。",
+      "deliverables": [
+        "CacheStore",
+        "eviction"
+      ],
+      "acceptance": [
+        "模型升级不误命中",
+        "敏感缓存可清理"
+      ]
+    },
+    {
+      "id": "T0703",
+      "phase": "P7",
+      "title": "并发与背压优化",
+      "priority": "P0",
+      "dependencies": [
+        "T0410",
+        "T0701"
+      ],
+      "goal": "轻任务并发、重模型单并发、队列和公平性。",
+      "deliverables": [
+        "Scheduler",
+        "load tests"
+      ],
+      "acceptance": [
+        "无OOM风暴",
+        "取消及时"
+      ]
+    },
+    {
+      "id": "T0704",
+      "phase": "P7",
+      "title": "取消、恢复与断点",
+      "priority": "P0",
+      "dependencies": [
+        "T0004",
+        "T0702"
+      ],
+      "goal": "阶段检查点、重启恢复和清理。",
+      "deliverables": [
+        "CheckpointManager",
+        "resume tests"
+      ],
+      "acceptance": [
+        "不重复已完成模型调用",
+        "状态一致"
+      ]
+    },
+    {
+      "id": "T0705",
+      "phase": "P7",
+      "title": "模型网关安全加固",
+      "priority": "P0",
+      "dependencies": [
+        "T0010",
+        "T0410"
+      ],
+      "goal": "TLS/API Key/IP/上传限制/超时/非root/断网。",
+      "deliverables": [
+        "Security config",
+        "penetration checklist"
+      ],
+      "acceptance": [
+        "内部端口不暴露",
+        "秘密不泄露"
+      ]
+    },
+    {
+      "id": "T0706",
+      "phase": "P7",
+      "title": "数据清理与隐私测试",
+      "priority": "P0",
+      "dependencies": [
+        "T0005",
+        "T0013",
+        "T0702"
+      ],
+      "goal": "临时文件、原始响应、缓存和日志清理。",
+      "deliverables": [
+        "Retention policy",
+        "privacy tests"
+      ],
+      "acceptance": [
+        "清理后无残留正文",
+        "保留项可配置"
+      ]
+    },
+    {
+      "id": "T0707",
+      "phase": "P7",
+      "title": "客户端打包",
+      "priority": "P0",
+      "dependencies": [
+        "T0607",
+        "T0704"
+      ],
+      "goal": "构建 macOS 应用和独立 CLI。",
+      "deliverables": [
+        "Release artifacts",
+        "signing plan"
+      ],
+      "acceptance": [
+        "干净机器可运行",
+        "配置向导可用"
+      ]
+    },
+    {
+      "id": "T0708",
+      "phase": "P7",
+      "title": "统一模型网关部署",
+      "priority": "P0",
+      "dependencies": [
+        "T0401",
+        "T0705"
+      ],
+      "goal": "部署统一模型网关 8100，并接入当前直接服务 9000/8000/8080。",
+      "deliverables": [
+        "Gateway deployment",
+        "routing configuration",
+        "health checks",
+        "smoke tests",
+        "rollback plan"
+      ],
+      "acceptance": [
+        "主应用仅访问8100",
+        "profile可切换"
+      ]
+    },
+    {
+      "id": "T0709",
+      "phase": "P7",
+      "title": "观测与运维",
+      "priority": "P0",
+      "dependencies": [
+        "T0013",
+        "T0703"
+      ],
+      "goal": "健康、模型状态、队列、错误和资源指标。",
+      "deliverables": [
+        "Dash/report endpoints",
+        "runbook"
+      ],
+      "acceptance": [
+        "不含正文",
+        "异常可定位"
+      ]
+    },
+    {
+      "id": "T0710",
+      "phase": "P7",
+      "title": "SBOM、许可证和供应链",
+      "priority": "P0",
+      "dependencies": [
+        "T0705"
+      ],
+      "goal": "生成依赖/模型/镜像清单，固定 revision/digest。",
+      "deliverables": [
+        "SBOM",
+        "THIRD_PARTY_NOTICES"
+      ],
+      "acceptance": [
+        "无未评估高风险依赖",
+        "可复现"
+      ]
+    },
+    {
+      "id": "T0711",
+      "phase": "P7",
+      "title": "发布资格回归",
+      "priority": "P0",
+      "dependencies": [
+        "T0701",
+        "T0706",
+        "T0707",
+        "T0708",
+        "T0710"
+      ],
+      "goal": "运行全部黄金集、安全、性能和升级测试。",
+      "deliverables": [
+        "Release qualification report"
+      ],
+      "acceptance": [
+        "阻断问题为0",
+        "DOCX打开率100%"
+      ]
+    },
+    {
+      "id": "T0712",
+      "phase": "P7",
+      "title": "用户与开发文档",
+      "priority": "P0",
+      "dependencies": [
+        "T0711"
+      ],
+      "goal": "完善安装、使用、故障、开发和模型升级手册。",
+      "deliverables": [
+        "Docs site/markdown",
+        "操作清单"
+      ],
+      "acceptance": [
+        "新环境可按文档复现",
+        "文档版本一致"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "description": "Normalized MonkeyOCRv2 /v1/models response fixture",
+  "contract_status": "verified",
+  "model_id": "MonkeyOCRv2",
+  "response": {
+    "object": "list",
+    "data": [
+      {
+        "id": "MonkeyOCRv2",
+        "object": "model",
+        "created": 1234567890,
+        "owned_by": "organization"
+      }
+    ]
+  }
+}

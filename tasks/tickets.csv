@@ -1,0 +1,98 @@
+﻿id,phase,title,priority,dependencies,goal,deliverables,acceptance
+T0014,P0,模型部署基线与架构文档对齐,P0,T0001,将仓库中的产品文档、架构文档、ADR、模型角色矩阵、路由配置、阶段计划和任务目录，与当前真实部署基线对齐。,部署基线文档（docs/23_MODEL_DEPLOYMENT_BASELINE_V1_1.md）;修订后的 ADR-003 和新增 ADR-006;更新后的核心文档和配置样例;更新后的任务目录（T0014-T0017）,文档与当前部署事实一致;旧模型名称已标注为历史或更新;目标架构与当前部署明确区分;待验证事项清晰列出;四个前置任务已加入任务目录
+T0015,P0,服务契约发现,P0,T0014,通过实测服务器 /openapi.json 冻结 PP HTTP 端点、Transport、请求参数和响应 Schema；确认 Monkey 和 Ovis 的模型元数据。,冻结的 PP 端点和 Transport 配置;冻结的请求/响应 Schema;模型版本和 revision 记录;Multipart 与 JSON-Base64 差异说明,所有端点已通过实测验证;Schema 与服务器 /openapi.json 一致;模型版本已锁定;不依赖文档猜测
+T0016,P0,JPG/PNG 与数学试卷回归,P0,T0015,验证 JPG/PNG 输入一致性；对比 PP 新版布局与 MonkeyOCRv2 在数学试卷上的几何质量；决定是否形成新的几何权威 ADR。,JPG/PNG 一致性报告;PP vs Monkey 几何质量对比报告;新的几何权威 ADR（如适用）;决策记录,JPG/PNG 默认策略已确定;几何质量对比完成;是否形成终局 ADR 已决策
+T0017,P0,旋转、UVDoc、多栏、表格和公式专项能力矩阵,P0,T0015,验证 PP-LCNet_x1_0_doc_ori、UVDoc、多栏布局、有线/无线表格、公式密集页等专项能力，建立能力矩阵。,专项能力验证报告;能力矩阵文档;启用策略建议,所有专项能力已验证;能力矩阵已完成;启用策略已确定
+T0001,P0,初始化 Monorepo 与工具链,P0,,建立 Python、Tauri/React、测试和文档基础。,仓库目录;pyproject.toml/uv.lock;前端 workspace;基础 README,Python/TS 构建通过;格式化和 lint 可运行;无业务模型耦合
+T0002,P0,建立 CI 与质量门禁,P0,T0001,自动执行 lint、typecheck、unit、schema validation。,CI 配置;本地 quality 脚本,失败会阻断;输出清晰报告
+T0003,P0,配置与秘密管理,P0,T0001,实现 YAML+环境变量配置、API Key 脱敏和配置版本。,Config 模型;example.env;配置加载测试,秘密不入日志;未知字段拒绝;三档配置可加载
+T0004,P0,作业状态机,P0,T0001,实现 created/preflight/extracting/routing/recognizing/fusing/structuring/building/qa/completed/failed/cancelled/waiting_model。,状态机;转换规则;持久化模型,非法转换拒绝;重试和取消有测试
+T0005,P0,作业目录与资产存储,P0,T0001;T0003,输入只读副本、页面图、区域图、原始响应、IR 和输出隔离。,WorkspaceManager;AssetStore;清理策略,防路径穿越;哈希验证;并发作业隔离
+T0006,P0,定义引擎 Adapter 协议,P0,T0001,冻结 Layout/OCR/Table/Formula/Reviewer 协议。,Protocol/Pydantic DTO;Mock Adapter,核心层不依赖模型 SDK;Mock 可替换
+T0007,P0,实现 Layout IR 1.1 域模型,P0,T0001,实现 Schema 对应模型、序列化和校验。,IR 模型;Schema validator;迁移入口,样例验证通过;非法 bbox/候选拒绝
+T0008,P0,候选、来源与证据模型,P0,T0007,实现 content_candidates、geometry_source、provenance 和选择理由。,Candidate 模型;Provenance 记录器,engine_confidence 可空;system_confidence 独立
+T0009,P0,错误码与 Issue 分类,P0,T0004,统一错误、严重度、建议动作和可重试属性。,Error 基类;Issue 工厂;错误映射,不出现通用吞错;API 返回稳定错误码
+T0010,P0,模型网关客户端骨架,P0,T0003;T0006;T0009,实现 8100 客户端、鉴权、超时、重试、幂等和取消。,GatewayClient;Mock Server;连接健康检查,不直连内部端口;错误映射正确;API Key 脱敏
+T0011,P0,CLI 与本地 API 骨架,P0,T0004;T0005,提供 create/status/cancel/export 命令和本地 API。,CLI;FastAPI routes;请求 ID,模拟作业完整流转;取消幂等
+T0012,P0,黄金测试框架,P0,T0002;T0007,建立 fixture manifest、期望 IR、文本/结构比较器。,Golden harness;fixture metadata schema,可新增样本;不硬编码业务文本
+T0013,P0,日志与指标基础,P0,T0003;T0004,结构化日志、阶段计时、模型调用计数、无正文策略。,Logger;Metrics DTO;脱敏测试,正文不会写日志;request/job/page 可关联
+T0101,P1,PDF 文件预检,P0,T0005;T0009,读取文件信息、加密、页数、尺寸、旋转、损坏和哈希。,PreflightService;报告模型,源文件不修改;损坏/加密有明确错误
+T0102,P1,PDFium 页面几何与渲染,P0,T0101,实现 MediaBox/CropBox/旋转和像素↔PDF point 转换。,PageGeometry;Renderer,旋转四方向测试;区域裁剪误差在阈值内
+T0103,P1,pdf-inspector Adapter,P0,T0101;T0006,封装页面分类、文字、字体和编码信息。,PdfInspectorAdapter;版本探测,原始输出不泄露到核心;异常映射
+T0104,P1,原生文字质量评分,P0,T0102;T0103,计算 Unicode、乱码、覆盖、顺序、重复和隐藏层指标。,NativeTextQualityScorer;阈值配置,已知乱码样本可识别;正常文本不过度拒绝
+T0105,P1,原生文字转 Layout IR,P0,T0007;T0103;T0104,生成文字块、run、样式、来源和阅读顺序候选。,NativeTextExtractor;IR writer,字体/字号/上下标保留;所有 run 有来源
+T0106,P1,图片和矢量对象提取,P0,T0102;T0005,提取原图；复杂矢量组合区域渲染。,ImageExtractor;VectorRegionRenderer;Asset records,透明/裁剪/旋转图片正确;资产去重
+T0107,P1,简单阅读顺序与段落聚合,P0,T0105,基于坐标、基线、间距和样式合并行/段落。,ReadingOrderSimple;ParagraphGrouper,单栏/双栏基础样本正确;页眉页脚可分离
+T0108,P1,样式归一化与字体映射,P0,T0105,建立 Word 样式候选和字体回退。,StyleNormalizer;FontMap,中英文字体分开处理;输出字体替换报告
+T0109,P1,基础 DOCX Planner/Builder,P0,T0106;T0107;T0108,输出标题、段落、列表和行内图片。,DocxPlan;BasicBuilder,DOCX ZIP 有效;可重新打开;无绝对定位滥用
+T0110,P1,电子 PDF 端到端作业,P0,T0109;T0011,串联预检、提取、IR、DOCX、报告。,Pipeline native;CLI command,无模型机可完成;正常文字模型调用=0
+T0111,P1,电子 PDF 黄金回归,P0,T0110;T0012,建设并验证普通报告、标准、中英混排、图片文档。,Golden set P1;回归报告,内容/图片/顺序通过;DOCX 可打开率100%
+T0201,P2,Paddle 布局能力 Adapter,P0,T0010;T0102,实现 paddle.layout_global、paddle.layout_block 任务和归一化。,PaddleLayoutAdapter;label map,通过8100（或 Gate 阶段直连 8080）;bbox 转换正确;未知标签保留
+T0202,P2,页面复杂度与路由评分,P0,T0104;T0201,计算何时 native、fast、complex、specialist。,Router;RoutingDecision,决策可解释;配置版本写入报告
+T0203,P2,区域切分与覆盖合并,P0,T0105;T0106;T0201,融合原生对象、PP Layout 和图片对象形成区域。,RegionPartitioner;overlap resolver,无明显空洞/重复;普通图不误判 raster_text
+T0204,P2,高质量区域裁剪,P0,T0102;T0203,按任务选择 DPI、padding、颜色和去旋转。,RegionCropper;image metadata,裁剪可逆映射;不过度裁掉上下标
+T0205,P2,Paddle 文字 OCR 能力 Adapter,P0,T0010;T0204,实现 paddle.text_ocr 任务、文字框、行和置信度。,TextOcrAdapter;normalizer,中文英文正常;置信度保留;无自动纠错
+T0206,P2,OCR 坐标归一化,P0,T0204;T0205,像素坐标映射回页面 PDF point。,CoordinateMapper tests,旋转/裁剪/缩放属性测试通过
+T0207,P2,隐藏文字层检测与去重,P0,T0104;T0205;T0206,对原生/OCR 几何和内容匹配。,HiddenTextResolver;supersedes relations,无双层重复;损坏原生可被有证据替换
+T0208,P2,栅格文字替换为可编辑段落,P0,T0205;T0207,将 raster_text OCR 内容聚合并插入 IR。,RasterTextAssembler,与周围原生顺序正确;原裁剪图保留
+T0209,P2,普通配图与内部文字元数据,P0,T0203;T0205,区分 figure_with_internal_text 和 raster_text。,FigureClassifier rules;metadata OCR policy,实验图不拆;内部文字不进入正文重复
+T0210,P2,混合页面融合,P0,T0207;T0208;T0209,合并原生、OCR、图片和布局证据。,MixedFusion v1,来源完整;无重复块;阅读顺序合理
+T0211,P2,混合 PDF 端到端与回归,P0,T0210;T0110,完成混合文档作业和黄金集。,Pipeline mixed;Golden set P2,局部OCR准确;配图关系保留;不全文OCR
+T0301,P3,PP-OCRv6 Medium 升级策略,P0,T0205;T0008,低置信度/高风险区域升级复识别。,EscalationPolicy;candidate compare,旧候选保留;升级次数有限
+T0302,P3,PP-StructureV3 表格 Adapter,P0,T0010;T0204,实现表格识别、单元格、跨度和坐标。,TableAdapter;table normalizer,简单/合并表格正确;错误可降级
+T0303,P3,表格质量与图片降级,P0,T0302,计算网格、覆盖和内容质量，决定 native/review/image。,TableQuality;fallback asset,低可信不强制输出表格;原因记录
+T0304,P3,PP-FormulaNet Adapter,P0,T0010;T0204,公式区域识别和候选。,FormulaAdapter;LaTeX result,原图保留;异常不吞掉
+T0305,P3,公式 OMML 与回渲染,P0,T0304,LaTeX/MathML/OMML 转换和视觉验证。,FormulaConverter;render comparator,通过才输出OMML;失败自动图片
+T0306,P3,化学与复杂图形保留规则,P0,T0209;T0304,区分纯文本化学式、结构图、装置图和流程图。,DomainFigurePolicy;fixtures,结构图不误转公式;方程式可处理
+T0307,P3,扫描页快速流水线,P0,T0201;T0301;T0303;T0305;T0306,PP Layout → OCR/Table/Formula/Figure。,ScannedFastPipeline,正文可编辑;图片完整;区域无重复
+T0308,P3,扫描页专项融合,P0,T0303;T0305;T0307,按任务权威合并表格、公式、文字和图。,SpecialistFusion,表格/公式选择规则可解释
+T0309,P3,扫描 PDF 回归集,P0,T0308;T0012,建立扫描、倾斜、公式、表格和中英样本。,Golden set P3;指标报告,关键指标基线记录;降级正确
+T0401,P4,MonkeyOCRv2 网关 Adapter,P0,T0010;T0006,实现 layout.complex 请求、鉴权、超时和幂等。,MonkeyAdapter;mock fixtures,只通过8100;原始响应引用保存
+T0402,P4,Monkey 标签与内容归一化,P0,T0401,实现标签映射、未知标签和内容格式解析。,MonkeyNormalizer;mapping config,未知标签不丢;HTML/LaTeX安全处理
+T0403,P4,Monkey 坐标归一化,P0,T0401;T0102,归一化/像素/区域/PDF point 变换。,MonkeyCoordinateMapper,属性测试通过;越界产生Issue
+T0404,P4,复杂页升级策略,P0,T0202;T0401,基于复杂度、冲突、文档模式和准确档调用 Monkey。,ComplexLayoutPolicy,简单页不调用;决策可解释
+T0405,P4,几何权威仲裁,P0,T0402;T0403;T0203,原生对象、Monkey、PP Layout 和规则之间选择 geometry_source。,GeometryArbitrator,PP 与 Monkey 作为并列候选;选择理由可解释;不得无实测证据固化固定主导关系;原生有效几何不被无证据覆盖
+T0406,P4,Monkey End-to-End 内容候选,P0,T0008;T0402,将 Monkey 内容加入候选但不直接选择。,Candidate importer,engine_confidence为空时保持null;来源版本完整
+T0407,P4,系统置信度计算,P0,T0405;T0406,实现几何、覆盖、一致性和风险综合评分。,SystemConfidenceCalculator;weight config,与模型置信度分离;权重版本化
+T0408,P4,OvisOCR2 内容复核 Adapter,P0,T0010;T0006,实现 review.content，解析 Markdown/HTML/LaTeX 候选。,OvisReviewer;safe parser,不承担geometry_source;只按策略调用
+T0409,P4,复核触发和冲突融合,P0,T0308;T0407;T0408,文字、表格、公式和覆盖冲突时调用 Ovis 并融合。,ReviewPolicy;FusionEngine v2,候选全部保留;低可信可图片降级
+T0410,P4,GPU 队列与客户端背压,P0,T0010;T0401;T0408,限制 Monkey/Ovis 并发、处理429/503、退避。,Backpressure client;metrics,不并发轰炸16GB GPU;取消可传播
+T0411,P4,Monkey/Ovis 影子模式,P0,T0409;T0309,同一黄金集运行 A/B/C/D 路线并比较。,Shadow runner;comparison report,不影响主输出;指标和显存/延迟记录
+T0412,P4,复杂页回归门禁,P0,T0411,建立多栏、拍照、题图密集和低质量复杂页门禁。,Golden set P4;release thresholds,阅读顺序/几何不低于基线;无新增静默纠正
+T0501,P5,文档层级聚合,P0,T0210;T0409,从块和样式形成 section/heading/paragraph/list。,DocumentStructureBuilder,层级稳定;原页来源保留
+T0502,P5,题号识别器,P0,T0501,支持中英题号、圈号和层级上下文。,QuestionNumberParser;fixtures,避免公式序号误判;可解释结果
+T0503,P5,大题/小题/子题层级,P0,T0502,构建 major_question/question/subquestion。,QuestionHierarchyBuilder,跨页可连接;层级无循环
+T0504,P5,选项识别与布局,P0,T0503,识别文字选项和图片选项。,OptionParser;grid hints,A-D顺序正确;图片选项不拆
+T0505,P5,图片去重与统一资产,P0,T0106;T0203;T0405,融合 PDF 图片、PP/Monkey检测框和裁剪。,FigureDeduplicator,同图不重复;选择最佳原始资产
+T0506,P5,题图锚定评分,P0,T0503;T0505,实现 anchored_to 评分、阈值和证据。,FigureAnchorResolver,自动/审校/未归属三态;跨下一题惩罚
+T0507,P5,图题和跨页关系,P0,T0506,实现 caption_of、continuation_of 和本地组合。,CaptionResolver;CrossPageResolver,图题不分离;跨页题可重组
+T0508,P5,高级 DOCX Layout Planner,P0,T0501;T0504;T0507;T0303;T0305,根据结构和 render_policy 生成布局计划。,Planner v2,无模型调用;每个块有输出决策
+T0509,P5,题图稳定容器,P0,T0508,实现行内图、1×2、1×N、2×2 无边框布局。,LayoutTableBuilder,图片不漂移到其他题;表格标记为布局容器
+T0510,P5,Word 原生表格输出,P0,T0303;T0508,单元格跨度、列宽、边框、内容和分页。,NativeTableBuilder,复杂样本通过;低可信仍图片
+T0511,P5,Word 公式输出,P0,T0305;T0508,OMML 插入、回退和来源映射。,OmmlBuilder,公式失败不阻断;原图可追溯
+T0512,P5,分页和 keep 规则,P0,T0509;T0510;T0511,标题、短题、题图、图题和表头保持。,PaginationPolicy,无大面积无意义空白;长题可跨页
+T0513,P5,页眉页脚与正式页码,P0,T0501;T0508,识别并按配置保留正式页码，忽略扫描查看器页码。,HeaderFooterBuilder,重复页眉不进正文;配置可关闭
+T0514,P5,完整 DOCX 端到端,P0,T0512;T0513,构建所有文档类型并生成来源报告。,Builder v2;source map,DOCX可打开;题图/表格/公式策略正确
+T0515,P5,试卷黄金回归,P0,T0514;T0412,数学、英语、化学试卷的结构与 Word 回归。,Golden set P5;题图指标,题图准确率达到阶段阈值;无静默纠错
+T0601,P6,Issue 生成器,P0,T0009;T0409;T0514,从路由、候选、结构和 Builder 生成统一问题。,IssueRules;severity mapping,每个问题有建议动作;可定位页/块
+T0602,P6,内容与结构 QA,P0,T0601,遗漏、重复、顺序、覆盖、冲突和题图检查。,QaEngine core,黄金故障样本可命中;误报可配置
+T0603,P6,DOCX 包和重新打开检查,P0,T0514,验证 ZIP、XML、关系、图片和重新加载。,DocxIntegrityChecker,损坏样本可发现;通过样本100%打开
+T0604,P6,DOCX 回渲染 Adapter,P0,T0603,使用可配置后端生成回渲染页面。,RenderBackend protocol;implementation,失败不破坏DOCX;后端可替换
+T0605,P6,结构化视觉比较,P0,T0604,发现丢图、重叠、空白、方向、题图分离和表格崩坏。,VisualQa;metrics,不以像素完全一致为目标;问题可定位
+T0606,P6,审校 API,P0,T0011;T0601,读取页面/块/候选，修改内容、类型、关系和策略。,Review endpoints;audit records,权限/路径安全;修改可重建
+T0607,P6,审校 UI,P0,T0606,页面预览、候选对比、题图分配、问题列表。,React review screens,不在UI实现业务规则;修改有确认
+T0608,P6,人工修正与锁定,P0,T0606;T0008,创建 manual_correction 候选并防自动覆盖。,ManualCorrectionService,审计完整;可撤销
+T0609,P6,区域重识别,P0,T0301;T0409;T0608,选择模型、DPI和策略追加候选并重新融合。,Reprocess endpoint;UI action,旧候选保留;有次数/资源限制
+T0610,P6,质量和转换报告,P0,T0602;T0603;T0605,导出页类型、模型、降级、问题、字体和来源摘要。,JobReport;download artifact,不泄露全文;数据与作业一致
+T0701,P7,性能基准与剖析,P0,T0515;T0610,记录不同文档类型耗时、内存、显存、模型调用。,Benchmark suite;baseline report,按阶段可复现;包含P50/P95
+T0702,P7,缓存和去重,P0,T0005;T0010,页面/区域/模型结果按输入和版本哈希缓存。,CacheStore;eviction,模型升级不误命中;敏感缓存可清理
+T0703,P7,并发与背压优化,P0,T0410;T0701,轻任务并发、重模型单并发、队列和公平性。,Scheduler;load tests,无OOM风暴;取消及时
+T0704,P7,取消、恢复与断点,P0,T0004;T0702,阶段检查点、重启恢复和清理。,CheckpointManager;resume tests,不重复已完成模型调用;状态一致
+T0705,P7,模型网关安全加固,P0,T0010;T0410,TLS/API Key/IP/上传限制/超时/非root/断网。,Security config;penetration checklist,内部端口不暴露;秘密不泄露
+T0706,P7,数据清理与隐私测试,P0,T0005;T0013;T0702,临时文件、原始响应、缓存和日志清理。,Retention policy;privacy tests,清理后无残留正文;保留项可配置
+T0707,P7,客户端打包,P0,T0607;T0704,构建 macOS 应用和独立 CLI。,Release artifacts;signing plan,干净机器可运行;配置向导可用
+T0708,P7,统一模型网关部署,P0,T0401;T0705,部署统一模型网关 8100，并接入当前直接服务 9000/8000/8080。,Gateway deployment;routing configuration;health checks;smoke tests;rollback plan,主应用仅访问8100;profile可切换
+T0709,P7,观测与运维,P0,T0013;T0703,健康、模型状态、队列、错误和资源指标。,Dash/report endpoints;runbook,不含正文;异常可定位
+T0710,P7,SBOM、许可证和供应链,P0,T0705,生成依赖/模型/镜像清单，固定 revision/digest。,SBOM;THIRD_PARTY_NOTICES,无未评估高风险依赖;可复现
+T0711,P7,发布资格回归,P0,T0701;T0706;T0707;T0708;T0710,运行全部黄金集、安全、性能和升级测试。,Release qualification report,阻断问题为0;DOCX打开率100%
+T0712,P7,用户与开发文档,P0,T0711,完善安装、使用、故障、开发和模型升级手册。,Docs site/markdown;操作清单,新环境可按文档复现;文档版本一致

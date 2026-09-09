@@ -1,0 +1,66 @@
+{
+  "mode": "balanced",
+  "language_hints": [
+    "zh-CN",
+    "en"
+  ],
+  "document_profile": "exam",
+  "output": {
+    "format": "docx",
+    "editable_priority": true,
+    "preserve_original_pagination": false,
+    "preserve_intermediate": false,
+    "include_source_map": true,
+    "overwrite": false
+  },
+  "routing": {
+    "native_text_valid_ratio": 0.97,
+    "native_text_coverage": 0.7,
+    "replacement_char_ratio_max": 0.01,
+    "scan_image_area_ratio": 0.85,
+    "complex_page_threshold": 0.62
+  },
+  "model_gateway": {
+    "enabled": true,
+    "base_url": "http://MODEL_SERVER_IP:8100",
+    "api_key_env": "PDF2WORD_MODEL_API_KEY",
+    "connect_timeout_seconds": 5,
+    "request_timeout_seconds": 180,
+    "max_retries": 2,
+    "complex_model_concurrency": 1
+  },
+  "model_policy": {
+    "layout_fast": "paddle.layout_global",
+    "layout_complex": "monkey.layout_complex",
+    "ocr_default": "paddle.text_ocr",
+    "ocr_upgrade": "paddle.text_ocr",
+    "table": "paddle.table_parse",
+    "formula": "paddle.formula_parse",
+    "content_reviewer": "ovis.content_review",
+    "monkey_mode": "complex_only",
+    "ovis_mode": "high_risk_only"
+  },
+  "structure": {
+    "question_figure_auto_threshold": 0.78,
+    "question_figure_review_threshold": 0.55,
+    "table_native_threshold": 0.86,
+    "formula_omml_threshold": 0.92,
+    "preserve_chemical_structures_as_image": true,
+    "preserve_experiment_diagrams_as_image": true
+  },
+  "qa": {
+    "enabled": true,
+    "validate_layout_ir": true,
+    "docx_integrity": true,
+    "reopen_docx": true,
+    "render_check": false,
+    "block_on_open_issues": false
+  },
+  "privacy": {
+    "offline_or_intranet_only": true,
+    "log_document_text": false,
+    "cleanup_intermediate": true,
+    "keep_layout_ir": true,
+    "keep_job_report": true
+  }
+}

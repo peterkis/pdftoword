@@ -1,0 +1,300 @@
+{
+  "schema_version": "layout-ir/1.1",
+  "document_id": "doc-sample-001",
+  "source": {
+    "filename": "sample_exam.pdf",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "page_count": 1,
+    "pdf_version": "1.7",
+    "encrypted": false
+  },
+  "metadata": {
+    "languages": [
+      "zh-CN",
+      "en"
+    ],
+    "document_profile": "exam"
+  },
+  "pages": [
+    {
+      "page_index": 0,
+      "label": "1",
+      "width_pt": 595.28,
+      "height_pt": 841.89,
+      "rotation": 0,
+      "page_type": "mixed",
+      "classification_confidence": 0.97,
+      "complexity_score": 0.71,
+      "routing_decision": "native+layout_complex+specialists",
+      "model_calls": [
+        "layout.complex",
+        "ocr.text"
+      ],
+      "blocks": [
+        {
+          "id": "blk-q12",
+          "type": "question",
+          "page_index": 0,
+          "bbox": [
+            72,
+            100,
+            520,
+            300
+          ],
+          "rotation": 0,
+          "engine_confidence": null,
+          "system_confidence": 0.95,
+          "source_type": "fused",
+          "geometry_source": "monkeyocrv2",
+          "engine": "fusion-engine",
+          "engine_version": "1.1.0",
+          "style_ref": null,
+          "content": {
+            "kind": "container",
+            "role": "question",
+            "number": "12",
+            "placement_hint": "local_group"
+          },
+          "content_candidates": [],
+          "selected_candidate_id": null,
+          "render_policy": "editable",
+          "children": [
+            "blk-q12-stem",
+            "blk-q12-fig"
+          ],
+          "relations": [
+            "rel-q12-fig"
+          ],
+          "provenance_refs": [
+            "prov-monkey-1"
+          ],
+          "flags": []
+        },
+        {
+          "id": "blk-q12-stem",
+          "type": "paragraph",
+          "page_index": 0,
+          "bbox": [
+            72,
+            110,
+            360,
+            180
+          ],
+          "rotation": 0,
+          "engine_confidence": 0.99,
+          "system_confidence": 0.99,
+          "source_type": "native_pdf",
+          "geometry_source": "native_pdf",
+          "engine": "pdf-inspector",
+          "engine_version": "pinned",
+          "style_ref": "style-body",
+          "content": {
+            "kind": "text",
+            "plain_text": "12．如图所示，根据实验装置回答问题。",
+            "runs": [
+              {
+                "text": "12．如图所示，根据实验装置回答问题。",
+                "bbox": [
+                  72,
+                  110,
+                  360,
+                  180
+                ],
+                "font_family": "SimSun",
+                "font_size_pt": 10.5,
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "superscript": false,
+                "subscript": false,
+                "color": "#000000",
+                "confidence": 1.0,
+                "source_ref": "native-p0-1"
+              }
+            ],
+            "language_hints": [
+              "zh-CN"
+            ]
+          },
+          "content_candidates": [
+            {
+              "id": "cand-native-1",
+              "provider": "native_pdf",
+              "model_id": "pdf-inspector",
+              "model_version": "pinned",
+              "content_kind": "text",
+              "text": "12．如图所示，根据实验装置回答问题。",
+              "latex": null,
+              "html": null,
+              "otsl": null,
+              "source_asset_id": null,
+              "engine_confidence": 1.0,
+              "system_score": 1.0,
+              "selected": true,
+              "evidence": {
+                "quality": "valid"
+              }
+            }
+          ],
+          "selected_candidate_id": "cand-native-1",
+          "render_policy": "editable",
+          "children": [],
+          "relations": [],
+          "provenance_refs": [
+            "prov-native-1"
+          ],
+          "flags": []
+        },
+        {
+          "id": "blk-q12-fig",
+          "type": "figure",
+          "page_index": 0,
+          "bbox": [
+            370,
+            105,
+            520,
+            260
+          ],
+          "rotation": 0,
+          "engine_confidence": null,
+          "system_confidence": 0.93,
+          "source_type": "pdf_vector_render",
+          "geometry_source": "monkeyocrv2",
+          "engine": "pypdfium2",
+          "engine_version": "pinned",
+          "style_ref": null,
+          "content": {
+            "kind": "image",
+            "asset_id": "asset-fig-1",
+            "content_mode": "figure_with_internal_text",
+            "render_mode": "preserve_as_image",
+            "ocr_mode": "metadata_only",
+            "placement_hint": "right_of_stem",
+            "alt_text": null,
+            "internal_text": [
+              "A",
+              "B",
+              "CO₂"
+            ]
+          },
+          "content_candidates": [
+            {
+              "id": "cand-monkey-fig",
+              "provider": "monkeyocrv2",
+              "model_id": "zenosai/MonkeyOCRv2-B-Parsing",
+              "model_version": "pinned",
+              "content_kind": "image_metadata",
+              "text": null,
+              "latex": null,
+              "html": null,
+              "otsl": null,
+              "source_asset_id": "asset-fig-1",
+              "engine_confidence": null,
+              "system_score": 0.88,
+              "selected": true,
+              "evidence": {
+                "raw_label": "Picture"
+              }
+            }
+          ],
+          "selected_candidate_id": "cand-monkey-fig",
+          "render_policy": "preserve_image",
+          "children": [],
+          "relations": [
+            "rel-q12-fig"
+          ],
+          "provenance_refs": [
+            "prov-monkey-1",
+            "prov-pdfium-1"
+          ],
+          "flags": []
+        }
+      ],
+      "reading_order": [
+        "blk-q12",
+        "blk-q12-stem",
+        "blk-q12-fig"
+      ],
+      "source_refs": [
+        "page-0"
+      ]
+    }
+  ],
+  "styles": {
+    "style-body": {
+      "role": "body",
+      "font_family": "SimSun",
+      "fallback_fonts": [
+        "宋体",
+        "Arial"
+      ],
+      "font_size_pt": 10.5,
+      "line_spacing": 1.2,
+      "space_before_pt": 0,
+      "space_after_pt": 0,
+      "alignment": "left",
+      "first_line_indent_pt": 0
+    }
+  },
+  "assets": [
+    {
+      "id": "asset-fig-1",
+      "type": "image",
+      "path": "assets/q12-figure.png",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "mime_type": "image/png",
+      "pixel_width": 600,
+      "pixel_height": 620,
+      "source_page_index": 0,
+      "source_bbox": [
+        370,
+        105,
+        520,
+        260
+      ],
+      "extraction_method": "pdf_vector_render",
+      "dpi": 288
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel-q12-fig",
+      "type": "anchored_to",
+      "from": "blk-q12-fig",
+      "to": "blk-q12",
+      "confidence": 0.91,
+      "method": "question_figure_score/v1.1",
+      "evidence": {
+        "same_column": false,
+        "vertical_interval": true,
+        "cue_phrase": true,
+        "placement": "right_of_stem"
+      }
+    }
+  ],
+  "issues": [],
+  "provenance": {
+    "prov-native-1": {
+      "engine": "pdf-inspector"
+    },
+    "prov-monkey-1": {
+      "engine": "monkeyocrv2",
+      "raw_response_ref": "raw/monkey-p0.json"
+    },
+    "prov-pdfium-1": {
+      "engine": "pypdfium2"
+    }
+  },
+  "metrics": {
+    "model_calls": 2
+  },
+  "model_registry": {
+    "monkeyocrv2-b-parsing": {
+      "id": "zenosai/MonkeyOCRv2-B-Parsing",
+      "revision": "pinned"
+    },
+    "pdf-inspector": {
+      "revision": "pinned"
+    }
+  }
+}

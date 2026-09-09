@@ -1,0 +1,65 @@
+version: 1.1.0
+mode: balanced
+language_hints:
+- zh-CN
+- en
+document_profile: auto
+routing:
+  native_text_valid_ratio: 0.97
+  native_text_coverage: 0.7
+  replacement_char_ratio_max: 0.01
+  scan_image_area_ratio: 0.85
+  complex_page_threshold: 0.62
+model_gateway:
+  enabled: true
+  base_url: http://MODEL_SERVER_IP:8100
+  api_key_env: PDF2WORD_MODEL_API_KEY
+  connect_timeout_seconds: 5
+  request_timeout_seconds: 180
+  max_retries: 2
+  complex_model_concurrency: 1
+model_policy:
+  paddle.full_pipeline:
+    endpoint_path: ""  # unresolved
+    transport: auto
+  paddle.layout_global: paddle.full_pipeline
+  paddle.layout_block: paddle.full_pipeline
+  paddle.text_ocr: paddle.full_pipeline
+  paddle.table_parse: paddle.full_pipeline
+  paddle.formula_parse: paddle.full_pipeline
+  paddle.orientation:
+    default_enabled: false
+  paddle.unwarping:
+    default_enabled: false
+  monkey.layout_complex: monkeyocrv2-b-parsing
+  monkey.end_to_end: monkeyocrv2-b-parsing
+  ovis.content_review: ovis-ocr2
+  monkey_mode: complex_only
+  ovis_mode: high_risk_only
+structure:
+  question_figure_auto_threshold: 0.78
+  question_figure_review_threshold: 0.55
+  table_native_threshold: 0.86
+  formula_omml_threshold: 0.92
+  preserve_chemical_structures_as_image: true
+  preserve_experiment_diagrams_as_image: true
+output:
+  format: docx
+  editable_priority: true
+  preserve_original_pagination: false
+  preserve_intermediate: false
+  include_source_map: true
+  overwrite: false
+qa:
+  enabled: true
+  validate_layout_ir: true
+  docx_integrity: true
+  reopen_docx: true
+  render_check: false
+  block_on_open_issues: false
+privacy:
+  offline_or_intranet_only: true
+  log_document_text: false
+  cleanup_intermediate: true
+  keep_layout_ir: true
+  keep_job_report: true

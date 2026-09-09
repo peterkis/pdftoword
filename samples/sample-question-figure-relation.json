@@ -1,0 +1,17 @@
+{
+  "relation_type": "anchored_to",
+  "figure_id": "blk-fig-12",
+  "question_id": "blk-q12",
+  "score": 0.91,
+  "decision": "auto",
+  "evidence": {
+    "vertical_interval": 0.25,
+    "same_column": 0.0,
+    "distance": 0.18,
+    "reading_order_proximity": 0.16,
+    "cue_phrase": 0.2,
+    "caption_relation": 0.12,
+    "crossing_next_question_penalty": 0.0
+  },
+  "placement_hint": "right_of_stem"
+}

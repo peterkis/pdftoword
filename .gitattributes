@@ -1,0 +1,25 @@
+# Normalize text files to LF in the repository; checkout follows the
+# platform convention (core.autocrlf).
+* text=auto
+
+# Scripts that require explicit line endings.
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets - never normalize.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.zip binary
+*.onnx binary
+*.whl binary

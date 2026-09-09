@@ -1,0 +1,27 @@
+{
+  "block_id": "blk-p0-1",
+  "geometry_source": "monkeyocrv2",
+  "selected_candidate_id": "cand-ppocr-1",
+  "system_confidence": 0.94,
+  "candidates": [
+    {
+      "id": "cand-ppocr-1",
+      "provider": "pp_ocr_v6",
+      "engine_confidence": 0.98,
+      "system_score": 0.96,
+      "selected": true
+    },
+    {
+      "id": "cand-monkey-1",
+      "provider": "monkeyocrv2",
+      "engine_confidence": null,
+      "system_score": 0.87,
+      "selected": false
+    }
+  ],
+  "reason": [
+    "pp_ocr_has_fine_grained_bbox",
+    "pp_ocr_high_confidence",
+    "content_agrees_with_monkey"
+  ]
+}

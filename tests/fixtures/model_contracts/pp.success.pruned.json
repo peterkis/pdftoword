@@ -1,0 +1,64 @@
+{
+  "description": "Normalized PP-StructureV3 success response fixture",
+  "contract_status": "verified",
+  "endpoint": "/layout-parsing",
+  "method": "POST",
+  "transport": "json_base64",
+  "response": {
+    "logId": "test-log-id-uuid",
+    "result": {
+      "layoutParsingResults": [
+        {
+          "prunedResult": {
+            "page_count": null,
+            "width": 800,
+            "height": 1159,
+            "model_settings": {
+              "use_doc_preprocessor": true,
+              "use_seal_recognition": false,
+              "use_table_recognition": true,
+              "use_formula_recognition": true,
+              "use_chart_recognition": false,
+              "use_region_detection": true,
+              "format_block_content": false
+            },
+            "parsing_res_list": [
+              {
+                "block_label": "doc_title",
+                "block_content": "Sample Document Title",
+                "block_bbox": [100, 50, 400, 80],
+                "block_id": 0,
+                "block_order": 1
+              },
+              {
+                "block_label": "text",
+                "block_content": "Sample text content",
+                "block_bbox": [100, 100, 500, 150],
+                "block_id": 1,
+                "block_order": 2
+              }
+            ],
+            "overall_ocr_res": {},
+            "formula_res_list": []
+          },
+          "markdown": "# Sample Document\n\nContent here.",
+          "outputImages": "[REDACTED_BASE64_IMAGES]",
+          "inputImage": "[REDACTED_BASE64_IMAGE]"
+        }
+      ],
+      "dataInfo": {
+        "width": 800,
+        "height": 1159,
+        "type": "image"
+      }
+    },
+    "errorCode": 0,
+    "errorMsg": "Success"
+  },
+  "notes": [
+    "file field accepts base64-encoded image string",
+    "fileType: 0=PDF, 1=image",
+    "block_bbox format: [x0, y0, x1, y1] in pixels",
+    "outputImages and inputImage contain base64 images (redacted in fixture)"
+  ]
+}

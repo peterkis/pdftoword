@@ -1,0 +1,23 @@
+version: 1.1
+# 注意：本文件为历史配置示例，能力键已更新见 config/default.yaml
+# PP HTTP 契约尚未冻结（待 T0015）
+routes:
+  native_simple:
+    engines: [native_pdf]
+  native_complex:
+    engines: [native_pdf, paddle.layout_global]  # 历史：pp-doclayout-m
+    upgrade: monkey.layout_complex
+  mixed_raster_text:
+    engines: [native_pdf, paddle.text_ocr]  # 历史：pp-ocrv6-small
+    upgrade: paddle.text_ocr
+  scanned_fast:
+    engines: [paddle.layout_global, paddle.text_ocr, paddle.table_parse, paddle.formula_parse]
+  scanned_accurate:
+    engines: [monkey.layout_complex, paddle.text_ocr, paddle.table_parse, paddle.formula_parse]
+    reviewer: ovis.content_review
+  table:
+    authority: paddle.table_parse
+    reviewers: [ovis.content_review, monkey.layout_complex]
+  formula:
+    authority: paddle.formula_parse
+    reviewers: [ovis.content_review, monkey.layout_complex]

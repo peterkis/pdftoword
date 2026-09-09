@@ -1,0 +1,6 @@
+{
+  "description": "PP-StructureV3 OpenAPI availability status",
+  "contract_status": "verified",
+  "openapi_available": false,
+  "note": "Service does not expose /openapi.json or standard OpenAPI endpoints"
+}

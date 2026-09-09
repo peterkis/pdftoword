@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.example/schemas/job-config-1.1.json",
+  "title": "PDF2Word Job Configuration 1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode",
+    "language_hints",
+    "document_profile",
+    "output",
+    "routing",
+    "model_gateway",
+    "model_policy",
+    "structure",
+    "qa",
+    "privacy"
+  ],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "balanced",
+        "accurate"
+      ]
+    },
+    "language_hints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "document_profile": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "general",
+        "exam",
+        "report",
+        "standard",
+        "form"
+      ]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "editable_priority",
+        "preserve_original_pagination",
+        "preserve_intermediate",
+        "include_source_map",
+        "overwrite"
+      ],
+      "properties": {
+        "format": {
+          "const": "docx"
+        },
+        "editable_priority": {
+          "type": "boolean"
+        },
+        "preserve_original_pagination": {
+          "const": false
+        },
+        "preserve_intermediate": {
+          "type": "boolean"
+        },
+        "include_source_map": {
+          "type": "boolean"
+        },
+        "overwrite": {
+          "type": "boolean"
+        }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "native_text_valid_ratio",
+        "native_text_coverage",
+        "scan_image_area_ratio",
+        "complex_page_threshold"
+      ],
+      "properties": {
+        "native_text_valid_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "native_text_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "scan_image_area_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "replacement_char_ratio_max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "complex_page_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "model_gateway": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "base_url",
+        "api_key_env",
+        "connect_timeout_seconds",
+        "request_timeout_seconds",
+        "max_retries",
+        "complex_model_concurrency"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "api_key_env": {
+          "type": "string"
+        },
+        "connect_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "request_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "complex_model_concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        }
+      }
+    },
+    "model_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "layout_fast",
+        "layout_complex",
+        "ocr_default",
+        "ocr_upgrade",
+        "table",
+        "formula",
+        "content_reviewer",
+        "monkey_mode",
+        "ovis_mode"
+      ],
+      "properties": {
+        "layout_fast": {
+          "type": "string"
+        },
+        "layout_complex": {
+          "type": "string"
+        },
+        "ocr_default": {
+          "type": "string"
+        },
+        "ocr_upgrade": {
+          "type": "string"
+        },
+        "table": {
+          "type": "string"
+        },
+        "formula": {
+          "type": "string"
+        },
+        "content_reviewer": {
+          "type": "string"
+        },
+        "monkey_mode": {
+          "type": "string",
+          "enum": [
+            "disabled",
+            "complex_only",
+            "scanned_accurate",
+            "always_for_scanned"
+          ]
+        },
+        "ovis_mode": {
+          "type": "string",
+          "enum": [
+            "disabled",
+            "conflict_only",
+            "high_risk_only",
+            "accurate_review"
+          ]
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "question_figure_auto_threshold",
+        "question_figure_review_threshold",
+        "table_native_threshold",
+        "formula_omml_threshold",
+        "preserve_chemical_structures_as_image",
+        "preserve_experiment_diagrams_as_image"
+      ],
+      "properties": {
+        "question_figure_auto_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "question_figure_review_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "table_native_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "formula_omml_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "preserve_chemical_structures_as_image": {
+          "type": "boolean"
+        },
+        "preserve_experiment_diagrams_as_image": {
+          "type": "boolean"
+        }
+      }
+    },
+    "qa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "validate_layout_ir",
+        "docx_integrity",
+        "reopen_docx",
+        "render_check",
+        "block_on_open_issues"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "validate_layout_ir": {
+          "type": "boolean"
+        },
+        "docx_integrity": {
+          "type": "boolean"
+        },
+        "reopen_docx": {
+          "type": "boolean"
+        },
+        "render_check": {
+          "type": "boolean"
+        },
+        "block_on_open_issues": {
+          "type": "boolean"
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "offline_or_intranet_only",
+        "log_document_text",
+        "cleanup_intermediate",
+        "keep_layout_ir",
+        "keep_job_report"
+      ],
+      "properties": {
+        "offline_or_intranet_only": {
+          "const": true
+        },
+        "log_document_text": {
+          "const": false
+        },
+        "cleanup_intermediate": {
+          "type": "boolean"
+        },
+        "keep_layout_ir": {
+          "type": "boolean"
+        },
+        "keep_job_report": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "description": "Normalized OvisOCR2 /v1/models response fixture",
+  "contract_status": "verified",
+  "model_id": "ovis-ocr2",
+  "response": {
+    "object": "list",
+    "data": [
+      {
+        "id": "ovis-ocr2",
+        "object": "model",
+        "created": 1234567890,
+        "owned_by": "organization"
+      }
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "request_id": "req-monkey-001",
+  "task": "layout.complex",
+  "model": {
+    "id": "zenosai/MonkeyOCRv2-B-Parsing",
+    "revision": "pinned"
+  },
+  "blocks": [
+    {
+      "raw_label": "Text",
+      "normalized_type": "paragraph",
+      "bbox_normalized": [
+        120,
+        130,
+        760,
+        210
+      ],
+      "bbox_pixel": [
+        240,
+        260,
+        1520,
+        420
+      ],
+      "bbox_pdf_pt": [
+        72,
+        109.2,
+        456,
+        176.4
+      ],
+      "reading_order": 1,
+      "raw_content": "示例文字",
+      "content_format": "text",
+      "engine_confidence": null
+    }
+  ],
+  "warnings": []
+}

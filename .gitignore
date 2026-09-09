@@ -1,0 +1,73 @@
+# --- Local environment & secrets (never commit) ---
+.env
+.env.local
+
+# --- Python tooling caches ---
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Python build artifacts ---
+dist/
+build/
+*.egg-info/
+
+# --- Runtime & intermediate data (per-job isolation) ---
+tmp/
+data/jobs/
+
+# --- Raw model responses: never commit; keep sanitized fixtures instead ---
+*.raw.json
+
+# --- Node / Tauri / Rust build artifacts ---
+node_modules/
+target/
+
+# --- Fixtures: sanitized, reviewed fixtures must stay committable ---------
+# Guard against the broad rules above accidentally swallowing fixture data.
+!tests/fixtures/**/*.json
+# ...but raw responses are never committable, not even inside tests/fixtures.
+tests/fixtures/**/*.raw.json
+
+# macOS metadata
+.DS_Store
+._*
+
+# Public repository: machine-specific settings and credentials
+.env.*
+!.env.example
+*.local.env
+*.local.yaml
+*.local.yml
+*.local.json
+config/local/
+config/secrets/
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+frpc*.toml
+frps*.toml
+frpc*.ini
+frps*.ini
+
+# Local documents, model inputs/outputs and databases
+/data/
+/outputs/
+/artifacts/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.pdf
+*.docx
+/scripts/test-page.jpg
+/tests/fixtures/model_api/
+*.raw.json

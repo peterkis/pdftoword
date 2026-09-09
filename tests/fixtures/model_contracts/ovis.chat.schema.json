@@ -1,0 +1,30 @@
+{
+  "description": "Normalized OvisOCR2 chat completions response fixture",
+  "contract_status": "verified",
+  "model_id": "ovis-ocr2",
+  "response": {
+    "id": "chatcmpl-test",
+    "object": "chat.completion",
+    "created": 1234567890,
+    "model": "ovis-ocr2",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "# Document Title\n\nParagraph text content here.\n\n## Section\n\nMore content."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 800,
+      "completion_tokens": 400,
+      "total_tokens": 1200
+    },
+    "system_fingerprint": "vllm-0.26.0-test"
+  },
+  "notes": [
+    "content is markdown-formatted text"
+  ]
+}

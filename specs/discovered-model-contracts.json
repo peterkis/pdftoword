@@ -1,0 +1,151 @@
+{
+  "schema_version": "1.0",
+  "discovered_at": "2026-08-29T02:45:00.000000+00:00",
+  "discovery_tool": "scripts/discover_model_contracts.py",
+  "discovery_task": "T0015 / P0-GATE-001A",
+  "services": {
+    "monkey": {
+      "provider_type": "openai_compatible",
+      "base_url_template": "http://MODEL_SERVER_IP:9000",
+      "model_id": "MonkeyOCRv2",
+      "models_path": "/v1/models",
+      "chat_path": "/v1/chat/completions",
+      "contract_status": "verified",
+      "actual_model_ids": ["MonkeyOCRv2"],
+      "openapi": {
+        "version": "3.1.0",
+        "info": {
+          "title": "FastAPI",
+          "version": "0.1.0"
+        },
+        "fingerprint": "5468c7f9fc5e79cef3bdc7e5ddc2d65083dfc36193fe5d793f6206dd199a3bee",
+        "available": true,
+        "path": "/openapi.json"
+      },
+      "system_fingerprint": "vllm-0.26.0-7a07b93c",
+      "response_structure": {
+        "has_choices": true,
+        "has_message": true,
+        "has_content": true,
+        "finish_reason": "stop",
+        "content_is_list_of_objects": true,
+        "content_fields": ["bbox", "label"]
+      },
+      "usage": {
+        "prompt_tokens_field": "prompt_tokens",
+        "completion_tokens_field": "completion_tokens",
+        "total_tokens_field": "total_tokens"
+      }
+    },
+    "ovis": {
+      "provider_type": "openai_compatible",
+      "base_url_template": "http://MODEL_SERVER_IP:8000",
+      "model_id": "ovis-ocr2",
+      "models_path": "/v1/models",
+      "chat_path": "/v1/chat/completions",
+      "contract_status": "verified",
+      "actual_model_ids": ["ovis-ocr2"],
+      "openapi": {
+        "version": "3.1.0",
+        "info": {
+          "title": "FastAPI",
+          "version": "0.1.0"
+        },
+        "fingerprint": "5468c7f9fc5e79cef3bdc7e5ddc2d65083dfc36193fe5d793f6206dd199a3bee",
+        "available": true,
+        "path": "/openapi.json"
+      },
+      "system_fingerprint": "vllm-0.26.0-1a9933c7",
+      "response_structure": {
+        "has_choices": true,
+        "has_message": true,
+        "has_content": true,
+        "finish_reason": "stop",
+        "content_is_markdown": true
+      },
+      "usage": {
+        "prompt_tokens_field": "prompt_tokens",
+        "completion_tokens_field": "completion_tokens",
+        "total_tokens_field": "total_tokens"
+      }
+    },
+    "paddle": {
+      "provider_type": "paddle_pipeline",
+      "base_url_template": "http://MODEL_SERVER_IP:8080",
+      "endpoint_path": "/layout-parsing",
+      "method": "POST",
+      "transport": "json_base64",
+      "file_field": "file",
+      "file_type_field": "fileType",
+      "file_type_values": {
+        "0": "pdf",
+        "1": "image"
+      },
+      "content_type": "application/json",
+      "contract_status": "verified",
+      "openapi": {
+        "available": false,
+        "note": "Service does not expose /openapi.json"
+      },
+      "request_schema": {
+        "required_fields": ["file", "fileType"],
+        "file_field_type": "string (base64 encoded)",
+        "file_type_constraints": "Must be 0 (PDF) or 1 (image)"
+      },
+      "success_response_schema": {
+        "top_level_fields": ["logId", "result", "errorCode", "errorMsg"],
+        "logId_field": "string (UUID)",
+        "errorCode_field": "integer (0 for success)",
+        "errorMsg_field": "string",
+        "result_fields": ["layoutParsingResults", "dataInfo"],
+        "result_layout_parsing_fields": ["prunedResult", "markdown", "outputImages", "inputImage"],
+        "pruned_result_fields": [
+          "page_count",
+          "width",
+          "height",
+          "model_settings",
+          "parsing_res_list",
+          "doc_preprocessor_res",
+          "layout_det_res",
+          "overall_ocr_res",
+          "formula_res_list"
+        ],
+        "block_fields": ["block_label", "block_content", "block_bbox", "block_id", "block_order"],
+        "block_bbox_format": "[x0, y0, x1, y1] in pixels",
+        "model_settings_fields": [
+          "use_doc_preprocessor",
+          "use_seal_recognition",
+          "use_table_recognition",
+          "use_formula_recognition",
+          "use_chart_recognition",
+          "use_region_detection",
+          "format_block_content",
+          "markdown_ignore_labels"
+        ]
+      },
+      "error_response_schema": {
+        "top_level_fields": ["logId", "errorCode", "errorMsg"],
+        "error_code_field": "integer (HTTP status code or validation error code)",
+        "error_msg_field": "string or JSON array of validation errors",
+        "validation_error_format": {
+          "type": "string",
+          "loc": "array of strings (field path)",
+          "msg": "string (error message)"
+        }
+      },
+      "verified_by": "T0015",
+      "verified_from": "manual_http_probe",
+      "verified_at": "2026-08-29"
+    }
+  },
+  "overall_status": "ACCEPTED",
+  "notes": [
+    "Monkey and Ovis use OpenAI-compatible chat completions API",
+    "Monkey returns layout as list of objects with bbox and label",
+    "Ovis returns markdown content",
+    "PP-StructureV3 uses custom JSON API with base64-encoded images",
+    "PP fileType: 0=PDF, 1=image",
+    "PP does not expose OpenAPI spec",
+    "All services verified with actual HTTP requests during T0015"
+  ]
+}

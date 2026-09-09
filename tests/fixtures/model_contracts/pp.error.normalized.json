@@ -1,0 +1,37 @@
+{
+  "description": "Normalized PP-StructureV3 error response fixture",
+  "contract_status": "verified",
+  "endpoint": "/layout-parsing",
+  "method": "POST",
+  "transport": "json_base64",
+  "error_responses": {
+    "missing_file": {
+      "status_code": 422,
+      "response": {
+        "logId": "test-log-id-uuid",
+        "errorCode": 422,
+        "errorMsg": "[{\"type\": \"missing\", \"loc\": [\"body\", \"file\"], \"msg\": \"Field required\"}]"
+      }
+    },
+    "invalid_file_type": {
+      "status_code": 422,
+      "response": {
+        "logId": "test-log-id-uuid",
+        "errorCode": 422,
+        "errorMsg": "[{\"type\": \"literal_error\", \"loc\": [\"body\", \"fileType\"], \"msg\": \"Input should be 0 or 1\"}]"
+      }
+    },
+    "invalid_file": {
+      "status_code": 422,
+      "response": {
+        "logId": "test-log-id-uuid",
+        "errorCode": 422,
+        "errorMsg": "Invalid input file"
+      }
+    }
+  },
+  "notes": [
+    "errorMsg can be either a string or a JSON array of validation errors",
+    "Validation errors follow Pydantic format with type, loc, and msg fields"
+  ]
+}
