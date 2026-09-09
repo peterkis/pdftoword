@@ -16,8 +16,14 @@ def isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Isolate tests from developer credentials and endpoint overrides."""
     monkeypatch.chdir(tmp_path)
     for prefix in ("MONKEY", "OVIS", "PP", "PADDLE"):
-        for suffix in ("BASE_URL", "OPENAI_BASE_URL", "STRUCTURE_BASE_URL", "CHAT_URL",
-                       "STRUCTURE_URL", "API_KEY"):
+        for suffix in (
+            "BASE_URL",
+            "OPENAI_BASE_URL",
+            "STRUCTURE_BASE_URL",
+            "CHAT_URL",
+            "STRUCTURE_URL",
+            "API_KEY",
+        ):
             monkeypatch.delenv(f"{prefix}_{suffix}", raising=False)
     return tmp_path
 
@@ -27,7 +33,8 @@ def test_frp_root_urls(isolated_env: Path) -> None:
     (isolated_env / ".env.local").write_text(
         'MONKEY_BASE_URL="http://127.0.0.1:9000"\n'
         "OVIS_BASE_URL='http://127.0.0.1:8000'\n"
-        "PP_BASE_URL=http://127.0.0.1:8080\n", encoding="utf-8",
+        "PP_BASE_URL=http://127.0.0.1:8080\n",
+        encoding="utf-8",
     )
     config = load_config()
     assert openai_endpoint_url(config.monkey.base_url, "models") == (
@@ -40,18 +47,21 @@ def test_frp_root_urls(isolated_env: Path) -> None:
 
 
 def test_environment_beats_file_alias(
-    isolated_env: Path, monkeypatch: pytest.MonkeyPatch,
+    isolated_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A legacy environment override takes priority over the local file."""
     (isolated_env / ".env.local").write_text(
-        "MONKEY_BASE_URL=http://file.example:9000\n", encoding="utf-8",
+        "MONKEY_BASE_URL=http://file.example:9000\n",
+        encoding="utf-8",
     )
     monkeypatch.setenv("MONKEY_OPENAI_BASE_URL", "http://override.example:9000/v1")
     assert load_config().monkey.base_url == "http://override.example:9000/v1"
 
 
 def test_new_alias_beats_legacy_in_same_source(
-    isolated_env: Path, monkeypatch: pytest.MonkeyPatch,
+    isolated_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Explicit short names win when both names exist in the environment."""
     monkeypatch.setenv("OVIS_BASE_URL", "http://new.example:8000")
@@ -62,6 +72,17 @@ def test_new_alias_beats_legacy_in_same_source(
 def test_legacy_file_still_supported(isolated_env: Path) -> None:
     """Existing Gate configurations remain usable."""
     (isolated_env / ".env.local").write_text(
-        "PP_STRUCTURE_BASE_URL=http://legacy.example:8080\n", encoding="utf-8",
+        "PP_STRUCTURE_BASE_URL=http://legacy.example:8080\n",
+        encoding="utf-8",
     )
     assert load_config().pp.base_url == "http://legacy.example:8080"
+
+
+def test_no_proxy_does_not_change_url(isolated_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Proxy bypass settings never rewrite the configured root or /v1 path."""
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost")
+    monkeypatch.setenv("no_proxy", "127.0.0.1,localhost")
+    monkeypatch.setenv("MONKEY_BASE_URL", "http://127.0.0.1:9000/v1")
+    assert openai_endpoint_url(load_config().monkey.base_url, "v1/models") == (
+        "http://127.0.0.1:9000/v1/models"
+    )

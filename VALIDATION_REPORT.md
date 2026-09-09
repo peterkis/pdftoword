@@ -1,63 +1,32 @@
-# 验证报告
+# 验证报告 — T0015 Mac + FRP
 
-文档版本：`1.1.0`
-日期：`2026-08-28`
+最终建议状态：**ACCEPTED（HTTP 契约）**。
 
-## 说明
+- 分支：`fix/t0015-reproducible-contract-evidence-macos`。
+- 起始公开提交 / 运行 HEAD：`a5f1fd713715e2304432ac3cc9d27544f849e904`。
+- 真实 run_id：`t0015-mac-20260909T061855Z`；execution_mode=live；access_mode=frp_stcp_loopback。
+- Monkey / Ovis：verified；PP：verified_from_openapi；overall_status=ACCEPTED。
+- 用户确认无需 API Key；旧值未用于鉴权，当前不发送 Authorization。`.env.local` 未跟踪、0600。
+- Spec、8 个 observed/provenance Fixture、13 个请求摘要与当前执行 core 哈希关联一致。
 
-本报告最初为原 PRD 启动包（V1.1.0）的验证报告。自 T0001 完成后，仓库已进入分阶段开发状态。
+## 质量门禁
 
-## 原启动包验证结果
-
-- 版本：1.1.0
-- JSON Schema：通过
-- Layout IR 样例：通过
-- Job Config 样例：通过
-- JSON 语法：通过
-- YAML 语法：通过
-- 阶段数量：8
-- Ticket 数量：97（原 93 + T0014-T0017）
-
-## 当前仓库状态
-
-- **开发状态**：P0 工程基础与契约阶段，T0001 已完成
-- **最新提交**：`3063875119f7d63b2b5a96d95532af26f64f43db`（feat/p0-foundation）
-- **部署基线**：见 `docs/23_MODEL_DEPLOYMENT_BASELINE_V1_1.md`
-- **任务目录**：见 `tasks/TICKETS.md`、`tasks/tickets.json`、`tasks/tickets.csv`
-
-## 重要变更
-
-- **T0001**：初始化 Monorepo 与工具链（已完成）
-- **T0014**：模型部署基线与架构文档对齐（本文档更新的一部分）
-- **T0015-T0017**：前置控制任务（服务契约发现、回归、能力矩阵）
-
-## 注意事项
-
-- 本包为需求、规格和任务启动包，不包含生产实现代码
-- 未在目标 RTX 5060 Ti 模型机上执行真实推理
-- 原文件哈希清单（MANIFEST.sha256 / PACKAGE_MANIFEST.md）已失效并移除
-- 正式交付包由发布脚本根据 Git commit 自动生成
-
-## 变更记录
-
-| 版本 | 日期 | 变更 |
-|---|---|---|
-| 1.0.0 | 2026-08-20 | 原启动包验证报告 |
-| 1.1.0 | 2026-08-28 | 更新为当前仓库状态说明，删除失效哈希清单引用 |
+| 命令 | 结果 |
+| --- | --- |
+| uv sync --locked | PASS |
+| uv run pytest | 147 PASS |
+| uv run ruff check . | PASS |
+| uv run mypy . | PASS |
+| uv run python scripts/validate_task_catalog.py | PASS |
+| uv run python scripts/validate_model_baseline.py | PASS |
+| git diff --check / 敏感信息扫描 | PASS |
 
 ## NEEDS_FIX 统计
 
-- **当前版本**：v1.1.0
-- **遗留问题数**：0
-- **阻塞问题数**：0
-- **验证状态**：✅ 所有检查通过
+- 初始基线：104 单测通过，ruff 6 项、mypy 17 项错误。
+- 当前静态错误：0；当前 T0015 HTTP 契约阻塞：0。
+- 未声称锁定服务未暴露的权重 revision / 容器镜像；这些字段保持 unknown/null。
 
-### 验证命令输出
+完整逐请求证据、错误契约、来源关联、历史失败尝试和变更清单见 [T0015 报告](tasks/reports/T0015_REPORT.md)。此前 Windows/启动包和未连通结果仅为 Historical。
 
-```
-pytest: 23 passed
-ruff: All checks passed
-mypy: Success
-validate_task_catalog.py: ✅ ALL CHECKS PASSED
-validate_model_baseline.py: ✅ ALL CHECKS PASSED
-```
+本轮未执行 T0016/T0017、生产 Adapter、网关开发、FRP 修改、commit、push 或 PR 操作。

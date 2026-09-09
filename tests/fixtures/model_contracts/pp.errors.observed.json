@@ -1,0 +1,93 @@
+{
+  "fixture_kind": "sanitized_observed_wire",
+  "contract_status": "verified",
+  "generated_by": "scripts/model_contract_discovery.py",
+  "source_run_id": "t0015-mac-20260909T061855Z",
+  "source_response_fingerprint": "743eff85ef3fad14f36de38bd8a3e7f4bce288f2766c6071ccfdee6f55dc31cd",
+  "source_response_fingerprints": [
+    "f75796384d5aaff37c5c38d9ec2cf68afd6087be3ab2d307153b0f3fc7611730",
+    "2c125bbece0e70549ef2df2e07159c9002c2b088aea9ca290c26b78614d580dc",
+    "b494c239445d1c398bb25037ce5fbc6c3547dda9e46c5fdda8ddee4b7cfae44a"
+  ],
+  "source_fingerprint_algorithm": "sha256_http_response_bytes_or_canonical_digest_list",
+  "generated_at": "2026-09-09T06:19:08.469757+00:00",
+  "input_file_sha256": "fe608629ae8af60890684c77437b3d62facd3a0c27b9fa019692890f96cbcf52",
+  "access_mode": "frp_stcp_loopback",
+  "observation": [
+    {
+      "name": "missing_file",
+      "http_status": 422,
+      "application_error_code": 422,
+      "error_msg_wire_type": "string",
+      "response_content_type": "application/json",
+      "response_fingerprint": "f75796384d5aaff37c5c38d9ec2cf68afd6087be3ab2d307153b0f3fc7611730",
+      "request_id": "f6b78682-9da2-4c4e-948e-526ab859c3dd",
+      "duration_ms": 45.721,
+      "wire_shape": {
+        "type": "object",
+        "properties": {
+          "logId": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "number"
+          },
+          "errorMsg": {
+            "type": "string"
+          }
+        }
+      },
+      "error_observed": true
+    },
+    {
+      "name": "invalid_file_type",
+      "http_status": 422,
+      "application_error_code": 422,
+      "error_msg_wire_type": "string",
+      "response_content_type": "application/json",
+      "response_fingerprint": "2c125bbece0e70549ef2df2e07159c9002c2b088aea9ca290c26b78614d580dc",
+      "request_id": "3c76f025-1885-4ed0-9f51-de33f89180e6",
+      "duration_ms": 81.057,
+      "wire_shape": {
+        "type": "object",
+        "properties": {
+          "logId": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "number"
+          },
+          "errorMsg": {
+            "type": "string"
+          }
+        }
+      },
+      "error_observed": true
+    },
+    {
+      "name": "invalid_file",
+      "http_status": 422,
+      "application_error_code": 422,
+      "error_msg_wire_type": "string",
+      "response_content_type": "application/json",
+      "response_fingerprint": "b494c239445d1c398bb25037ce5fbc6c3547dda9e46c5fdda8ddee4b7cfae44a",
+      "request_id": "ad041bb2-f563-43e1-a0b6-0cb6ff2e0c58",
+      "duration_ms": 48.284,
+      "wire_shape": {
+        "type": "object",
+        "properties": {
+          "logId": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "number"
+          },
+          "errorMsg": {
+            "type": "string"
+          }
+        }
+      },
+      "error_observed": true
+    }
+  ]
+}

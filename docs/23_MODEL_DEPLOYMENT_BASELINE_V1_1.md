@@ -22,7 +22,7 @@
 
 ### 1.1 当前部署事实
 
-#### Windows 11 客户端
+#### macOS 客户端（保留 Windows 兼容）
 
 - **桌面应用**：Tauri 2 + React + TypeScript（目标架构，T0001 已完成工具链初始化）
 - **本地 Core**：Python 3.12 包（T0001 已初始化骨架）
@@ -48,14 +48,14 @@
 **目标架构**：
 ```
 Tauri / React
-  → Windows 本地 Core
+  → 本地 Core
     → Provider / Gateway Adapter
       → Ubuntu 模型服务
 ```
 
 **重要约束**：
 - UI 不得直接访问模型服务器
-- Windows Core 只感知抽象能力，不感知具体模型端口
+- 本地 Core 只感知抽象能力，不感知具体模型端口
 
 ---
 
@@ -144,7 +144,7 @@ Tauri / React
 
 ### 2.4 当前模型能力映射
 
-Windows Core 应只感知抽象能力：
+本地 Core 应只感知抽象能力：
 
 ```
 PaddleProvider
@@ -203,39 +203,26 @@ OvisProvider
 **已知端点**：
 - 端口 **8080** 已有服务运行
 
-**HTTP 契约状态**：**✅ 已冻结（T0015 / P0-GATE-001A）**
+**HTTP 契约状态**：**verified_from_openapi（当前 Mac + FRP）**。
 
-实测结果（2026-08-29）：
-- **端点路径**：`/layout-parsing`
-- **HTTP Method**：`POST`
-- **Transport**：`application/json`（JSON + Base64）
-- **文件字段**：`file`（Base64 编码字符串）
-- **文件类型字段**：`fileType`（0=PDF, 1=图片）
-- **OpenAPI**：服务未暴露 `/openapi.json`
+- 当前完整 run：`t0015-mac-20260909T061855Z`，overall_status=ACCEPTED。
+- OpenAPI 可用：3.1.0，FastAPI / 0.1.0；paths `/health`、`/layout-parsing`。
+- primary：`POST /layout-parsing`，operationId=`infer`，Content-Type=`application/json`，Transport=`json_base64`。
+- Schema required 为 `file`；`fileType` 允许 0/1/null，图片请求明确传 1。
+- request/response Schema 已解析并经实际成功请求验证；三种无害错误响应已记录。
+- compatibility alternatives：`[]`，未文档化 multipart 或 `/PP-StructureV3`，本轮不额外探测。
+- source=`openapi_with_runtime_verification`；OpenAPI SHA-256：`d8fa7c68be55a2ff12e5d01b47e60c15535170318d51814985cf542df3f1a885`。
 
-**请求示例**：
-```json
-{
-  "file": "<base64_encoded_image>",
-  "fileType": 1
-}
-```
+同一次运行确认 Monkey Wire 是 string / python_literal_list / normalized_1000，Ovis Wire 是 string / markdown。详见 [机器契约](../specs/discovered-model-contracts.json) 与 [T0015 报告](../tasks/reports/T0015_REPORT.md)。
 
-**成功响应字段**：
-- `logId`：请求 ID
-- `result.layoutParsingResults`：布局解析结果列表
-- `result.dataInfo`：输入文件元信息
-- `errorCode`：错误码（0 表示成功）
-- `errorMsg`：错误消息
-
-**详细契约**：见 `specs/discovered-model-contracts.json`
+旧 2026-08-29 无 OpenAPI 的记录属于 Historical。应用版本/服务指纹不代表模型权重 revision 或镜像锁定，未暴露字段仍为 unknown/null。
 
 ### 4.3 当前部署事实 vs 假设
 
 | 内容 | 状态 |
 |---|---|
 | PP 服务在 **8080** 运行 | ✅ 已部署 |
-| 具体 HTTP 端点和 Schema | ✅ 已冻结（T0015） |
+| 具体 HTTP 端点和 Schema | ✅ 当前 Mac + FRP 实测验证 |
 | 每个子模型有独立 HTTP 端点 | ❌ 未验证，目前使用聚合端点 |
 
 ---
@@ -343,11 +330,12 @@ Gate B/C 完成后，根据实测结果决定是否形成新的终局 ADR。
 
 ### 7.1 Gate A（T0015）
 
-- [x] PP 完整流水线端点 → `/layout-parsing`
-- [x] PP Transport → `json_base64`
-- [x] PP 请求参数和响应 Schema → 已冻结
-- [x] Monkey 和 Ovis 的 `/v1/models` 响应 → 已验证
-- [x] Multipart 与 JSON-Base64 两种上传方式的差异 → 使用 JSON-Base64
+- [x] 当前 Mac + FRP 单次运行 `t0015-mac-20260909T061855Z` 的成功/错误 HTTP 契约
+- [x] OpenAPI 文档化成功请求/响应与实际 Schema 一致
+- [x] Spec/Fixture 与 source_run_id、响应 fingerprint 相互对应
+- [x] 全仓质量门禁与敏感信息扫描
+
+权重 revision 未由服务暴露；不得将 HTTP 契约验收表述为权重/镜像锁定完成。
 
 ### 7.2 Gate B（T0016）
 
@@ -421,7 +409,7 @@ Gate B/C 完成后，根据实测结果决定是否形成新的终局 ADR。
 
 ### 9.1 当前配置结构
 
-**Windows 应用配置以能力为中心**，不直接编排 15 个 PP 子模型名。
+**本地应用配置以能力为中心**，不直接编排 15 个 PP 子模型名。
 
 **能力键**：
 ```yaml
@@ -457,7 +445,7 @@ model_policy:
 ### 10.1 当前部署状态
 
 ```
-Windows 客户端（目标架构骨架已初始化）
+macOS 客户端（目标架构骨架已初始化）
   │
   └─ 尚未连接模型服务（需要开发 Model Gateway Client）
 
@@ -470,7 +458,7 @@ Ubuntu 模型服务器
 ### 10.2 目标统一网关架构
 
 ```
-Windows Core
+本地 Core
   │
   └─ Model Gateway Client
        │
@@ -488,7 +476,7 @@ Windows Core
 | 统一网关 8100 | ❌ 未部署 | ✅ 计划实现 |
 | 当前服务端口 | 9000/8000/8080 | 统一网关代理 |
 | 客户端直连模型服务 | ⚠️ Gate 验证阶段允许 | ❌ 生产环境禁止 |
-| Windows Core 是否感知模型端口 | ⚠️ Gate 阶段需要 | ❌ 仅感知抽象能力 |
+| 本地 Core 是否感知模型端口 | ⚠️ Gate 阶段需要 | ❌ 仅感知抽象能力 |
 | API Key 管理 | 直接传给各服务 | 统一网关鉴权 |
 
 ### 10.4 迁移路径

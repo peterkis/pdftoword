@@ -1,6 +1,6 @@
 {
-  "description": "Normalized MonkeyOCRv2 chat completions response fixture",
-  "contract_status": "verified",
+  "description": "Historical synthetic example; not current service evidence. Normalized MonkeyOCRv2 chat completions response fixture",
+  "contract_status": "synthetic",
   "model_id": "MonkeyOCRv2",
   "response": {
     "id": "chatcmpl-test",
@@ -13,8 +13,24 @@
         "message": {
           "role": "assistant",
           "content": [
-            {"bbox": [100, 50, 200, 80], "label": "text"},
-            {"bbox": [150, 100, 300, 130], "label": "title"}
+            {
+              "bbox": [
+                100,
+                50,
+                200,
+                80
+              ],
+              "label": "text"
+            },
+            {
+              "bbox": [
+                150,
+                100,
+                300,
+                130
+              ],
+              "label": "title"
+            }
           ]
         },
         "finish_reason": "stop"
@@ -30,5 +46,6 @@
   "notes": [
     "content is a list of objects with bbox and label fields",
     "bbox format: [x0, y0, x1, y1] in pixels"
-  ]
+  ],
+  "fixture_kind": "synthetic_example"
 }

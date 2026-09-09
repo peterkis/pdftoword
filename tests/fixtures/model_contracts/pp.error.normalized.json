@@ -1,6 +1,6 @@
 {
-  "description": "Normalized PP-StructureV3 error response fixture",
-  "contract_status": "verified",
+  "description": "Historical synthetic example; not current service evidence. Normalized PP-StructureV3 error response fixture",
+  "contract_status": "synthetic",
   "endpoint": "/layout-parsing",
   "method": "POST",
   "transport": "json_base64",
@@ -33,5 +33,6 @@
   "notes": [
     "errorMsg can be either a string or a JSON array of validation errors",
     "Validation errors follow Pydantic format with type, loc, and msg fields"
-  ]
+  ],
+  "fixture_kind": "synthetic_example"
 }

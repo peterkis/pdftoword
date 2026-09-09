@@ -41,23 +41,27 @@ Python 固定为 3.12 系列，依赖使用现有 `uv.lock`。不要从其他机
 
 ## Gate 调试
 
-查看参数不会调用模型：
+当前用户确认模型服务无需 API Key，旧配置值未使用。`.env.local` 中 API Key 项为空且权限 0600；不发送 Authorization。如果部署以后增加鉴权，必须先撤销/轮换旧值，新密钥仅存在本机忽略配置。
+
+完整运行 `t0015-mac-20260909T061855Z` 已通过：Monkey/Ovis verified，PP verified_from_openapi。PP OpenAPI 3.1.0 提供 `/health` 与 `/layout-parsing`；primary 为 JSON `POST /layout-parsing`，alternatives 为空。成功/错误响应和 fingerprint 见同次自动生成的 Spec 与 T0015 报告。
 
 ```sh
 uv run python scripts/discover_model_contracts.py --help
+export NO_PROXY=127.0.0.1,localhost
+export no_proxy="$NO_PROXY"
+RUN_ID="t0015-mac-$(date -u +%Y%m%dT%H%M%SZ)"
+uv run python scripts/discover_model_contracts.py \
+  --confirm-no-auth \
+  --test-image "$T0015_TEST_IMAGE" \
+  --output-dir "tmp/model-contract-discovery/$RUN_ID" \
+  --promote-artifacts
 ```
 
-准备好样本并需要真实推理时，在根目录执行，输出目录每次使用新名称：
+请先将 `T0015_TEST_IMAGE` 设置为有权使用且允许发送至现有模型服务的本地图片。原始样本不随公开仓库分发；实际路径不写入报告。`--confirm-no-auth` 与 `--confirm-key-rotation` 二选一，不能省略安全确认。
 
-```sh
-uv run python scripts/discover_model_contracts.py --output-dir tmp/model-contract-discovery/local-run-001
-```
+命令执行一次串行契约探测，可能耗时数分钟；不会测试 JPG/PNG 质量差异、旋转、UVDoc、表格/公式专项，也不会实现生产 Adapter。需要再次运行时使用新的 run 目录，不能覆盖旧证据。
 
-原始样本不随公开仓库分发。当前本机保留了 `scripts/test-page.jpg`；新克隆需自行提供有权使用的样本，并通过 `--test-image /path/to/sample.jpg` 指定。
-
-该命令会向模型服务器发送指定样本并运行契约探测，可能耗时数分钟。正常调试不要加 `--promote-artifacts`；该参数会更新契约和测试夹具，应在审查结果后按 Gate 流程使用。
-
-端口监听只证明 visitor 可达；HTTP 成功只证明对应端点可用。真实识别质量、题图关系和黄金样本通过需另行验收。PP 没有 OpenAPI 不等于推理服务不可用，参见已有 ADR-007。发生鉴权/超时错误时保留状态码和错误类别，不打印凭据或文档正文。
+`--promote-artifacts` 仅在完整 ACCEPTED 时产生公开 Spec/Fixture，失败不推广。所有产物以相同 source_run_id、输入 SHA-256 和响应 fingerprint 关联；原始详细证据只在被忽略的 tmp 目录。详细行为见 [脚本说明](../scripts/README.md)。
 
 ## Agent 文档维护
 

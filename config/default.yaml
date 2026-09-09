@@ -21,9 +21,10 @@ model_gateway:
 model_policy:
   # 注意：以下为能力键，对应当前部署的模型版本
   # 详见 docs/23_MODEL_DEPLOYMENT_BASELINE_V1_1.md
-  # 契约冻结于 T0015 / P0-GATE-001A
+  # T0015 已由当前 Mac + FRP Run 验证；以生成契约为准
   paddle.full_pipeline:
     available: true
+    contract_status: verified_from_openapi
     endpoint_path: /layout-parsing
     transport: json_base64
     file_field: file
@@ -31,8 +32,11 @@ model_policy:
     file_type_image: 1
     file_type_pdf: 0
     verified_by: T0015
-    verified_from: manual_http_probe
-    verified_at: "2026-08-29"
+    verified_from: openapi_with_runtime_verification
+    source_run_id: t0015-mac-20260909T061855Z
+    openapi_fingerprint: "d8fa7c68be55a2ff12e5d01b47e60c15535170318d51814985cf542df3f1a885"
+    compatibility_alternatives: []
+    verified_at: "2026-09-09"
   paddle.layout_global: paddle.full_pipeline  # PP-DocLayout_plus-L
   paddle.layout_block: paddle.full_pipeline   # PP-DocBlockLayout
   paddle.text_ocr: paddle.full_pipeline       # PP-OCRv6_medium

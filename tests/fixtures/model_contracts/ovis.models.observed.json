@@ -1,0 +1,21 @@
+{
+  "fixture_kind": "sanitized_observed_wire",
+  "contract_status": "verified",
+  "generated_by": "scripts/model_contract_discovery.py",
+  "source_run_id": "t0015-mac-20260909T061855Z",
+  "source_response_fingerprint": "17f7072b673e43ce87b7c6e738afa245f86b6898b600fbe4f24614ce33dcef8b",
+  "source_response_fingerprints": [
+    "17f7072b673e43ce87b7c6e738afa245f86b6898b600fbe4f24614ce33dcef8b"
+  ],
+  "source_fingerprint_algorithm": "sha256_http_response_bytes_or_canonical_digest_list",
+  "generated_at": "2026-09-09T06:19:08.469757+00:00",
+  "input_file_sha256": "fe608629ae8af60890684c77437b3d62facd3a0c27b9fa019692890f96cbcf52",
+  "access_mode": "frp_stcp_loopback",
+  "observation": {
+    "model_id": "ovis-ocr2",
+    "actual_model_ids": [
+      "ovis-ocr2"
+    ],
+    "response_object": "chat.completion"
+  }
+}

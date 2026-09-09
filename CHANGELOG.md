@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-09 — T0015 Mac + FRP 可复现契约证据
+
+- 收敛 core/CLI 为一套发现实现，新增 loopback、安全确认、无重定向、严格模型身份与 Wire 检查。
+- PP 优先读取当前 OpenAPI；失败/不完整时仅执行有限回退，运行差异阻断验收。
+- 响应摘要、逐请求元数据、运行来源与全部 Artifact 使用同一生成链；合成数据明确标识。
+- 测试调用真实函数，通过 MockTransport 离线验证，修复全仓 T0015 lint/type 问题。
+- 完整真实运行 `t0015-mac-20260909T061855Z` 已通过，13 个请求与 8 个 observed/provenance Fixture 同源；147 项测试及全仓门禁通过。
+
+
 ## 2026-09-09 — macOS 开发迁移
 
 - 清理复制自 Windows 的虚拟环境和 Python 工具缓存，按 `uv.lock` 重建 Python 3.12 环境，补充 macOS 元数据忽略规则。

@@ -1,0 +1,69 @@
+{
+  "fixture_kind": "sanitized_observed_wire",
+  "contract_status": "verified",
+  "generated_by": "scripts/model_contract_discovery.py",
+  "source_run_id": "t0015-mac-20260909T061855Z",
+  "source_response_fingerprint": "7502284b2ce7eda0385806ed225ba3ef0a42293aea9471c6f841c4611c9ba5c6",
+  "source_response_fingerprints": [
+    "82c6de3314b49d8be47a77135b4a305039f5a00f68ef7874fca78eb04971dfae",
+    "86078475d629b919e8a7762100e02312a379a264173227fdedbd3cf0b4aac1b2"
+  ],
+  "source_fingerprint_algorithm": "sha256_http_response_bytes_or_canonical_digest_list",
+  "generated_at": "2026-09-09T06:19:08.469757+00:00",
+  "input_file_sha256": "fe608629ae8af60890684c77437b3d62facd3a0c27b9fa019692890f96cbcf52",
+  "access_mode": "frp_stcp_loopback",
+  "observation": {
+    "response_object": "chat.completion",
+    "model": "MonkeyOCRv2",
+    "wire_contract": {
+      "wire_type": "string",
+      "serialization": "python_literal_list",
+      "parsed_type": "array<object>",
+      "strict_json": false,
+      "safe_parser": "ast.literal_eval",
+      "parsed_block_count": 38,
+      "coordinate_space": "normalized_1000",
+      "coordinate_space_basis": "declared_contract_range_checked"
+    },
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 1213,
+      "total_tokens": 2319,
+      "completion_tokens": 1106,
+      "prompt_tokens_details": null
+    },
+    "system_fingerprint": "vllm-0.26.0-7a07b93c",
+    "error_probe": {
+      "http_status": 404,
+      "application_error_code": null,
+      "error_msg_wire_type": "null",
+      "response_content_type": "application/json",
+      "response_fingerprint": "86078475d629b919e8a7762100e02312a379a264173227fdedbd3cf0b4aac1b2",
+      "request_id": "977e9124-be0b-4636-b550-6cbd22ff69fa",
+      "duration_ms": 56.297,
+      "wire_shape": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "param": {
+                "type": "string"
+              },
+              "code": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "error_observed": true
+    }
+  }
+}

@@ -1,6 +1,7 @@
 {
-  "description": "PP-StructureV3 OpenAPI availability status",
-  "contract_status": "verified",
+  "description": "Historical synthetic example; not current service evidence. PP-StructureV3 OpenAPI availability status",
+  "contract_status": "synthetic",
   "openapi_available": false,
-  "note": "Service does not expose /openapi.json or standard OpenAPI endpoints"
+  "note": "Service does not expose /openapi.json or standard OpenAPI endpoints",
+  "fixture_kind": "synthetic_example"
 }
