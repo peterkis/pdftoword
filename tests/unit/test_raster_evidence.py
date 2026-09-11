@@ -392,3 +392,68 @@ def test_malformed_choices_metadata_safe() -> None:
     values: list[Any] = [None, [], ["bad"], {}, "bad"]
     for value in values:
         assert core.safe_finish_reason({"choices": value}) is None
+
+
+@pytest.mark.parametrize("reference", ["", " \t\n", r"\( \)", "$ $", r"\[ \]"])
+def test_empty_confirmed_reference_rejected(tmp_path: Path, reference: str) -> None:
+    case = synthetic_case(tmp_path)
+    gt = core.read_json(case / "ground-truth.private.json")
+    (case / "ground-truth-manifest.private.json").unlink()  # Synthetic unreviewed annotation.
+    gt["critical_text_checks"][0]["reference"] = reference
+    core.write_private(case / "ground-truth.private.json", gt)
+    with pytest.raises(ValueError, match="EMPTY_CONFIRMED_TEXT_REFERENCE"):
+        core.validate_ground_truth(case)
+    for provider in ("pp", "ovis"):
+        with pytest.raises(ValueError, match="EMPTY_CONFIRMED_TEXT_REFERENCE"):
+            core.content_metrics(
+                gt, {"content": "unrelated", "layers": {"paragraph": []}}, provider
+            )
+
+
+def test_nonempty_reference_and_uncertain_empty_reference() -> None:
+    gt = {
+        "regions": [{"id": "r1"}],
+        "critical_text_checks": [
+            {"id": "c1", "region_id": "r1", "reference": "x<0", "status": "confirmed"},
+            {"id": "c2", "region_id": "r1", "reference": "", "status": "uncertain"},
+        ],
+    }
+    result = core.content_metrics(gt, {"content": "x<0"}, "ovis")["checks"]
+    assert result[0]["raw_present"] and result[0]["normalized_present"]
+    assert result[1] == {"id": "c2", "status": "not_scored"}
+
+
+@pytest.mark.parametrize(
+    "scenario,count,median,failed",
+    [("success", 3, 4500.0, 0), ("mixed", 1, 3500.0, 2), ("failed", 0, None, 3)],
+)
+def test_success_latency_excludes_failures_in_public_summary(
+    collected: Path, scenario: str, count: int, median: float | None, failed: int
+) -> None:
+    evidence = core.read_json(collected / "requests.json")
+    rows = [
+        r for r in evidence["requests"] if r["provider"] == "monkey" and r["variant_id"] == "jpg"
+    ]
+    for i, row in enumerate(rows):
+        success = scenario == "success" or (scenario == "mixed" and i == 0)
+        row["status"] = "COMPLETE" if success else "NETWORK_BLOCKED"
+        row["duration_ms"] = [3500.0, 4500.0, 5500.0][i] if success else 1.822
+    core.write_private(collected / "requests.json", evidence)
+    meta = core.read_json(collected / "run-metadata.json")
+    meta["inference_complete"] = 14 - failed
+    meta["execution_status"] = "PARTIAL" if failed else "COMPLETE"
+    core.write_private(collected / "run-metadata.json", meta)
+    core.seal_run(collected)  # Reseal only synthetic test evidence, never a real run.
+    metrics = core.evaluate(collected, collected / "ground-truth.snapshot.private.json")
+    private = metrics["duration_including_frp_transport_service"]["monkey_jpg"]
+    public = core.public_summary(collected)["durations"]["monkey_jpg"]
+    assert private == public
+    assert public["count"] == count
+    assert public["median_ms"] == median
+    assert public["min_ms"] == (3500.0 if count else None)
+    assert public["max_ms"] == (5500.0 if scenario == "success" else median)
+    assert public["failed_count"] == failed
+    assert len(public["failures"]) == failed
+    assert all(
+        f["status"] == "NETWORK_BLOCKED" and f["duration_ms"] == 1.822 for f in public["failures"]
+    )

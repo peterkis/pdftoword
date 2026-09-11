@@ -85,3 +85,5 @@ HTTP 失败只记录异常类型、状态码与摘要，不记录异常消息中
 | LOCAL_EVIDENCE_ERROR | CLI 安全兜底，不泄漏异常正文 |
 
 COMPLETE/PARTIAL/BLOCKED 是执行状态，不是模型正确率结论。`missing_localized_candidate` 表示有确认真值但没有可归属内容块，不能据此声称字符识别错误；`N/A_LAYOUT_ONLY` 为 Monkey 正文不评分，`NO_GROUND_TRUTH_AT_THIS_GRANULARITY` 为对应粒度没有确认真值。
+
+`EMPTY_CONFIRMED_TEXT_REFERENCE`：confirmed 参考按既定规范化后为空，标注验证及内容评分入口均拒绝；不改写参考或静默降级为另一个答案。

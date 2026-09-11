@@ -288,6 +288,8 @@ def validate_ground_truth(case_dir: Path) -> Json:
             or not isinstance(check.get("reference"), str)
         ):
             raise ValueError("INVALID_TEXT_CHECK")
+        if check["status"] == "confirmed" and not normalize_text(check["reference"]):
+            raise ValueError("EMPTY_CONFIRMED_TEXT_REFERENCE")
     frozen = {
         "ground_truth_sha256": compute_file_hash(path),
         "annotation_version": gt["annotation_version"],
@@ -609,6 +611,10 @@ def content_metrics(gt: Json, pred: Json, provider: str) -> Json:
         if check["status"] != "confirmed":
             checks.append({"id": check["id"], "status": "not_scored"})
             continue
+        if not isinstance(check.get("reference"), str):
+            raise ValueError("INVALID_TEXT_CHECK")
+        if not normalize_text(check["reference"]):
+            raise ValueError("EMPTY_CONFIRMED_TEXT_REFERENCE")
         target = by_id[check["region_id"]]
         if provider == "pp":
             selected = [
@@ -1130,21 +1136,23 @@ def evaluate(run_dir: Path, ground_truth: Path) -> Json:
     durations = {}
     for provider in ("monkey", "pp", "ovis"):
         for variant in ("jpg", "png"):
-            times = [
-                r["duration_ms"]
-                for r in requests
-                if r["provider"] == provider and r["variant_id"] == variant
+            group = [
+                r for r in requests if r["provider"] == provider and r["variant_id"] == variant
             ]
-            durations[f"{provider}_{variant}"] = (
-                {
-                    "count": len(times),
-                    "median_ms": statistics.median(times),
-                    "min_ms": min(times),
-                    "max_ms": max(times),
-                }
-                if times
-                else {}
-            )
+            times = [r["duration_ms"] for r in group if r["status"] == "COMPLETE"]
+            failures = [
+                {k: r[k] for k in ("request_id", "status", "duration_ms")}
+                for r in group
+                if r["status"] != "COMPLETE"
+            ]
+            durations[f"{provider}_{variant}"] = {
+                "count": len(times),
+                "median_ms": statistics.median(times) if times else None,
+                "min_ms": min(times) if times else None,
+                "max_ms": max(times) if times else None,
+                "failed_count": len(failures),
+                "failures": failures,
+            }
     metrics: Json = {
         "run_id": meta["run_id"],
         "execution_status": meta["execution_status"],
@@ -1167,8 +1175,10 @@ def evaluate(run_dir: Path, ground_truth: Path) -> Json:
                 run_dir / "evidence-manifest.private.json"
             ),
             "evaluation_tool_hashes": source_hashes(),
-            "evaluation_version": "1.1",
-            "correction_sha256": compute_file_hash(ROOT / "specs/t0016-evaluation-correction.json"),
+            "evaluation_version": "1.2",
+            "correction_sha256": compute_file_hash(
+                ROOT / "specs/t0016-evaluation-correction-v1.2.json"
+            ),
         },
     )
     overlays(run_dir, gt, predictions)

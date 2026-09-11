@@ -98,3 +98,10 @@ uv run --locked python scripts/evaluate_raster_models.py promote \
 `evaluate` 只用同一 run 的本地文件重算，检查输入/真值/协议/响应/预测/矩阵链，拒绝哈希漂移。`promote` 仅写 `tasks/reports/T0016_METRICS.json` 的 allowlist 脱敏指标，不调用模型、不触碰 T0015；PARTIAL 也可公开失败证据，**不等于验收通过**。CLI 对 PARTIAL/BLOCKED 返回 2，局部输入/证据错误返回 1，完整执行返回 0。不要用 `&&` 隐去 PARTIAL 的后续证据整理。
 
 本地 `review.private.html` 包含原图叠加和转录评分细节，不能提交或上传。T0016 当前状态及全部限制见 `tasks/reports/T0016_REPORT.md`。
+
+
+### PR #2 防错修订（评估 v1.2）
+
+见 `specs/t0016-evaluation-correction-v1.2.json`：confirmed 参考在既定规范化后必须非空，标注校验和内容评分均拒绝无效参考，不自动改写为答案。耗时的 count/median_ms/min_ms/max_ms 只统计 COMPLETE；无成功结果时为 0/null/null/null。failed_count 与 failures（request_id、status、duration_ms）单独保存，公开摘要保持相同区分。
+
+两个真实运行仍使用其封存的 v1.1 评分和当时工具哈希。本轮没有重新 evaluate/promote 它们；新代码版本与历史证据版本不同是有意保留的来源事实，不应手工改写历史哈希。修复不改变 T0016 的 ACCEPTED_WITH_QUALITY_FINDINGS 结论。
