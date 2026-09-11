@@ -1,0 +1,12 @@
+{
+  "evaluation_version": "1.2",
+  "previous_evaluation_version": "1.1",
+  "reason": "PR #2 defensive validation and latency population correction; not a new model run or quality improvement.",
+  "corrections": {
+    "confirmed_reference": "Reject non-string or normalized-empty confirmed references at validation and content scoring; do not rewrite references.",
+    "success_latency": "count/median_ms/min_ms/max_ms use COMPLETE requests only; no successes means count=0 and null median/min/max.",
+    "failed_latency": "failed_count and failures preserve request_id, status and duration_ms separately in private and public summaries."
+  },
+  "retained": "v1.1 label normalization, paragraph denominator, geometry thresholds, prompts and model parameters remain unchanged.",
+  "history_policy": "Both real runs, v1.1 metrics and recorded tool hashes remain sealed and unchanged. This version applies to future evaluations only."
+}

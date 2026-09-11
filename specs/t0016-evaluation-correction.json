@@ -1,0 +1,19 @@
+{
+  "evaluation_version": "1.1",
+  "reason": "Fix label case and documented semantic aliases in evaluation only; v1.0 Monkey class matching invalid. No truth, bbox, threshold, prompt or inference change.",
+  "previous_evaluation_version": "1.0",
+  "corrections": {
+    "label_case": "casefold",
+    "aliases": {
+      "picture": "visual",
+      "image": "visual",
+      "chart": "visual",
+      "list-item": "text",
+      "section-header": "title",
+      "page-footer": "footer"
+    },
+    "paragraph_scope": "Exclude visual regions from paragraph precision denominator; visual regions scored separately and also in whole-page block layer."
+  },
+  "original_protocol_unchanged": true,
+  "original_collected_predictions_unchanged": true
+}

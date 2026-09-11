@@ -1,0 +1,13 @@
+{
+  "fixture_kind": "synthetic_example",
+  "coordinate_space": "raster_pixel",
+  "ground_truth": [
+    {"id": "g1", "type": "visual", "bbox": [0, 0, 10, 10]},
+    {"id": "g2", "type": "text", "bbox": [10, 0, 20, 10]}
+  ],
+  "predictions": [
+    {"id": "p1", "type": "Picture", "raw_label": "Picture", "bbox": [0, 0, 10, 10]},
+    {"id": "p2", "type": "List-item", "raw_label": "List-item", "bbox": [10, 0, 20, 10]}
+  ],
+  "expected_tp_at_075": 2
+}
