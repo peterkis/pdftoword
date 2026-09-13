@@ -2000,3 +2000,20 @@ def test_same_type_merge_quarantines_independent_relations(
     assert not any(r["type"] == relation_kind for r in result["relations"])
     assert any(i["type"] == "MERGED_RELATION_REVIEW" for i in result["issues"])
     assert len(result["provenance"]["merge-collapsed-0"]["before"]) == 2
+
+
+@pytest.mark.parametrize(
+    "tag", ["section", "h1", "p", "foreignObject", "annotation-xml", "feGaussianBlur"]
+)
+def test_formula_before_standard_truncated_tag_falls_back(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x$<" + tag}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)

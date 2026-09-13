@@ -23,6 +23,37 @@ from .structure import CAPTION, MATH, OPTION, QUESTION, chat_content, image_cont
 IMAGE = re.compile(r'<img\s+src="images/bbox_(\d+)_(\d+)_(\d+)_(\d+)\.jpg"\s*/?>')
 
 
+# Standard element names are ambiguous with variable names when markup is truncated.
+# Immediately after a formula, preserve the source for review for these names.
+STANDARD_MARKUP_TAGS = frozenset(
+    """
+a abbr acronym address applet area article aside audio b base basefont bdi bdo big
+blockquote body br button canvas caption center cite code col colgroup data datalist
+dd del details dfn dialog dir div dl dt em embed fieldset figcaption figure font
+footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img
+input ins kbd label legend li link main map mark marquee menu meta meter nav nobr
+noembed noframes noscript object ol optgroup option output p param picture plaintext
+portal pre progress q rb rp rt rtc ruby s samp script search section select selectedcontent
+slot small source span strike strong style sub summary sup table tbody td template
+textarea tfoot th thead time title tr track tt u ul var video wbr xmp
+math semantics annotation annotation-xml maction menclose merror mfenced mfrac mi
+mmultiscripts mn mo mover mpadded mphantom mprescripts mroot mrow ms mspace msqrt
+mstyle msub msubsup msup mtable mtd mtext mtr munder munderover none maligngroup
+malignmark mlabeledtr mlongdiv mscarries mscarry msgroup msline msrow mstack
+apply bind bvar ci cn csymbol cerror condition declare domainofapplication interval
+lambda list logbase lowlimit matrix matrixrow momentabout piece piecewise otherwise
+reln set tendsto uplimit vector
+svg animate animateMotion animateTransform circle clipPath defs desc discard ellipse
+feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting
+feDisplacementMap feDistantLight feDropShadow feFlood feFuncA feFuncB feFuncG feFuncR
+feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight
+feSpecularLighting feSpotLight feTile feTurbulence filter foreignObject g hatch hatchpath
+image line linearGradient marker mask metadata mpath path pattern polygon polyline
+radialGradient rect set solidcolor stop switch symbol text textPath tspan use view
+""".lower().split()
+)
+
+
 def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> None:
     """Build IR exclusively from one complete Ovis Markdown response.
 
@@ -40,7 +71,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         "text_bbox": "unknown; full-page source reference only",
     }
     page_box = [0.0, 0.0, p["width_pt"], p["height_pt"]]
-    plain_context = MATH.sub("M", IMAGE.sub("", content))
+    plain_context = MATH.sub("\ufffc", IMAGE.sub("", content))
     residual_math = unrendered_math(MATH.sub("", content))
     alternate_formula = residual_math or any(
         marker in content for marker in (r"\(", r"\)", r"\[", r"\]")
@@ -64,6 +95,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
             plain_context,
             re.IGNORECASE,
         )
+    )
+    truncated_html = truncated_html or any(
+        match[1].lower() in STANDARD_MARKUP_TAGS
+        for match in re.finditer(r"\ufffc<([A-Za-z][A-Za-z0-9:_-]*)(?=\s|/|>|$)", plain_context)
     )
     unsupported_html = (
         unknown_image
