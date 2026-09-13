@@ -24,7 +24,7 @@ IMAGE = re.compile(r'<img\s+src="images/bbox_(\d+)_(\d+)_(\d+)_(\d+)\.jpg"\s*/?>
 
 
 # Standard element names are ambiguous with variable names when markup is truncated.
-# Immediately after a formula, preserve the source for review for these names.
+# After a formula or sentence terminator, preserve the source for review for these names.
 STANDARD_MARKUP_TAGS = frozenset(
     """
 a abbr acronym address applet area article aside audio b base basefont bdi bdo big
@@ -99,7 +99,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
     truncated_html = truncated_html or any(
         match[1].lower() in STANDARD_MARKUP_TAGS
         for match in re.finditer(
-            r"\ufffc<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?([A-Za-z][A-Za-z0-9_-]*)(?=\s|/|>|$)",
+            r"[\ufffc。！？.!?]<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?([A-Za-z][A-Za-z0-9_-]*)(?=\s|/|>|$)",
             plain_context,
         )
     )

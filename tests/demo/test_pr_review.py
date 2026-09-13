@@ -2040,3 +2040,16 @@ def test_heading_only_page_counts_as_editable_main_content(private_case: Path) -
     p["reading_order"] = ["h"]
     qa = finish(job, ir)
     assert qa["page_editable_content"] == {"0": True}
+
+
+@pytest.mark.parametrize(
+    "raw", ["正文。<section", "提示！<h1", "疑问？<p", "Done.<section", "Note!<h1", "Question?<p"]
+)
+def test_sentence_end_before_truncated_tag_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
