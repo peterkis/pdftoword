@@ -6,6 +6,7 @@ import ctypes
 import itertools
 import math
 import threading
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from .common import (
     box_valid,
     crop,
     intersection,
+    invalid_xml_text,
     issue,
     page,
     union,
@@ -26,6 +28,16 @@ from .common import (
 )
 from .formula import unrendered_math
 from .structure import QUESTION, image_content
+
+
+def _abnormal_unicode(char: str) -> bool:
+    """Identify unreliable glyph mappings, including supplementary private-use planes."""
+    return (
+        (not char.isprintable() and char not in "\t\r\n")
+        or char == "\ufffd"
+        or unicodedata.category(char) == "Co"
+    )
+
 
 PDFIUM_LOCK = threading.RLock()
 
@@ -172,13 +184,9 @@ def extract(
                     for ci in range(textpage.count_chars()):
                         char = chr(pdfium.raw.FPDFText_GetUnicode(textpage, ci))
                         source_chars.append(char)
-                        if char in "\r\n" or char == "\x00":
+                        if char in "\r\n":
                             continue
-                        if (
-                            not char.isprintable()
-                            or char == "\ufffd"
-                            or 0xE000 <= ord(char) <= 0xF8FF
-                        ):
+                        if _abnormal_unicode(char):
                             bad += 1
                         cb = convert_box(textpage.get_charbox(ci, loose=True))
                         if not box_valid(cb):
@@ -301,7 +309,7 @@ def extract(
                     if image_text_overlap:
                         reason.append("image_text_overlap_review")
                     count = max(1, len(chars))
-                    if bad / count > 0.01:
+                    if bad:
                         reason.append("abnormal_unicode")
                     if invalid_box / count > 0.01:
                         reason.append("invalid_bbox")
@@ -365,15 +373,9 @@ def extract(
                         if row[0]["size"] >= 16:
                             b["type"] = "heading"
                         alternate_formula = unrendered_math(text)
-                        if alternate_formula or any(
-                            not (
-                                ord(c) in {9, 10, 13}
-                                or 32 <= ord(c) <= 0xD7FF
-                                or 0xE000 <= ord(c) <= 0xFFFD
-                                or 0x10000 <= ord(c) <= 0x10FFFF
-                            )
-                            for c in text
-                        ):
+                        abnormal_unicode = any(_abnormal_unicode(c) for c in text)
+                        invalid_xml = invalid_xml_text(text)
+                        if alternate_formula or abnormal_unicode or invalid_xml:
                             aid = crop(job, ir, p, bbox, bid + "-invalid-xml")
                             b.update(content=image_content(aid), render_policy="preserve_image")
                             b["flags"].append("invalid_xml_text_fallback")
@@ -381,8 +383,10 @@ def extract(
                                 ir,
                                 "NATIVE_FORMULA_DELIMITER_REVIEW"
                                 if alternate_formula
-                                else "INVALID_XML_TEXT_FALLBACK",
-                                "原生行含未支持公式定界符或XML非法字符，保留候选并降级源图待审校。",
+                                else "INVALID_XML_TEXT_FALLBACK"
+                                if invalid_xml
+                                else "NATIVE_UNICODE_FALLBACK",
+                                "原生行含未支持公式定界符、异常字形映射或XML非法字符，保留候选并降级源图待审校。",
                                 [bid],
                                 index,
                             )

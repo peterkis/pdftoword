@@ -2053,3 +2053,31 @@ def test_sentence_end_before_truncated_tag_falls_back(private_case: Path, raw: s
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("codepoint", [0xFFFD, 0xE001, 0xF0001, 0x200B])
+def test_native_abnormal_unicode_line_preserves_source(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch, codepoint: int
+) -> None:
+    import pypdfium2 as pdfium
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "abnormal.pdf"
+    make_pdf(source)
+    original = pdfium.raw.FPDFText_GetUnicode
+    monkeypatch.setattr(
+        pdfium.raw,
+        "FPDFText_GetUnicode",
+        lambda page, index: codepoint if index == 0 else original(page, index),
+    )
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    assert any(i["type"] == "NATIVE_UNICODE_FALLBACK" for i in ir["issues"])
+    assert common.read(job / "qa.json")["fallback_region_count"] > 0
+    assert any(
+        chr(codepoint) in c.get("text", "")
+        for p in ir["pages"]
+        for b in p["blocks"]
+        for c in b["content_candidates"]
+    )
