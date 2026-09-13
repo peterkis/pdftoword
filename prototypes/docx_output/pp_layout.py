@@ -61,6 +61,11 @@ def _apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) 
     ]
     fine = [transform(b, sx, sy) for b in raw.get("overall_ocr_res", {}).get("rec_boxes", [])]
     fine += [transform(f["dt_polys"], sx, sy) for f in raw.get("formula_res_list", [])]
+    for bbox in fine:
+        if not (
+            0 <= bbox[0] < bbox[2] <= p["width_pt"] and 0 <= bbox[1] < bbox[3] <= p["height_pt"]
+        ):
+            raise DemoError("PP_FINE_REGION_OUT_OF_PAGE")
     policy = RULES.effective(fine)
     ir["metadata"]["layout_policy"] = policy
     ir["metadata"]["layout_provider"] = "pp"

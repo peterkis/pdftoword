@@ -234,6 +234,10 @@ def extract(
                             intersection(c["bbox"], f) / area(c["bbox"]) > 0.8 for f in figures
                         )
                     ]
+                    # Keep ambiguous vector ink as an explicit review crop as well;
+                    # it never suppresses the editable native text above.
+                    ambiguous_figures = cluster_regions(ambiguous_paths)
+                    figures.extend(ambiguous_figures)
                     duplicate = len(chars) - len(
                         {(c["text"], tuple(round(v, 1) for v in c["bbox"])) for c in chars}
                     )
@@ -310,6 +314,15 @@ def extract(
                         aid = crop(job, ir, p, f, bid)
                         b = block(bid, index, f, "", "pdf_vector_render", "figure")
                         b.update(content=image_content(aid), render_policy="preserve_image")
+                        if f in ambiguous_figures:
+                            b["flags"].append("ambiguous_vector_reference")
+                            issue(
+                                ir,
+                                "VECTOR_TEXT_OVERLAP_REVIEW",
+                                "矢量图域含原生文字，保留参考裁剪与可编辑文字；图内文字可能重复，需复核图域边界。",
+                                [bid],
+                                index,
+                            )
                         p["blocks"].append(b)
                         if area(f) / (w * h) > 0.5:
                             issue(

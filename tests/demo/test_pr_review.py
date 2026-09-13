@@ -179,3 +179,49 @@ def test_math_only_output_is_editable(private_case: Path) -> None:
     assert qa["omml_formula_count"] == 1
     assert qa["has_editable_runs"]
     assert qa["execution_status"] == "COMPLETE"
+
+
+@pytest.mark.parametrize("kind", ["ocr", "formula"])
+def test_pp_fine_boxes_outside_page_fall_back(private_case: Path, kind: str) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    raw = pp["result"]["layoutParsingResults"][0]["prunedResult"]
+    bbox = [-2, 20, 100, 50]
+    if kind == "ocr":
+        raw["overall_ocr_res"]["rec_boxes"].append(bbox)
+    else:
+        raw["formula_res_list"].append({"dt_polys": bbox})
+    before = copy.deepcopy(p["blocks"])
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert ir["metadata"]["layout_validation"]["status"] == "FALLBACK"
+    assert p["blocks"] == before
+
+
+def test_caption_rows_cannot_cross_text(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("f1", 0, [10, 10, 40, 40], "", "inferred", "figure"),
+        block("c1", 0, [10, 40, 40, 45], "第1题", "inferred"),
+        block("middle", 0, [10, 45, 80, 50], "Keep between", "inferred"),
+        block("f2", 0, [50, 10, 80, 40], "", "inferred", "figure"),
+        block("c2", 0, [50, 40, 80, 45], "第2题", "inferred"),
+    ]
+    associate_ovis(ir, p)
+    groups = ir["metadata"]["figure_groups"]
+    assert [len(g["pairs"]) for g in groups] == [1, 1]
+
+
+def test_ambiguous_native_vectors_remain_in_output(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "labeled-vector.pdf"
+    make_pdf(source, decoration=b"50 700 300 70 re S\n")
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    assert any("ambiguous_vector_reference" in b["flags"] for b in ir["pages"][0]["blocks"])
+    assert any(i["type"] == "VECTOR_TEXT_OVERLAP_REVIEW" for i in ir["issues"])

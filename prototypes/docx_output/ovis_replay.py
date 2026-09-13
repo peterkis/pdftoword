@@ -251,6 +251,7 @@ def associate_ovis(ir: Json, p: Json) -> None:
         groups.append({"page_index": p["page_index"], "kind": "option_grid", "pairs": pairs})
     # Preserve only genuine figure rows: adjacent captioned figures with overlapping vertical spans.
     by_id = {b["id"]: b for b in blocks}
+    positions = {b["id"]: index for index, b in enumerate(blocks)}
     rows: list[list[Json]] = []
     for pair in shared:
         box = by_id[pair["figure"]]["bbox"]
@@ -259,7 +260,10 @@ def associate_ovis(ir: Json, p: Json) -> None:
             overlap = min(box[3], prior[3]) - max(box[1], prior[1])
         else:
             overlap = 0
-        if rows and overlap > 0:
+        adjacent = bool(rows) and (
+            positions[pair["figure"]] == positions[rows[-1][-1]["label"]] + 1
+        )
+        if rows and overlap > 0 and adjacent:
             rows[-1].append(pair)
         else:
             rows.append([pair])
