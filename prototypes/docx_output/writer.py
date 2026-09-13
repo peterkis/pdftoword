@@ -203,7 +203,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
             para.add_run(text)
         counts["editable_text_char_count"] += len(text.strip())
 
-    for page_index, p in enumerate(ir["pages"]):
+    for p in ir["pages"]:
         decision = ir["metadata"].get("layout_by_page", {}).get(str(p["page_index"]))
         content_left = (
             decision.get("content_left_pt", 0)
@@ -212,8 +212,6 @@ def build(job: Path, ir: Json, revision: str) -> Json:
         )
         if decision:
             spatial = decision["status"] == "APPLIED"
-        if page_index:
-            doc.add_page_break()
         by_id = {b["id"]: b for b in p["blocks"]}
         group_map: dict[str, Json] = {}
         for g in ir["metadata"].get("figure_groups", []):

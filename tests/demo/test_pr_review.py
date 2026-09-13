@@ -1557,3 +1557,20 @@ def test_replaced_ovis_crop_has_evidence_reference(private_case: Path) -> None:
     pp = response([pp_block("", label="image", bbox=[40, 60, 200, 180])])
     apply_pp_layout(job, ir, p, pp, "pp")
     assert ir["provenance"]["pp-layout-" + b["id"]]["previous_asset_id"] == previous
+
+
+def test_source_pages_do_not_force_word_page_break(private_case: Path) -> None:
+    import zipfile
+
+    from lxml import etree
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "flow.pdf"
+    make_pdf(source, pages=2)
+    job = convert(source, output_root=private_case / "jobs")
+    with zipfile.ZipFile(job / "auto.docx") as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    assert not root.xpath('//w:br[@w:type="page"]', namespaces=ns)
+    assert len(common.read(job / "layout.auto.json")["pages"]) == 2
