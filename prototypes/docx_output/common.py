@@ -364,7 +364,7 @@ def crop(
         if not box_valid(bound):
             raise DemoError("CROP_OUTSIDE_PAGE")
         image = im.crop((bound[0], bound[1], bound[2], bound[3]))
-        path = safe_path(job, f"assets/{aid}.png")
+        path = safe_path(job, f"assets/{aid}-{uuid.uuid4().hex}.png")
         image.save(path)
         image.close()
     path.chmod(0o600)

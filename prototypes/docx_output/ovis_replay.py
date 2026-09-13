@@ -30,7 +30,8 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
     }
     page_box = [0.0, 0.0, p["width_pt"], p["height_pt"]]
     plain_context = MATH.sub("", IMAGE.sub("", content))
-    if re.search(
+    alternate_formula = any(marker in content for marker in (r"\(", r"\)", r"\[", r"\]"))
+    if alternate_formula or re.search(
         r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_]+[*_](?!\w)",
         plain_context,
     ):
@@ -42,7 +43,12 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
             page_box,
             "",
             "inferred",
-            evidence={"request_id": request_id, "reason": "unsupported_markdown_source_page"},
+            evidence={
+                "request_id": request_id,
+                "reason": "unsupported_formula_delimiter"
+                if alternate_formula
+                else "unsupported_markdown_source_page",
+            },
         )
         b.update(content=image_content(aid), render_policy="preserve_image")
         b["flags"].append("full_page_markdown_fallback")
@@ -51,8 +57,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         p["routing_decision"] = "OVIS_MARKDOWN_SOURCE_FALLBACK"
         issue(
             ir,
-            "OVIS_MARKDOWN_REVIEW_REQUIRED",
-            "不支持的Markdown结构已降级为源页图片，原响应保留；待人工转写或确认。",
+            "OVIS_FORMULA_DELIMITER_REVIEW"
+            if alternate_formula
+            else "OVIS_MARKDOWN_REVIEW_REQUIRED",
+            "不支持的公式或Markdown结构已降级为源页图片，原响应保留；待人工转写或确认。",
             [bid],
             p["page_index"],
         )

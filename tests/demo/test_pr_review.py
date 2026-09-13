@@ -1083,3 +1083,55 @@ def test_currency_prefix_remains_literal(private_case: Path, raw: str) -> None:
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["has_editable_runs"]
+
+
+def test_currency_then_formula_parses_independently(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "US$5 and $x$"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    parts = ir["metadata"]["inline_parts"][p["blocks"][0]["id"]]
+    assert [x["latex"] for x in parts if "latex" in x] == ["x"]
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_preview_crop_does_not_overwrite_saved_bytes(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    first = common.crop(job, ir, p, [1, 1, 20, 20], "same")
+    asset = next(a for a in ir["assets"] if a["id"] == first)
+    path = job / asset["path"]
+    before = path.read_bytes()
+    other = copy.deepcopy(ir)
+    other["assets"] = []
+    common.crop(job, other, p, [1, 1, 100, 100], "same")
+    assert path.read_bytes() == before
+    assert other["assets"][0]["path"] != asset["path"]
+
+
+@pytest.mark.parametrize("mode", ["ovis", "native"])
+def test_alternate_math_exports_reviewable_fallback(private_case: Path, mode: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    if mode == "ovis":
+        job, ir, p = setup_ir(private_case)
+        recover_ovis(
+            job,
+            ir,
+            p,
+            {"choices": [{"finish_reason": "stop", "message": {"content": r"\(x^2\)"}}]},
+            "ovis",
+        )
+        qa = finish(job, ir)
+    else:
+        source = private_case / "math.pdf"
+        text = r"\(x^2\)".encode("utf-16-be").hex()
+        make_pdf(source, decoration=f"BT /F1 12 Tf 60 580 Td <{text}> Tj ET\n".encode())
+        job = convert(source, output_root=private_case / "jobs")
+        qa = common.read(job / "qa.json")
+    assert qa["fallback_region_count"] > 0
+    assert (job / "auto.docx").exists()

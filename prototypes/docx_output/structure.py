@@ -22,14 +22,12 @@ from .common import (
     transform,
     union,
 )
-from .formula import to_omml, unrendered_math
+from .formula import MathSpans, to_omml, unrendered_math
 
 QUESTION = re.compile(r"^\s*(\d+)[.．、](?!\d)\s*")
 OPTION = re.compile(r"^\s*([A-D])[.．、]\s*")
 CAPTION = re.compile(r"^\s*第\s*(\d+)\s*题\s*$")
-MATH = re.compile(
-    r"(?<!\$)(?!\$\d[^$]*\$\d)(?=\$\$[^$]+\$\$(?!\$)|\$[^$]+\$(?!\$))\$\$?([^$]+)\$\$?(?!\$)"
-)
+MATH = MathSpans()
 
 
 def chat_content(body: Json) -> str:

@@ -316,7 +316,10 @@ def extract(
                         ]
                         if row[0]["size"] >= 16:
                             b["type"] = "heading"
-                        if any(
+                        alternate_formula = any(
+                            marker in text for marker in (r"\(", r"\)", r"\[", r"\]")
+                        )
+                        if alternate_formula or any(
                             not (
                                 ord(c) in {9, 10, 13}
                                 or 32 <= ord(c) <= 0xD7FF
@@ -330,8 +333,10 @@ def extract(
                             b["flags"].append("invalid_xml_text_fallback")
                             issue(
                                 ir,
-                                "INVALID_XML_TEXT_FALLBACK",
-                                "原生行含XML非法字符，保留候选并降级源图待审校。",
+                                "NATIVE_FORMULA_DELIMITER_REVIEW"
+                                if alternate_formula
+                                else "INVALID_XML_TEXT_FALLBACK",
+                                "原生行含未支持公式定界符或XML非法字符，保留候选并降级源图待审校。",
                                 [bid],
                                 index,
                             )

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from typing import Any
 
 from lxml import etree
@@ -177,3 +178,32 @@ def unrendered_math(text: str) -> bool:
         if match[1] in commands or text[match.end() :].lstrip().startswith("{"):
             return True
     return False
+
+
+class MathSpans:
+    """Match dollar math after masking unambiguous amount starts, preserving offsets."""
+
+    def __init__(self) -> None:
+        self.pattern = re.compile(
+            r"(?<!\$)(?=\$\$[^$]+\$\$(?!\$)|\$[^$]+\$(?!\$))\$\$?([^$]+)\$\$?(?!\$)"
+        )
+        self.currency = re.compile(
+            r"(?<![\w$])(?:US|HK|CA|AU|NZ|SG|NT|A|C|S)?\$\d+(?:[.,]\d+)*(?=\s|[;!,)]|$)"
+        )
+
+    def finditer(self, text: str) -> Iterator[re.Match[str]]:
+        """Yield math spans without consuming currency dollar signs."""
+        masked = list(text)
+        for amount in self.currency.finditer(text):
+            position = text.index("$", amount.start(), amount.end())
+            masked[position] = "\x00"
+        return self.pattern.finditer("".join(masked))
+
+    def sub(self, replacement: str, text: str) -> str:
+        """Replace math spans while preserving literal text including amounts."""
+        result = []
+        cursor = 0
+        for match in self.finditer(text):
+            result.extend([text[cursor : match.start()], replacement])
+            cursor = match.end()
+        return "".join([*result, text[cursor:]])
