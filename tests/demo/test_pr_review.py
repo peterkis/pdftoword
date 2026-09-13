@@ -137,8 +137,8 @@ def test_footer_join_keeps_both_candidates(private_case: Path) -> None:
 
 @pytest.mark.parametrize("decoration", [b"10 10 575 820 re S\n", b"50 590 480 190 re S\n"])
 def test_native_container_keeps_editable_text(private_case: Path, decoration: bytes) -> None:
-    from tests.demo.synthetic import make_pdf
     from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
 
     source = private_case / "border.pdf"
     original = make_pdf(source, decoration=decoration)
