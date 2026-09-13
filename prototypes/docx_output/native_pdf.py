@@ -227,15 +227,11 @@ def extract(
                         ]
                         if internal:
                             figures[fi] = union([f, *internal])
-                    visible_chars = [
-                        c
-                        for c in chars
-                        if not any(
-                            area(f) / (w * h) < 0.5
-                            and intersection(c["bbox"], f) / area(c["bbox"]) > 0.8
-                            for f in figures
-                        )
-                    ]
+                    # Containment does not prove that native text belongs to a figure.
+                    visible_chars = chars
+                    image_text_overlap = any(
+                        intersection(c["bbox"], bounds) > 0 for bounds in image_boxes for c in chars
+                    )
                     # Keep ambiguous vector ink as an explicit review crop as well;
                     # it never suppresses the editable native text above.
                     ambiguous_figures = [
@@ -249,6 +245,8 @@ def extract(
                     )
                     img_ratio = union_area(image_boxes) / (w * h)
                     reason = ["vector_text_overlap_review"] if ambiguous_paths else []
+                    if image_text_overlap:
+                        reason.append("image_text_overlap_review")
                     count = max(1, len(chars))
                     if bad / count > 0.01:
                         reason.append("abnormal_unicode")

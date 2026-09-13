@@ -601,3 +601,29 @@ def test_relation_id_never_collides_after_delete() -> None:
     ir["relations"].pop(0)
     common.relation(ir, "references", "e", "f", {})
     assert len({r["id"] for r in ir["relations"]}) == 2
+
+
+@pytest.mark.parametrize("raw", [r"1. 求 \sqrt{x}", r"x\leq0", r"$x$ and \alpha"])
+def test_unprocessed_latex_never_exports_as_plain_text(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    with pytest.raises(common.DemoError, match="UNRENDERED_MATH_REQUIRES_REVIEW"):
+        finish(job, ir)
+
+
+def test_small_background_keeps_native_text_and_requires_review(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "small-bg.pdf"
+    original = make_pdf(source, decoration=b"q 500 0 0 190 40 600 cm /Im0 Do Q\n")
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    p = ir["pages"][0]
+    text = "".join(b["content"].get("plain_text", "") for b in p["blocks"])
+    assert "".join(original.split()) == "".join(text.split())
+    assert p["routing_decision"] == "NEEDS_ROUTE_REVIEW"

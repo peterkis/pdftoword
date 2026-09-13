@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import posixpath
+import re
 import unicodedata
 import zipfile
 from pathlib import Path
@@ -180,13 +181,15 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                 elif "asset_id" in item:
                     picture(para, item["asset_id"], width, True)
                 else:
+                    if "$" in item["text"] or re.search(r"\\[A-Za-z]+", item["text"]):
+                        raise DemoError("UNRENDERED_MATH_REQUIRES_REVIEW")
                     para.add_run(item["text"])
                     counts["editable_text_char_count"] += len(item["text"].strip())
             return
         if content["kind"] != "text":
             raise DemoError("UNSUPPORTED_IR_CONTENT")
         text = content["plain_text"]
-        if "$" in text or "\\frac" in text:
+        if "$" in text or re.search(r"\\[A-Za-z]+", text):
             raise DemoError("UNRENDERED_MATH_REQUIRES_REVIEW")
         if content["runs"]:
             for r in content["runs"]:
