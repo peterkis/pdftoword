@@ -36,7 +36,10 @@ def chat_content(body: Json) -> str:
     """Require the frozen string wire type and complete finish reason."""
     choices = body.get("choices", [])
     if (
-        len(choices) != 1
+        not isinstance(choices, list)
+        or len(choices) != 1
+        or not isinstance(choices[0], dict)
+        or not isinstance(choices[0].get("message"), dict)
         or choices[0].get("finish_reason") != "stop"
         or not isinstance(choices[0].get("message", {}).get("content"), str)
     ):

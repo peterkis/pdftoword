@@ -81,6 +81,23 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             or not op["reason"].strip()
         ):
             raise DemoError("OVERRIDE_REASON_REQUIRED")
+        if op.get("action") == "resolve_issue":
+            chosen = [i for i in ir["issues"] if i["id"] == op.get("issue_id")]
+            if len(chosen) != 1:
+                raise DemoError("ISSUE_NOT_FOUND")
+            item = chosen[0]
+            if (item["block_ids"] and op.get("block_id") not in item["block_ids"]) or op.get(
+                "page_index", item["page_index"]
+            ) != item["page_index"]:
+                raise DemoError("ISSUE_NOT_FOUND")
+            before_issue = copy.deepcopy(item)
+            item["status"] = "resolved"
+            ir["provenance"][f"manual-{n}"] = {
+                "operation": op,
+                "before_issue": before_issue,
+                "after_issue": copy.deepcopy(item),
+            }
+            continue
         matches = [
             (p, b) for p in ir["pages"] for b in p["blocks"] if b["id"] == op.get("block_id")
         ]
@@ -312,15 +329,6 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 r for r in ir["relations"] if not (r["from"] == b["id"] and r["type"] == kind)
             ]
             relation(ir, kind, b["id"], target, {"reason": op["reason"], "manual": True})
-        elif action == "resolve_issue":
-            chosen = [
-                i
-                for i in ir["issues"]
-                if i["id"] == op.get("issue_id") and b["id"] in i["block_ids"]
-            ]
-            if len(chosen) != 1:
-                raise DemoError("ISSUE_NOT_FOUND")
-            chosen[0]["status"] = "resolved"
         else:
             raise DemoError("UNKNOWN_OVERRIDE_ACTION")
         b["source_type"] = "manual_correction"

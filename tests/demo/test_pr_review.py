@@ -798,3 +798,31 @@ def test_split_rejects_parent_ovis_candidate(private_case: Path) -> None:
     ]
     with pytest.raises(common.DemoError, match="CANDIDATE_NOT_FOUND"):
         apply_overrides(job, ir, {"operations": operations})
+
+
+@pytest.mark.parametrize("choices", [{"x": 1}, [None], [{"message": None}], None])
+def test_malformed_chat_shapes_raise_domain_error(choices: object) -> None:
+    from prototypes.docx_output.structure import chat_content
+
+    with pytest.raises(common.DemoError, match="INVALID_CANDIDATE_WIRE_TYPE"):
+        chat_content({"choices": choices})
+
+
+@pytest.mark.parametrize("page_level", [False, True])
+def test_issue_resolution_can_empty_queue(private_case: Path, page_level: bool) -> None:
+    job, ir, p = setup_ir(private_case)
+    if not page_level:
+        p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+        p["reading_order"] = ["a"]
+    common.issue(ir, "REVIEW", "Check", [] if page_level else ["a"])
+    op = {
+        "action": "resolve_issue",
+        "issue_id": ir["issues"][0]["id"],
+        "page_index": 0,
+        "reason": "checked",
+    }
+    if not page_level:
+        op["block_id"] = "a"
+    result = apply_overrides(job, ir, {"operations": [op]})
+    assert all(i["status"] == "resolved" for i in result["issues"])
+    assert result["provenance"]["manual-0"]["operation"] == op

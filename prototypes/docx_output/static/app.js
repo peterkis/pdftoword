@@ -40,6 +40,7 @@ function show(){
   $('issues').replaceChildren();for(const i of layout.issues.filter(i=>i.page_index===pageIndex)){
     const el=document.createElement('div');el.className='issue';el.textContent=i.id+' · '+i.type+' · '+i.status+' — '+i.message;
     if(i.block_ids.length){const b=document.createElement('button');b.textContent='定位';b.onclick=()=>{const found=p.blocks.find(x=>i.block_ids.includes(x.id));if(found)choose(found);};el.append(b);}
+    if(i.status==='open'){const resolve=document.createElement('button');resolve.textContent='标记已核对';resolve.onclick=()=>operation({action:'resolve_issue',issue_id:i.id,page_index:i.page_index,block_id:i.block_ids[0]}).catch(e=>message(e));el.append(resolve);}
     $('issues').append(el);
   }
   $('alternatives').textContent=JSON.stringify({monkey:layout.provenance.monkey_geometry?.[pageIndex],ovis:layout.provenance.ovis_content?.[pageIndex]},null,2);
@@ -59,13 +60,13 @@ function choose(b){
   for(const e of $('blocks').children)e.classList.toggle('active',e.firstChild.textContent.startsWith(b.id+' ·'));
 }
 async function operation(op){
-  if(!selected)throw new Error('请先选择一个块');
+  if(!selected&&op.action!=='resolve_issue')throw new Error('请先选择一个块');
   if(!$('reason').value.trim())throw new Error('请填写操作原因，以保留修正来源');
-  const next=[...operations,{block_id:selected.id,reason:$('reason').value,...op}];
+  const next=[...operations,{block_id:selected?.id,reason:$('reason').value,...op}];
   const result=await api('/api/preview/'+jobId,{operations:next});operations=next;layout=result.layout;
   // Preview crops are registered in the preview revision served by backend.
   preview=true;revision='reviewed';data.reviewed=layout;data.qa_reviewed=null;$('revision').value=revision;
-  const id=selected.id;show();const b=layout.pages.flatMap(p=>p.blocks).find(b=>b.id===id);if(b)choose(b);
+  const id=selected?.id;show();const b=layout.pages.flatMap(p=>p.blocks).find(b=>b.id===id);if(b)choose(b);
 }
 async function wait(){
   let s=await api('/api/status');$('status').textContent=s.state;
