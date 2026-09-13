@@ -70,7 +70,7 @@ def _apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) 
     ir["metadata"]["layout_policy"] = policy
     ir["metadata"]["layout_provider"] = "pp"
     ir["metadata"]["layout_profile"] = "pp_geometry_flow"
-    ir["provenance"]["pp_layout_only"] = {
+    ir["provenance"].setdefault("pp_layout_only", {})[str(p["page_index"])] = {
         "request_id": request_id,
         "regions": regions,
         "fine_boxes": fine,

@@ -263,6 +263,23 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 or target not in {x["id"] for pg in ir["pages"] for x in pg["blocks"]}
             ):
                 raise DemoError("INVALID_RELATION_TARGET")
+            target_block = next(x for pg in ir["pages"] for x in pg["blocks"] if x["id"] == target)
+            valid = target != b["id"]
+            if kind == "references":
+                valid = valid and b["type"] == "figure" and target_block["type"] == "question"
+            else:
+                allowed = (
+                    {"caption", "paragraph"} if kind == "caption_of" else {"option", "paragraph"}
+                )
+                valid = (
+                    valid
+                    and b["type"] in allowed
+                    and b["content"]["kind"] == "text"
+                    and target_block["type"] == "figure"
+                    and b["page_index"] == target_block["page_index"]
+                )
+            if not valid:
+                raise DemoError("INVALID_RELATION_TARGET")
             ir["relations"] = [
                 r for r in ir["relations"] if not (r["from"] == b["id"] and r["type"] == kind)
             ]

@@ -511,3 +511,40 @@ def test_ovis_single_newline_question_boundary(private_case: Path) -> None:
         for b in p["blocks"]
         for c in b["content_candidates"]
     )
+
+
+def test_pp_provenance_is_page_keyed(private_case: Path) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    ir["provenance"]["pp_layout_only"] = {"earlier": {"request_id": "previous"}}
+    apply_pp_layout(job, ir, p, pp, "current")
+    assert ir["provenance"]["pp_layout_only"]["earlier"]["request_id"] == "previous"
+    assert ir["provenance"]["pp_layout_only"]["0"]["request_id"] == "current"
+
+
+@pytest.mark.parametrize("kind", ["label_of", "caption_of", "references"])
+def test_manual_relation_rejects_wrong_endpoint_types(private_case: Path, kind: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf"),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    with pytest.raises(common.DemoError, match="INVALID_RELATION_TARGET"):
+        apply_overrides(
+            job,
+            ir,
+            {
+                "operations": [
+                    {
+                        "block_id": "a",
+                        "action": "relation",
+                        "target_id": "b",
+                        "relation_type": kind,
+                        "reason": "link",
+                    }
+                ]
+            },
+        )
