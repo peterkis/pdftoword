@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import shutil
 from pathlib import Path
 
@@ -82,9 +83,14 @@ def finish(job: Path, ir: Json, revision: str = "auto") -> Json:
             for b in fallback_boxes.get(p["page_index"], [])
         ]
         fallback += union_area([b for b in bounded if area(b)])
+    auxiliary_ids = {r["from"] for r in ir["relations"] if r["type"] in {"label_of", "caption_of"}}
     page_editable_content = {
         str(p["page_index"]): any(
-            b["content"]["kind"] == "text" and bool(b["content"].get("plain_text", "").strip())
+            b["content"]["kind"] == "text"
+            and b["type"] in {"paragraph", "question", "option", "formula", "table"}
+            and b["id"] not in auxiliary_ids
+            and not re.fullmatch(r"[A-D][.．、]?", b["content"].get("plain_text", "").strip())
+            and bool(b["content"].get("plain_text", "").strip())
             for b in p["blocks"]
         )
         for p in ir["pages"]

@@ -10,6 +10,7 @@ from prototypes.docx_output import common
 from prototypes.docx_output.common import Json, block
 from prototypes.docx_output.pipeline import finish
 from prototypes.docx_output.review import apply_overrides
+from prototypes.docx_output.structure import image_content as common_image_content
 from prototypes.docx_output.structure import recover
 from tests.demo.test_output import pp_block, raster, response, setup_ir
 
@@ -1761,3 +1762,28 @@ def test_any_image_only_page_marks_job_incomplete(private_case: Path) -> None:
         "ovis",
     )
     assert finish(job, ir)["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+@pytest.mark.parametrize("kind,text", [("footer", "1页"), ("caption", "第1题"), ("option", "A.")])
+def test_auxiliary_text_does_not_prove_main_editability(
+    private_case: Path, kind: str, text: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    aid = common.crop(job, ir, p, [0, 0, p["width_pt"], p["height_pt"]], "main")
+    b = block("main", 0, [0, 0, p["width_pt"], p["height_pt"]], "", "inferred")
+    b["content"] = common_image_content(aid)
+    b["render_policy"] = "preserve_image"
+    p["blocks"] = [b, block("aux", 0, [1, 1, 20, 20], text, "native_pdf", kind)]
+    p["reading_order"] = ["main", "aux"]
+    assert finish(job, ir)["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+@pytest.mark.parametrize("raw", ["x<sup", "x<sub", "<section", "<h1"])
+def test_generic_truncated_html_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
