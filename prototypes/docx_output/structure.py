@@ -27,7 +27,7 @@ from .formula import to_omml
 QUESTION = re.compile(r"^\s*(\d+)[.．、](?!\d)\s*")
 OPTION = re.compile(r"^\s*([A-D])[.．、]\s*")
 CAPTION = re.compile(r"^\s*第\s*(\d+)\s*题\s*$")
-MATH = re.compile(r"\$([^$]+)\$")
+MATH = re.compile(r"(?<!\$)(?=\$\$[^$]+\$\$(?!\$)|\$[^$]+\$(?!\$))\$\$?([^$]+)\$\$?(?!\$)")
 
 
 def chat_content(body: Json) -> str:
@@ -229,7 +229,7 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                     aid = crop(
                         job, ir, p, f["bbox"], child["id"] + f"-formula{mi}", "formula_image"
                     )
-                    part = {"asset_id": aid, "latex": match[1]}
+                    part = {"asset_id": aid, "latex": match[1], "source_text": match[0]}
                     try:
                         # Known critical relation operators stay as source imagery until reviewed.
                         if re.search(r"\\(?:leq|geq)|[≤≥]", match[1]):

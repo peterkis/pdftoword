@@ -324,7 +324,7 @@ def split_parts(parts: list[Json], offset: int) -> tuple[list[Json], list[Json]]
         length = (
             len(part["source_text"] if "source_text" in part else part["text"])
             if "text" in part
-            else len(part["latex"]) + 2
+            else len(part.get("source_text", "$" + part["latex"] + "$"))
         )
         if cursor + length <= offset:
             left.append(part)
@@ -364,11 +364,11 @@ def replan_text(job: Path, ir: Json, p: Json, b: Json, text: str, old: Json, n: 
             # This path runs only after an explicit, reason-bearing review operation.
             # Rebuild even if the automatic version deliberately retained an image.
             part = {**candidates[0]} if len(candidates) == 1 else {}
-            part.update(latex=m[1], omml=to_omml(m[1]))
+            part.update(latex=m[1], source_text=m[0], omml=to_omml(m[1]))
             result.append(part)
         except DemoError:
             if len(candidates) == 1:
-                result.append({**candidates[0], "latex": m[1]})
+                result.append({**candidates[0], "latex": m[1], "source_text": m[0]})
             else:
                 supported = False
                 break

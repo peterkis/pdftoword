@@ -93,6 +93,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
     section.top_margin = section.bottom_margin = Pt(40)
     available = 505.28
     spatial = ir["metadata"].get("layout_profile") == "pp_geometry_flow"
+    content_left = ir["metadata"].get("content_left_pt", 0)
     font_info = fonts()
     for name, size in [("Normal", 11), ("Title", 16), ("Heading 1", 13), ("Caption", 10)]:
         style: Any = doc.styles[name]
@@ -149,7 +150,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
             spatial
             and b["type"] == "paragraph"
             and b["geometry_source"] == "pp_structure"
-            and b["bbox"][0] > ir["metadata"].get("content_left_pt", 0) + 60
+            and b["bbox"][0] > content_left + 60
         ):
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         para.paragraph_format.keep_with_next = b["type"] in {"heading", "caption", "question"}
@@ -201,6 +202,11 @@ def build(job: Path, ir: Json, revision: str) -> Json:
 
     for page_index, p in enumerate(ir["pages"]):
         decision = ir["metadata"].get("layout_by_page", {}).get(str(p["page_index"]))
+        content_left = (
+            decision.get("content_left_pt", 0)
+            if decision
+            else ir["metadata"].get("content_left_pt", 0)
+        )
         if decision:
             spatial = decision["status"] == "APPLIED"
         if page_index:

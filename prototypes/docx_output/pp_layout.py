@@ -348,6 +348,7 @@ def apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) -
         "status": "APPLIED",
         "rule_version": RULES.version,
         "effective_policy": trial["metadata"]["layout_policy"],
+        "content_left_pt": trial["metadata"]["content_left_pt"],
         "content_preserved": True,
         "placement_validated": True,
         "ocr_accuracy": "NOT_EVALUATED_BY_LAYOUT_RULES",

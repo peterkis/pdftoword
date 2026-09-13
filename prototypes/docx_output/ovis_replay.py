@@ -122,7 +122,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
                 for m in MATH.finditer(text):
                     parts.append({"text": text[cursor : m.start()]})
                     try:
-                        parts.append({"latex": m[1], "omml": to_omml(m[1])})
+                        parts.append({"latex": m[1], "source_text": m[0], "omml": to_omml(m[1])})
                     except DemoError as exc:
                         issue(
                             ir,

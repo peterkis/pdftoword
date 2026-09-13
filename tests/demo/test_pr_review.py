@@ -429,3 +429,33 @@ def test_auto_pp_split_retains_parent_candidate(private_case: Path) -> None:
         selected = next(c for c in b["content_candidates"] if c["selected"])
         assert selected["evidence"]["supersedes"] == "p0-b0-c0"
         assert ir["provenance"]["p0-b0"]["original_block"]["content_candidates"][0]["text"] == text
+
+
+@pytest.mark.parametrize("formula", ["$x$", "$$x$$", "$$\nx^2\n$$"])
+def test_formula_delimiters_leave_no_dollar_text(private_case: Path, formula: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": formula}}]},
+        "ovis",
+    )
+    bid = p["blocks"][0]["id"]
+    parts = ir["metadata"]["inline_parts"][bid]
+    assert not any("$" in part.get("text", "") for part in parts)
+    assert next(part for part in parts if "latex" in part)["source_text"] == formula.strip()
+
+
+def test_layout_records_page_left_margin(private_case: Path) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert (
+        ir["metadata"]["layout_by_page"]["0"]["content_left_pt"]
+        == ir["metadata"]["content_left_pt"]
+    )
