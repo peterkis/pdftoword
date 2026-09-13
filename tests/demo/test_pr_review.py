@@ -1049,7 +1049,7 @@ def test_currency_exports_as_literal_text(private_case: Path, raw: str) -> None:
 def test_invalid_native_xml_char_falls_back(
     private_case: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import pypdfium2 as pdfium
+    import pypdfium2 as pdfium  # type: ignore[import-untyped]
     from prototypes.docx_output.pipeline import convert
     from tests.demo.synthetic import make_pdf
 
