@@ -142,7 +142,11 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 b["bbox"],
                 text[offset:],
                 "manual_correction",
-                evidence={"parent": b["id"], "reason": op["reason"]},
+                evidence={
+                    "parent": b["id"],
+                    "reason": op["reason"],
+                    "supersedes": old["selected_candidate_id"],
+                },
             )
             if old_parts:
                 left, right = split_parts(old_parts, offset)

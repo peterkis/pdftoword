@@ -3,7 +3,7 @@
 from pathlib import Path
 
 
-def make_pdf(path: Path, *, rotation: int = 0, pages: int = 1) -> str:
+def make_pdf(path: Path, *, rotation: int = 0, pages: int = 1, decoration: bytes = b"") -> str:
     """Write a tiny standards-based PDF without importing a second PDF engine."""
     lines = [
         "原生 PDF 测试 Native PDF",
@@ -17,6 +17,7 @@ def make_pdf(path: Path, *, rotation: int = 0, pages: int = 1) -> str:
         encoded = text.encode("utf-16-be").hex()
         stream += f"BT /F1 {size} Tf 60 {740 - i * 38} Td <{encoded}> Tj ET\n".encode()
     stream += b"0.2 0.5 0.6 RG 2 w 70 470 140 70 re S 70 470 m 210 540 l S\n"
+    stream += decoration
     cmap = (
         b"/CIDInit /ProcSet findresource begin 12 dict begin begincmap "
         b"/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def "

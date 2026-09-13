@@ -144,7 +144,7 @@ def extract(
                         ]
 
                     objects = list(native.get_objects())
-                    visual_boxes = []
+                    path_boxes = []
                     image_boxes = []
                     for obj in objects:
                         if obj.type in {
@@ -158,10 +158,10 @@ def extract(
                             if bounds[3] == bounds[1]:
                                 bounds[3] += 1
                             if box_valid(bounds):
-                                visual_boxes.append(bounds)
                                 if obj.type == pdfium.raw.FPDF_PAGEOBJ_IMAGE:
                                     image_boxes.append(bounds)
-                    figures = cluster_regions(visual_boxes)
+                                else:
+                                    path_boxes.append(bounds)
                     textpage = native.get_textpage()
                     chars: list[Json] = []
                     bad = 0
@@ -206,6 +206,17 @@ def extract(
                                 "index": ci,
                             }
                         )
+                    # Path envelopes may be page/table borders, not actual ink coverage.
+                    # Never let these ambiguous containers suppress valid native text.
+                    ambiguous_paths = [
+                        bounds
+                        for bounds in path_boxes
+                        if any(intersection(c["bbox"], bounds) > 0 for c in chars)
+                    ]
+                    info["ambiguous_vector_bounds"] = ambiguous_paths
+                    figures = cluster_regions(
+                        [*image_boxes, *(b for b in path_boxes if b not in ambiguous_paths)]
+                    )
                     # Include adjacent lettering in the composite crop only.
                     for fi, f in enumerate(figures):
                         grown = [f[0] - 5, f[1] - 5, f[2] + 5, f[3] + 5]
@@ -227,7 +238,7 @@ def extract(
                         {(c["text"], tuple(round(v, 1) for v in c["bbox"])) for c in chars}
                     )
                     img_ratio = union_area(image_boxes) / (w * h)
-                    reason = []
+                    reason = ["vector_text_overlap_review"] if ambiguous_paths else []
                     count = max(1, len(chars))
                     if bad / count > 0.01:
                         reason.append("abnormal_unicode")

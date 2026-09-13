@@ -322,13 +322,15 @@ def inspect_package(path: Path) -> Json:
         ns = {
             "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
             "wp": "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+            "m": "http://schemas.openxmlformats.org/officeDocument/2006/math",
         }
         text = "".join(root.xpath("//w:t/text()", namespaces=ns))
+        math_text = "".join(root.xpath("//m:oMath//m:t/text()", namespaces=ns))
         for extent in root.xpath("//wp:extent", namespaces=ns):
             if int(extent.get("cx", "0")) <= 0 or int(extent.get("cy", "0")) <= 0:
                 raise DemoError("INVALID_IMAGE_EXTENT")
         return {
             "docx_package_valid": True,
-            "has_editable_runs": bool(text.strip()),
+            "has_editable_runs": bool(text.strip() or math_text.strip()),
             "package_text_char_count": len(text),
         }

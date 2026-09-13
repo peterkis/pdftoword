@@ -133,3 +133,49 @@ def test_footer_join_keeps_both_candidates(private_case: Path) -> None:
     assert set(originals) == {"第", "1页", "第1页"}
     selected = next(c for c in footer["content_candidates"] if c["selected"])
     assert set(selected["evidence"]["supersedes"]) == {originals["第"], originals["1页"]}
+
+
+@pytest.mark.parametrize("decoration", [b"10 10 575 820 re S\n", b"50 590 480 190 re S\n"])
+def test_native_container_keeps_editable_text(private_case: Path, decoration: bytes) -> None:
+    from tests.demo.synthetic import make_pdf
+    from prototypes.docx_output.pipeline import convert
+
+    source = private_case / "border.pdf"
+    original = make_pdf(source, decoration=decoration)
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    text = "".join(b["content"].get("plain_text", "") for b in ir["pages"][0]["blocks"])
+    assert "".join(original.split()) == "".join(text.split())
+    assert ir["pages"][0]["routing_decision"] == "NEEDS_ROUTE_REVIEW"
+
+
+def test_split_right_candidate_has_supersedes(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    b = block("a", 0, [1, 1, 30, 20], "First Second", "native_pdf")
+    p["blocks"] = [b]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "split", "offset": 6, "reason": "split"}]},
+    )
+    right = result["pages"][0]["blocks"][1]
+    selected = next(c for c in right["content_candidates"] if c["selected"])
+    assert selected["evidence"]["supersedes"] == b["selected_candidate_id"]
+
+
+def test_math_only_output_is_editable(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x^2$"}}]},
+        "ovis",
+    )
+    qa = finish(job, ir)
+    assert qa["omml_formula_count"] == 1
+    assert qa["has_editable_runs"]
+    assert qa["execution_status"] == "COMPLETE"
