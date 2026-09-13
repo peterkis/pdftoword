@@ -515,3 +515,9 @@ DOCX不再在每个PDF来源页边界无条件硬分页，正文自然流排；L
 整体输出不足谓词纳入PP_RECONSTRUCTION_FALLBACK。Native非空白字符框无效时保留完整字符候选并降级源页，不按错误比例静默删除。截断常见HTML起始/结束标签进入Ovis源页降级。
 
 新增4项回归先失败后通过，全仓441 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第四十九轮审核修复（2026-09-13）
+
+执行状态改为逐页可编辑内容检查，不再枚举部分错误码；任一来源页仅有图片或无内容时整体输出不足。QA记录page_editable_content，人工恢复内容后可据实际块重新判断。
+
+新增混合正常页/HTML整页降级回归先失败后通过，全仓442 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

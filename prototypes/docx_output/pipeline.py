@@ -82,16 +82,20 @@ def finish(job: Path, ir: Json, revision: str = "auto") -> Json:
             for b in fallback_boxes.get(p["page_index"], [])
         ]
         fallback += union_area([b for b in bounded if area(b)])
+    page_editable_content = {
+        str(p["page_index"]): any(
+            b["content"]["kind"] == "text" and bool(b["content"].get("plain_text", "").strip())
+            for b in p["blocks"]
+        )
+        for p in ir["pages"]
+    }
     qa = dict(
         execution_status=(
             "COMPLETE"
-            if stats["has_editable_runs"]
-            and not any(
-                i["type"] in {"PRIMARY_CONTENT_MISSING", "PP_RECONSTRUCTION_FALLBACK"}
-                for i in ir["issues"]
-            )
+            if stats["has_editable_runs"] and all(page_editable_content.values())
             else "DEMO_OUTPUT_INSUFFICIENT"
         ),
+        page_editable_content=page_editable_content,
         content_review_status="REVIEW_REQUIRED",
         layout_validation=ir["metadata"].get("layout_validation", {"status": "NOT_APPLICABLE"}),
         structure_review_status="REVIEW_REQUIRED",

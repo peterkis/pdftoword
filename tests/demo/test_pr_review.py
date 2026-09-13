@@ -1743,3 +1743,21 @@ def test_truncated_html_exports_fallback(private_case: Path, raw: str) -> None:
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_any_image_only_page_marks_job_incomplete(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+    from prototypes.docx_output.pipeline import source_image
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Editable", "native_pdf")]
+    p["reading_order"] = ["a"]
+    other = source_image(job, ir, job / "assets/source-0.png", 1)
+    recover_ovis(
+        job,
+        ir,
+        other,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "<table"}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
