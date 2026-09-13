@@ -236,7 +236,11 @@ def extract(
                     ]
                     # Keep ambiguous vector ink as an explicit review crop as well;
                     # it never suppresses the editable native text above.
-                    ambiguous_figures = cluster_regions(ambiguous_paths)
+                    ambiguous_figures = [
+                        bounds
+                        for bounds in cluster_regions(ambiguous_paths)
+                        if area(bounds) / (w * h) < 0.5
+                    ]
                     figures.extend(ambiguous_figures)
                     duplicate = len(chars) - len(
                         {(c["text"], tuple(round(v, 1) for v in c["bbox"])) for c in chars}

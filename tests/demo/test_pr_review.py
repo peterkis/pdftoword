@@ -370,9 +370,9 @@ def test_pp_ignores_other_page_relations(private_case: Path) -> None:
 def test_merge_transfers_relations(private_case: Path) -> None:
     job, ir, p = setup_ir(private_case)
     p["blocks"] = [
-        block("a", 0, [1, 1, 20, 20], "A", "native_pdf"),
-        block("b", 0, [1, 21, 20, 40], "B", "native_pdf"),
-        block("target", 0, [1, 50, 20, 70], "T", "native_pdf"),
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf", "question"),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf", "question"),
+        block("target", 0, [1, 50, 20, 70], "T", "native_pdf", "figure"),
     ]
     p["reading_order"] = ["a", "b", "target"]
     common.relation(ir, "references", "target", "b", {})
@@ -548,3 +548,35 @@ def test_manual_relation_rejects_wrong_endpoint_types(private_case: Path, kind: 
                 ]
             },
         )
+
+
+def test_large_native_frame_is_not_ordinary_figure(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "frame.pdf"
+    make_pdf(source, decoration=b"10 10 575 820 re S\n")
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    p = ir["pages"][0]
+    assert all(
+        common.area(b["bbox"]) < p["width_pt"] * p["height_pt"] * 0.5
+        for b in p["blocks"]
+        if b["type"] == "figure"
+    )
+
+
+def test_merge_quarantines_invalid_relation_types(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("q", 0, [1, 1, 20, 20], "1. Q", "native_pdf", "question"),
+        block("c", 0, [1, 21, 20, 40], "Caption", "native_pdf", "caption"),
+        block("f", 0, [1, 50, 20, 70], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["q", "c", "f"]
+    common.relation(ir, "caption_of", "c", "f", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "q", "action": "merge", "reason": "join"}]}
+    )
+    assert not any(r["type"] == "caption_of" for r in result["relations"])
+    assert any(i["type"] == "MERGED_RELATION_REVIEW" for i in result["issues"])

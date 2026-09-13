@@ -198,17 +198,33 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 )
             p["blocks"].remove(other)
             order.remove(other["id"])
+            original_relations = copy.deepcopy(ir["relations"])
             for rel in ir["relations"]:
                 for endpoint in ("from", "to"):
                     if rel[endpoint] == other["id"]:
                         rel[endpoint] = b["id"]
-            collapsed = [r for r in ir["relations"] if r["from"] == r["to"] == b["id"]]
+            by_id = {x["id"]: x for pg in ir["pages"] for x in pg["blocks"]}
+            collapsed = [
+                r
+                for r in ir["relations"]
+                if b["id"] in (r["from"], r["to"])
+                and (
+                    r["from"] == r["to"]
+                    or (
+                        r["type"] in {"references", "caption_of", "label_of"}
+                        and not valid_relation(r["type"], by_id[r["from"]], by_id[r["to"]])
+                    )
+                )
+            ]
             if collapsed:
-                ir["provenance"][f"merge-collapsed-{n}"] = copy.deepcopy(collapsed)
+                ir["provenance"][f"merge-collapsed-{n}"] = {
+                    "before": original_relations,
+                    "rejected": copy.deepcopy(collapsed),
+                }
                 issue(
                     ir,
                     "MERGED_RELATION_REVIEW",
-                    "块内关系因合并折叠，原关系已记录待复核。",
+                    "合并后关系折叠或端点类型不适用，原关系已记录待复核。",
                     [b["id"]],
                     p["page_index"],
                 )
@@ -264,20 +280,7 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             ):
                 raise DemoError("INVALID_RELATION_TARGET")
             target_block = next(x for pg in ir["pages"] for x in pg["blocks"] if x["id"] == target)
-            valid = target != b["id"]
-            if kind == "references":
-                valid = valid and b["type"] == "figure" and target_block["type"] == "question"
-            else:
-                allowed = (
-                    {"caption", "paragraph"} if kind == "caption_of" else {"option", "paragraph"}
-                )
-                valid = (
-                    valid
-                    and b["type"] in allowed
-                    and b["content"]["kind"] == "text"
-                    and target_block["type"] == "figure"
-                    and b["page_index"] == target_block["page_index"]
-                )
+            valid = valid_relation(kind, b, target_block)
             if not valid:
                 raise DemoError("INVALID_RELATION_TARGET")
             ir["relations"] = [
@@ -407,3 +410,18 @@ def replan_text(job: Path, ir: Json, p: Json, b: Json, text: str, old: Json, n: 
             [b["id"]],
             p["page_index"],
         )
+
+
+def valid_relation(kind: str, source: Json, target: Json) -> bool:
+    """Validate the semantic endpoints of an authored or redirected relation."""
+    if source["id"] == target["id"]:
+        return False
+    if kind == "references":
+        return source["type"] == "figure" and target["type"] == "question"
+    allowed = {"caption", "paragraph"} if kind == "caption_of" else {"option", "paragraph"}
+    return (
+        source["type"] in allowed
+        and source["content"]["kind"] == "text"
+        and target["type"] == "figure"
+        and source["page_index"] == target["page_index"]
+    )
