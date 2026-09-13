@@ -9,6 +9,7 @@ from .common import (
     DemoError,
     Json,
     block,
+    box_valid,
     candidate,
     crop,
     invalid_xml_text,
@@ -53,6 +54,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
             alternate_formula = True
 
     unknown_image = bool(re.search(r"<img\b", IMAGE.sub("", content), re.IGNORECASE))
+    for image_match in IMAGE.finditer(content):
+        raw_box = [float(v) for v in image_match.groups()]
+        if not box_valid(raw_box) or any(v > 1000 for v in raw_box):
+            unknown_image = True
     unsupported_html = unknown_image or bool(
         re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content))
     )

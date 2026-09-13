@@ -204,7 +204,7 @@ def test_live_uses_shared_reconstruction(
     assert qa["model_call_count"] == len(seen)
     if failed == "ovis":
         assert qa["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
-        assert not ir["pages"][0]["blocks"]
+        assert ir["pages"][0]["blocks"][0]["content"]["kind"] == "image"
     else:
         assert qa["omml_formula_count"] == 8
         assert qa["layout_validation"]["status"] == ("FALLBACK" if failed else "APPLIED"), (

@@ -48,7 +48,7 @@ def test_ovis_rejects_unknown_geometry_or_syntax(private_case: Path, content: st
 
     job, ir, p = setup_ir(private_case)
     body = {"choices": [{"finish_reason": "stop", "message": {"content": content}}]}
-    if "unsupported" in content or "https://" in content:
+    if "unsupported" in content or "<img" in content:
         recover_ovis(job, ir, p, body, "ovis-request")
         assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
     else:

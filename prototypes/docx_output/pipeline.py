@@ -83,7 +83,12 @@ def finish(job: Path, ir: Json, revision: str = "auto") -> Json:
         ]
         fallback += union_area([b for b in bounded if area(b)])
     qa = dict(
-        execution_status="COMPLETE" if stats["has_editable_runs"] else "DEMO_OUTPUT_INSUFFICIENT",
+        execution_status=(
+            "COMPLETE"
+            if stats["has_editable_runs"]
+            and not any(i["type"] == "PRIMARY_CONTENT_MISSING" for i in ir["issues"])
+            else "DEMO_OUTPUT_INSUFFICIENT"
+        ),
         content_review_status="REVIEW_REQUIRED",
         layout_validation=ir["metadata"].get("layout_validation", {"status": "NOT_APPLICABLE"}),
         structure_review_status="REVIEW_REQUIRED",
@@ -119,11 +124,19 @@ def reconstruct(
 
     primary = "ovis" if content_provider in {"ovis", "ovis-pp"} else "pp"
     if primary not in responses:
+        bounds = [0.0, 0.0, p["width_pt"], p["height_pt"]]
+        bid = f"p{p['page_index']}-missing-primary"
+        aid = crop(job, ir, p, bounds, bid)
+        b = block(bid, p["page_index"], bounds, "", "inferred")
+        b.update(content=image_content(aid), render_policy="preserve_image")
+        p["blocks"].append(b)
+        p["reading_order"].append(bid)
+        p["routing_decision"] = "PRIMARY_CONTENT_MISSING_SOURCE_FALLBACK"
         issue(
             ir,
             "PRIMARY_CONTENT_MISSING",
             "主识别未完成；保留源页，不替换内容来源。",
-            [],
+            [bid],
             p["page_index"],
         )
         return

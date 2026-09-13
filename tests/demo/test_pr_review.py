@@ -1674,3 +1674,28 @@ def test_truncated_image_tag_uses_source_fallback(private_case: Path) -> None:
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_missing_primary_page_makes_job_incomplete(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import reconstruct, source_image
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Success", "native_pdf")]
+    p["reading_order"] = ["a"]
+    second = source_image(job, ir, job / "assets/source-0.png", 1)
+    reconstruct(job, ir, second, {}, {"requests": []}, "ovis-pp")
+    qa = finish(job, ir)
+    assert qa["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+    assert second["blocks"][0]["content"]["kind"] == "image"
+
+
+@pytest.mark.parametrize("coords", ["0_0_1001_20", "10_10_5_20", "0_0_0_20"])
+def test_invalid_ovis_image_geometry_falls_back(private_case: Path, coords: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = f'<img src="images/bbox_{coords}.jpg" />'
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
