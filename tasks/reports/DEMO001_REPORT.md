@@ -437,3 +437,9 @@ CLI export在成功替换reviewed后，同样清理旧资产中所有持久化la
 HTTP保存及CLI导出成功后结束preview布局并清理其全部持久化layout未引用的资产。PP布局候选回退时回收trial新增且未登记的裁图，不触碰原IR资产。
 
 新增2项回归先失败后通过，全仓406 tests passed，ruff、mypy（49 files）及diff通过。开发中遗漏导入被检查发现，补齐后重新全测通过。无新模型调用。
+
+## PR #3 第三十五轮审核修复（2026-09-13）
+
+Ovis非图片HTML结构进入源页降级并继续审校导出；非法图片标签仍拒绝。apply_overrides统一在失败时回收本次新增且所有layout均未引用的裁图，覆盖保存/CLI/预览入口。
+
+新增3项回归先失败后通过，全仓409 tests passed，ruff、mypy（49 files）及diff通过。条件分支遗漏在检查中发现并修复后重跑通过，无新模型调用。

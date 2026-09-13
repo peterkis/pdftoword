@@ -1338,3 +1338,33 @@ def test_rejected_layout_reclaims_trial_crops(
     monkeypatch.setattr(pp_layout, "_apply_pp_layout", rejected)
     pp_layout.apply_pp_layout(job, ir, p, {}, "pp")
     assert set((job / "assets").iterdir()) == before
+
+
+@pytest.mark.parametrize("raw", ["<table><tr><td>Text</td></tr></table>", "Text<br>More"])
+def test_ovis_html_exports_source_fallback(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_failed_override_reclaims_new_crops(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+    p["reading_order"] = ["a"]
+    before = set((job / "assets").iterdir())
+    with pytest.raises(common.DemoError):
+        apply_overrides(
+            job,
+            ir,
+            {
+                "operations": [
+                    {"block_id": "a", "action": "crop", "reason": "crop"},
+                    {"block_id": "missing", "action": "move", "delta": 1, "reason": "invalid"},
+                ]
+            },
+        )
+    assert set((job / "assets").iterdir()) == before

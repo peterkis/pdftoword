@@ -49,8 +49,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         except DemoError:
             alternate_formula = True
 
+    unsupported_html = bool(re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content)))
     if (
-        invalid_xml
+        unsupported_html
+        or invalid_xml
         or alternate_formula
         or re.search(
             r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_]+[*_](?!\w)",
@@ -79,7 +81,9 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         p["routing_decision"] = "OVIS_MARKDOWN_SOURCE_FALLBACK"
         issue(
             ir,
-            "INVALID_XML_TEXT_FALLBACK"
+            "OVIS_HTML_REVIEW_REQUIRED"
+            if unsupported_html
+            else "INVALID_XML_TEXT_FALLBACK"
             if invalid_xml
             else "OVIS_FORMULA_DELIMITER_REVIEW"
             if alternate_formula

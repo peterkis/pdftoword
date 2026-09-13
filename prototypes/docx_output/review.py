@@ -17,6 +17,7 @@ from .common import (
     invalid_xml_text,
     issue,
     private_dir,
+    prune_preview_assets,
     relation,
     text_content,
     union,
@@ -70,7 +71,7 @@ def write_preview(job: Path, ir: Json, revision: str) -> None:
     target.chmod(0o600)
 
 
-def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
+def _apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
     """Apply deterministic explicit edits to a copy; all operations require a reason."""
     ir = copy.deepcopy(automatic)
     operations = overrides.get("operations")
@@ -549,3 +550,13 @@ def valid_relation(kind: str, source: Json, target: Json) -> bool:
         and target["type"] == "figure"
         and source["page_index"] == target["page_index"]
     )
+
+
+def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
+    """Apply a review ledger and reclaim newly generated assets if validation fails."""
+    before = set((job / "assets").glob("*.png"))
+    try:
+        return _apply_overrides(job, automatic, overrides)
+    except BaseException:
+        prune_preview_assets(job, set((job / "assets").glob("*.png")) - before)
+        raise
