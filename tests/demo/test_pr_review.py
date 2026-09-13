@@ -1699,3 +1699,47 @@ def test_invalid_ovis_image_geometry_falls_back(private_case: Path, coords: str)
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_pp_fallback_page_marks_job_incomplete(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import reconstruct, source_image
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Good", "native_pdf")]
+    p["reading_order"] = ["a"]
+    second = source_image(job, ir, job / "assets/source-0.png", 1)
+    reconstruct(job, ir, second, {"pp": {}}, {"requests": []}, "pp")
+    assert finish(job, ir)["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+def test_invalid_native_charbox_preserves_page(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import pypdfium2 as pdfium
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "badbox.pdf"
+    make_pdf(source)
+    original = pdfium.PdfTextPage.get_charbox
+
+    def charbox(self: object, index: int, **kwargs: object) -> tuple[float, float, float, float]:
+        return (0, 0, 0, 0) if index == 0 else original(self, index, **kwargs)
+
+    monkeypatch.setattr(pdfium.PdfTextPage, "get_charbox", charbox)
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "qa.json")["fallback_area_ratio"] == pytest.approx(1)
+    assert any(
+        i["type"] == "NATIVE_GEOMETRY_FALLBACK" for i in common.read(job / "issues.json")["issues"]
+    )
+
+
+@pytest.mark.parametrize("raw", ["<table", "<br"])
+def test_truncated_html_exports_fallback(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)

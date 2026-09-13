@@ -58,8 +58,17 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         raw_box = [float(v) for v in image_match.groups()]
         if not box_valid(raw_box) or any(v > 1000 for v in raw_box):
             unknown_image = True
-    unsupported_html = unknown_image or bool(
-        re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content))
+    truncated_html = bool(
+        re.search(
+            r"</?(?:table|thead|tbody|tr|td|th|br|p|div|span|em|strong|b|i|ul|ol|li|pre|code|script|style)\b",
+            plain_context,
+            re.IGNORECASE,
+        )
+    )
+    unsupported_html = (
+        unknown_image
+        or truncated_html
+        or bool(re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content)))
     )
     if (
         unsupported_html

@@ -165,11 +165,13 @@ def extract(
                                     path_boxes.append(bounds)
                     textpage = native.get_textpage()
                     chars: list[Json] = []
+                    source_chars: list[str] = []
                     bad = 0
                     invalid_box = 0
                     angles = 0
                     for ci in range(textpage.count_chars()):
                         char = chr(pdfium.raw.FPDFText_GetUnicode(textpage, ci))
+                        source_chars.append(char)
                         if char in "\r\n" or char == "\x00":
                             continue
                         if (
@@ -207,6 +209,30 @@ def extract(
                                 "index": ci,
                             }
                         )
+                    if invalid_box:
+                        bounds = [0.0, 0.0, w, h]
+                        bid = f"p{index}-native-geometry-fallback"
+                        b = block(
+                            bid,
+                            index,
+                            bounds,
+                            "".join(source_chars),
+                            "native_pdf",
+                            evidence={"reason": "invalid_character_geometry"},
+                        )
+                        aid = crop(job, ir, p, bounds, bid)
+                        b.update(content=image_content(aid), render_policy="preserve_image")
+                        p["blocks"].append(b)
+                        p["reading_order"] = [bid]
+                        p["routing_decision"] = "NATIVE_GEOMETRY_FALLBACK"
+                        issue(
+                            ir,
+                            "NATIVE_GEOMETRY_FALLBACK",
+                            "原生字符坐标无效，保留完整字符候选并降级源页，避免静默缺字。",
+                            [bid],
+                            index,
+                        )
+                        continue
                     # Path envelopes may be page/table borders, not actual ink coverage.
                     # Never let these ambiguous containers suppress valid native text.
                     ambiguous_paths = [

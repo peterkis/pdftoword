@@ -509,3 +509,9 @@ DOCX不再在每个PDF来源页边界无条件硬分页，正文自然流排；L
 主内容失败页写入源页降级块，整份作业即使其他页可编辑也标记DEMO_OUTPUT_INSUFFICIENT。Ovis已匹配图片标签的越界、空框和倒置坐标在预检阶段转入源页审校降级。
 
 新增4项回归先失败后通过，全仓437 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第四十八轮审核修复（2026-09-13）
+
+整体输出不足谓词纳入PP_RECONSTRUCTION_FALLBACK。Native非空白字符框无效时保留完整字符候选并降级源页，不按错误比例静默删除。截断常见HTML起始/结束标签进入Ovis源页降级。
+
+新增4项回归先失败后通过，全仓441 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

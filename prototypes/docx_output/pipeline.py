@@ -86,7 +86,10 @@ def finish(job: Path, ir: Json, revision: str = "auto") -> Json:
         execution_status=(
             "COMPLETE"
             if stats["has_editable_runs"]
-            and not any(i["type"] == "PRIMARY_CONTENT_MISSING" for i in ir["issues"])
+            and not any(
+                i["type"] in {"PRIMARY_CONTENT_MISSING", "PP_RECONSTRUCTION_FALLBACK"}
+                for i in ir["issues"]
+            )
             else "DEMO_OUTPUT_INSUFFICIENT"
         ),
         content_review_status="REVIEW_REQUIRED",
