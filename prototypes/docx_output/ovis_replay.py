@@ -1,0 +1,418 @@
+"""Ovis-only reconstruction: literal content, declared figure geometry, no PP inputs."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+from .common import (
+    DemoError,
+    Json,
+    block,
+    box_valid,
+    candidate,
+    crop,
+    invalid_xml_text,
+    issue,
+    relation,
+    transform,
+)
+from .formula import to_omml, unrendered_math
+from .structure import CAPTION, MATH, OPTION, QUESTION, chat_content, image_content
+
+IMAGE = re.compile(r'<img\s+src="images/bbox_(\d+)_(\d+)_(\d+)_(\d+)\.jpg"\s*/?>')
+
+
+# Standard element names are ambiguous with variable names when markup is truncated.
+# After a formula or sentence terminator, preserve the source for review for these names.
+STANDARD_MARKUP_TAGS = frozenset(
+    """
+a abbr acronym address applet area article aside audio b base basefont bdi bdo big
+blockquote body br button canvas caption center cite code col colgroup data datalist
+dd del details dfn dialog dir div dl dt em embed fieldset figcaption figure font
+footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img
+input ins kbd label legend li link main map mark marquee menu meta meter nav nobr
+noembed noframes noscript object ol optgroup option output p param picture plaintext
+portal pre progress q rb rp rt rtc ruby s samp script search section select selectedcontent
+slot small source span strike strong style sub summary sup table tbody td template
+textarea tfoot th thead time title tr track tt u ul var video wbr xmp
+math semantics annotation annotation-xml maction menclose merror mfenced mfrac mi
+mmultiscripts mn mo mover mpadded mphantom mprescripts mroot mrow ms mspace msqrt
+mstyle msub msubsup msup mtable mtd mtext mtr munder munderover none maligngroup
+malignmark mlabeledtr mlongdiv mscarries mscarry msgroup msline msrow mstack
+apply bind bvar ci cn csymbol cerror condition declare domainofapplication interval
+lambda list logbase lowlimit matrix matrixrow momentabout piece piecewise otherwise
+reln set tendsto uplimit vector
+svg animate animateMotion animateTransform circle clipPath defs desc discard ellipse
+feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting
+feDisplacementMap feDistantLight feDropShadow feFlood feFuncA feFuncB feFuncG feFuncR
+feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight
+feSpecularLighting feSpotLight feTile feTurbulence filter foreignObject g hatch hatchpath
+image line linearGradient marker mask metadata mpath path pattern polygon polyline
+radialGradient rect set solidcolor stop switch symbol text textPath tspan use view
+""".lower().split()
+)
+
+
+def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> None:
+    """Build IR exclusively from one complete Ovis Markdown response.
+
+    Figure coordinates follow the official normalized_1000 convention. Text has
+    no precise bbox in this wire format: full-page source bounds are explicitly
+    marked unknown and are never interpreted as a detected text rectangle.
+    """
+    content = chat_content(body)
+    ir["metadata"]["content_provider"] = "ovis"
+    ir["provenance"].setdefault("ovis_content", {})[str(p["page_index"])] = content
+    ir["provenance"]["ovis_coordinate_contract"] = {
+        "unit": "normalized_1000",
+        "scope": "figure_tags_only",
+        "source": "https://huggingface.co/ATH-MaaS/OvisOCR2",
+        "text_bbox": "unknown; full-page source reference only",
+    }
+    page_box = [0.0, 0.0, p["width_pt"], p["height_pt"]]
+    plain_context = MATH.sub("\ufffc", IMAGE.sub("", content))
+    residual_math = unrendered_math(MATH.sub("", content))
+    alternate_formula = residual_math or any(
+        marker in content for marker in (r"\(", r"\)", r"\[", r"\]")
+    )
+    invalid_xml = invalid_xml_text(content)
+    if not invalid_xml:
+        try:
+            for math_match in MATH.finditer(content):
+                to_omml(math_match[1])
+        except DemoError:
+            alternate_formula = True
+
+    unknown_image = bool(re.search(r"</?img\b|<!|<\?", IMAGE.sub("", content), re.IGNORECASE))
+    for image_match in IMAGE.finditer(content):
+        raw_box = [float(v) for v in image_match.groups()]
+        if not box_valid(raw_box) or any(v > 1000 for v in raw_box):
+            unknown_image = True
+    truncated_html = bool(
+        re.search(
+            r"</[A-Za-z][A-Za-z0-9:_-]*(?=\s|/|>|$)|</?(?:sup|sub|math|mrow|mi|mn|mo|msup|msub|msubsup|mfrac|msqrt|mroot|mtable|mtr|mtd|mtext|svg|path|rect|circle|text|table|thead|tbody|tfoot|tr|td|th|caption|div|span|br|hr|ul|ol|li|pre|code|strong|em|script|style)(?=\s|/|>|$)|(?<![^\s:：,，;；])</?[A-Za-z][A-Za-z0-9:_-]*(?=\s|/|>|$)",
+            plain_context,
+            re.IGNORECASE,
+        )
+    )
+    truncated_html = truncated_html or any(
+        match[1].lower() in STANDARD_MARKUP_TAGS
+        for match in re.finditer(
+            r"[\ufffc。！？.!?]<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?([A-Za-z][A-Za-z0-9_-]*)(?=\s|/|>|$)",
+            plain_context,
+        )
+    )
+    unsupported_html = (
+        unknown_image
+        or truncated_html
+        or bool(re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content)))
+    )
+    if (
+        unsupported_html
+        or invalid_xml
+        or alternate_formula
+        or re.search(
+            r"(?m)^\s*(?:[-+*]\s|>|~~~|```|\|?\s*:?-{3,})|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_]+[*_](?!\w)",
+            plain_context,
+        )
+    ):
+        bid = f"p{p['page_index']}-markdown-fallback"
+        aid = crop(job, ir, p, page_box, bid)
+        b = block(
+            bid,
+            p["page_index"],
+            page_box,
+            "",
+            "inferred",
+            evidence={
+                "request_id": request_id,
+                "reason": "unsupported_formula_delimiter"
+                if alternate_formula
+                else "unsupported_markdown_source_page",
+            },
+        )
+        b.update(content=image_content(aid), render_policy="preserve_image")
+        b["flags"].append("full_page_markdown_fallback")
+        p["blocks"].append(b)
+        p["reading_order"] = [b["id"] for b in p["blocks"]]
+        p["routing_decision"] = "OVIS_MARKDOWN_SOURCE_FALLBACK"
+        issue(
+            ir,
+            "OVIS_HTML_REVIEW_REQUIRED"
+            if unsupported_html
+            else "INVALID_XML_TEXT_FALLBACK"
+            if invalid_xml
+            else "OVIS_FORMULA_DELIMITER_REVIEW"
+            if alternate_formula
+            else "OVIS_MARKDOWN_REVIEW_REQUIRED",
+            "不支持的公式或Markdown结构已降级为源页图片，原响应保留；待人工转写或确认。",
+            [bid],
+            p["page_index"],
+        )
+        return
+    for token in re.split(r"(<img\b[^>]*>)", content):
+        if not token.strip():
+            continue
+        if token.startswith("<img"):
+            match = IMAGE.fullmatch(token)
+            if not match:
+                raise DemoError("OVIS_UNSUPPORTED_IMAGE_TAG")
+            raw = [float(x) for x in match.groups()]
+            if any(x > 1000 for x in raw):
+                raise DemoError("OVIS_IMAGE_COORDINATES_OUT_OF_RANGE")
+            bbox = transform(raw, p["width_pt"] / 1000, p["height_pt"] / 1000)
+            bid = f"p{p['page_index']}-ovis{len(p['blocks'])}"
+            b = block(
+                bid,
+                p["page_index"],
+                bbox,
+                "",
+                "ovis_ocr2",
+                "figure",
+                {
+                    "request_id": request_id,
+                    "raw_image_tag": token,
+                    "raw_bbox": raw,
+                    "raw_unit": "normalized_1000",
+                },
+            )
+            aid = crop(job, ir, p, bbox, bid + "-figure")
+            b.update(content=image_content(aid), render_policy="preserve_image")
+            ir["provenance"][bid] = {"request_id": request_id, "raw_image_tag": token}
+            p["blocks"].append(b)
+            continue
+        if re.search(r"<[A-Za-z!/][^>]*>", token):
+            raise DemoError("OVIS_UNSUPPORTED_HTML_REGION")
+        for paragraph in re.split(r"\n\s*\n", token):
+            original = paragraph
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+            heading = bool(re.match(r"^#{1,6}\s+", paragraph))
+            paragraph = re.sub(r"^#{1,6}\s+", "", paragraph)
+            # Only split explicit option markers at whitespace boundaries,
+            # outside math delimiters; never split decimals or formula tokens.
+            markers = [
+                m.start()
+                for m in re.finditer(r"(?<!\S)[A-D][.．、]\s*", paragraph)
+                if not any(f.start() <= m.start() < f.end() for f in MATH.finditer(paragraph))
+            ]
+            markers.extend(
+                m.start()
+                for m in re.finditer(r"(?m)^[ \t]*\d+[.．、](?!\d)[ \t]*", paragraph)
+                if not any(f.start() <= m.start() < f.end() for f in MATH.finditer(paragraph))
+            )
+            starts = [0, *sorted({i for i in markers if i > 0})]
+            ends = [*starts[1:], len(paragraph)]
+            for start, end in zip(starts, ends, strict=True):
+                text = paragraph[start:end].strip()
+                if not text:
+                    continue
+                kind = (
+                    "heading"
+                    if heading and start == 0
+                    else "question"
+                    if QUESTION.match(text)
+                    else "option"
+                    if OPTION.match(text)
+                    else "caption"
+                    if CAPTION.match(text)
+                    else "footer"
+                    if re.fullmatch(r".*第|\d+页", text)
+                    else "paragraph"
+                )
+                bid = f"p{p['page_index']}-ovis{len(p['blocks'])}"
+                b = block(
+                    bid,
+                    p["page_index"],
+                    list(page_box),
+                    text,
+                    "ovis_ocr2",
+                    kind,
+                    {
+                        "request_id": request_id,
+                        "raw_markdown_paragraph": original,
+                        "split_reason": "explicit_option_or_line_start_question_outside_math",
+                        "text_geometry": "not_provided_by_provider",
+                    },
+                )
+                b["geometry_source"] = "inferred"
+                b["flags"].append("text_geometry_unknown_full_page_reference")
+                ir["provenance"][bid] = {
+                    "request_id": request_id,
+                    "raw_markdown_paragraph": original,
+                    "geometry_scope": "page_reference_not_detected_bbox",
+                }
+                parts: list[Json] = []
+                cursor = 0
+                for m in MATH.finditer(text):
+                    parts.append({"text": text[cursor : m.start()]})
+                    try:
+                        parts.append({"latex": m[1], "source_text": m[0], "omml": to_omml(m[1])})
+                    except DemoError as exc:
+                        issue(
+                            ir,
+                            "OVIS_FORMULA_GEOMETRY_REQUIRED",
+                            "不支持的公式缺少精确源框；不能猜坐标或伪装成可编辑结果。",
+                            [bid],
+                            p["page_index"],
+                        )
+                        raise DemoError("OVIS_FORMULA_GEOMETRY_REQUIRED") from exc
+                    cursor = m.end()
+                if parts:
+                    parts.append({"text": text[cursor:]})
+                    ir["metadata"].setdefault("inline_parts", {})[bid] = parts
+                    b["render_policy"] = "hybrid"
+                    b["flags"].append("editable_formulas")
+                p["blocks"].append(b)
+    # A split page-number phrase has explicit syntax, not inferred document text.
+    compact: list[Json] = []
+    for b in p["blocks"]:
+        if (
+            compact
+            and b["type"] == "footer"
+            and compact[-1]["type"] == "footer"
+            and compact[-1]["content"]["plain_text"].endswith("第")
+            and re.fullmatch(r"\d+页", b["content"]["plain_text"])
+        ):
+            previous = compact[-1]
+            text = previous["content"]["plain_text"] + b["content"]["plain_text"]
+            supersedes = [previous["selected_candidate_id"], b["selected_candidate_id"]]
+            previous["content_candidates"].extend(b["content_candidates"])
+            for old in previous["content_candidates"]:
+                old["selected"] = False
+            selected = candidate(
+                previous["id"] + "-joined",
+                "ovis_ocr2",
+                text,
+                {
+                    "request_id": request_id,
+                    "source_blocks": [previous["id"], b["id"]],
+                    "supersedes": supersedes,
+                    "reason": "adjacent_page_number_phrase_whitespace_join",
+                },
+            )
+            previous["content"]["plain_text"] = text
+            previous["content_candidates"].append(selected)
+            previous["selected_candidate_id"] = selected["id"]
+            previous["provenance_refs"].append(b["id"])
+        else:
+            compact.append(b)
+    p["blocks"] = compact
+    unlocated = [b["id"] for b in p["blocks"] if b["geometry_source"] == "inferred"]
+    issue(
+        ir,
+        "TEXT_GEOMETRY_NOT_PROVIDED",
+        "Ovis未提供文字行/公式精确框；文字点击显示整页来源，不能作为精确定位。",
+        unlocated,
+        p["page_index"],
+    )
+    ir["metrics"]["unlocated_text_block_count"] = len(unlocated)
+    associate_ovis(ir, p)
+    p["routing_decision"] = "OVIS_CONTENT_AND_FIGURE_REPLAY"
+    p["reading_order"] = [b["id"] for b in p["blocks"]]
+
+
+def associate_ovis(ir: Json, p: Json) -> None:
+    """Use explicit adjacent labels/captions and model sequence, not invented text boxes."""
+    blocks = p["blocks"]
+    questions: dict[str, list[Json]] = {}
+    for b in blocks:
+        if m := QUESTION.match(b["content"].get("plain_text", "")):
+            questions.setdefault(m[1], []).append(b)
+    option_groups: dict[str, list[Json]] = {}
+    shared: list[Json] = []
+    question_id = ""
+    associated = set()
+    for index, b in enumerate(blocks):
+        if b["type"] == "question":
+            question_id = b["id"]
+        if b["type"] != "figure":
+            continue
+        previous = blocks[index - 1] if index else None
+        following = blocks[index + 1] if index + 1 < len(blocks) else None
+        if previous and re.fullmatch(r"[A-D][.．、]", previous["content"].get("plain_text", "")):
+            relation(
+                ir,
+                "label_of",
+                previous["id"],
+                b["id"],
+                {"reason": "adjacent_Ovis_label_image_tokens"},
+            )
+            option_groups.setdefault(question_id, []).append(
+                {"label": previous["id"], "figure": b["id"]}
+            )
+            associated.add(b["id"])
+            if question_id:
+                relation(
+                    ir, "anchored_to", b["id"], question_id, {"reason": "explicit_option_sequence"}
+                )
+        if following and (m := CAPTION.match(following["content"].get("plain_text", ""))):
+            relation(
+                ir,
+                "caption_of",
+                following["id"],
+                b["id"],
+                {"reason": "adjacent_Ovis_image_caption"},
+            )
+            if b["id"] not in associated:
+                shared.append({"label": following["id"], "figure": b["id"]})
+            associated.add(b["id"])
+            if len(questions.get(m[1], [])) == 1:
+                relation(
+                    ir,
+                    "references",
+                    b["id"],
+                    questions[m[1]][0]["id"],
+                    {"explicit_question": m[1], "placement": "source_figure_row"},
+                )
+            else:
+                issue(
+                    ir,
+                    "AMBIGUOUS_QUESTION_NUMBER" if m[1] in questions else "target_not_in_input",
+                    "重复题号无法唯一关联，保留图组待复核。"
+                    if m[1] in questions
+                    else "图题指向的题干不在输入中，保留独立图组。",
+                    [b["id"], following["id"]],
+                    p["page_index"],
+                )
+    groups = ir["metadata"].setdefault("figure_groups", [])
+    positions = {b["id"]: index for index, b in enumerate(blocks)}
+    for pairs in option_groups.values():
+        contiguous: list[Json] = []
+        for pair in pairs:
+            if contiguous and positions[pair["label"]] != positions[contiguous[-1]["figure"]] + 1:
+                groups.append(
+                    {"page_index": p["page_index"], "kind": "option_grid", "pairs": contiguous}
+                )
+                contiguous = []
+            contiguous.append(pair)
+        if contiguous:
+            groups.append(
+                {"page_index": p["page_index"], "kind": "option_grid", "pairs": contiguous}
+            )
+    # Captioned figures may share a row only when consecutive in reading order.
+    by_id = {b["id"]: b for b in blocks}
+    rows: list[list[Json]] = []
+    for pair in shared:
+        box = by_id[pair["figure"]]["bbox"]
+        if rows:
+            prior = by_id[rows[-1][-1]["figure"]]["bbox"]
+            overlap = min(box[3], prior[3]) - max(box[1], prior[1])
+        else:
+            overlap = 0
+        adjacent = bool(rows) and (
+            positions[pair["figure"]] == positions[rows[-1][-1]["label"]] + 1
+        )
+        if rows and overlap > 0 and adjacent:
+            rows[-1].append(pair)
+        else:
+            rows.append([pair])
+    for pairs in rows:
+        groups.append({"page_index": p["page_index"], "kind": "shared_row", "pairs": pairs})
+    for b in blocks:
+        if b["type"] == "figure" and b["id"] not in associated:
+            issue(
+                ir, "FIGURE_ASSOCIATION_REVIEW", "独立图域待复核关联。", [b["id"]], p["page_index"]
+            )

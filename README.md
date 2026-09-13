@@ -147,3 +147,11 @@ uv run mypy .          # 类型检查
 ### 公开仓库边界
 
 仓库保留源码、规范、配置模板和脱敏契约夹具。本地 `.env*`（除 `.env.example`）、FRP 配置、密钥、运行数据和原始文档样本不上传。新克隆运行 Gate 工具时须通过 `--test-image` 提供自有样本。旧开发机 Git 历史保留在本地，公开 `main` 从经过检查的源码快照开始。
+
+### DEMO-001 本机输出审阅原型
+
+独立原型已提供真实 T0016 结果的零模型回放 DOCX、有限 Native PDF 转换、
+本机对照与修正另存，以及显式授权的 raster live 开发入口。
+运行 `uv run --locked python scripts/docx_demo.py serve`，打开 `http://127.0.0.1:8765`。
+详见 [启动与审阅说明](prototypes/docx_output/README.md) 和
+[原型边界](prototypes/docx_output/prototype-scope.md)。它不代表完整生产转换链路或阶段验收。

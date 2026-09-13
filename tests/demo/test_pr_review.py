@@ -1,0 +1,2083 @@
+"""Regression coverage for PR 3 review findings."""
+
+from __future__ import annotations
+
+import copy
+from pathlib import Path, PureWindowsPath
+
+import pytest
+from prototypes.docx_output import common
+from prototypes.docx_output.common import Json, block
+from prototypes.docx_output.pipeline import finish
+from prototypes.docx_output.review import apply_overrides
+from prototypes.docx_output.structure import image_content as common_image_content
+from prototypes.docx_output.structure import recover
+from tests.demo.test_output import pp_block, raster, response, setup_ir
+
+
+@pytest.mark.parametrize("anchor", ["C:/", "//server/share/"])
+def test_windows_input_anchor(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch, anchor: str
+) -> None:
+    """Exercise validate_input's anchor split with Windows drive and UNC semantics."""
+    source = raster(private_case)
+    windows = PureWindowsPath(anchor) / "中文 空格" / source.name
+
+    def check(root: Path, relative: str) -> Path:
+        assert not PureWindowsPath(relative).is_absolute()
+        assert PureWindowsPath(str(root)) / relative == windows
+        return source
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "absolute", lambda self: windows)
+        patch.setattr(common, "safe_path", check)
+        common.validate_input(source)
+
+
+def test_merge_retains_both_candidate_lineages(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("first", 0, [1, 1, 30, 20], "First", "native_pdf"),
+        block("second", 0, [1, 21, 30, 40], "Second", "native_pdf"),
+    ]
+    p["reading_order"] = ["first", "second"]
+    before = copy.deepcopy(p["blocks"])
+    revised = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "first", "action": "merge", "reason": "join paragraphs"}]},
+    )
+    merged = revised["pages"][0]["blocks"][0]
+    candidates = {c["id"]: c for c in merged["content_candidates"]}
+    for original in before:
+        for c in original["content_candidates"]:
+            assert candidates[c["id"]]["text"] == c["text"]
+        assert (
+            original["selected_candidate_id"]
+            in candidates[merged["selected_candidate_id"]]["evidence"]["supersedes"]
+        )
+    assert revised["provenance"]["manual-0"]["merged_before"] == before[1]
+    assert merged["content"]["plain_text"] == "First\nSecond"
+    assert ir["pages"][0]["blocks"] == before
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "not a literal",
+        "{}",
+        "[{'label':'text','bbox':[1,2,3]}]",
+        "[{'label':'text','bbox':[20,20,10,30]}]",
+    ],
+)
+def test_optional_monkey_failure_preserves_pp(private_case: Path, content: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    responses: Json = {
+        "pp": response([pp_block("Preserved text")]),
+        "monkey": {"choices": [{"finish_reason": "stop", "message": {"content": content}}]},
+    }
+    recover(job, ir, p, responses, {"requests": []})
+    assert any(b["content"].get("plain_text") == "Preserved text" for b in p["blocks"])
+    assert any(i["type"] == "MONKEY_CANDIDATE_REJECTED" for i in ir["issues"])
+    qa = finish(job, ir)
+    assert qa["execution_status"] == "COMPLETE"
+
+
+@pytest.mark.parametrize("mode", ["ovis", "ovis-pp"])
+@pytest.mark.parametrize("valid", [False, True])
+def test_ovis_modes_keep_monkey_candidate(private_case: Path, mode: str, valid: bool) -> None:
+    from prototypes.docx_output.pipeline import reconstruct
+
+    job, ir, p = setup_ir(private_case)
+    content = "[{'label':'text','bbox':[10,20,300,40]}]" if valid else "bad"
+    responses = {
+        "ovis": {"choices": [{"finish_reason": "stop", "message": {"content": "Preserved"}}]},
+        "monkey": {"choices": [{"finish_reason": "stop", "message": {"content": content}}]},
+    }
+    reconstruct(job, ir, p, responses, {"requests": []}, mode)
+    if valid:
+        assert ir["provenance"]["monkey_geometry"]["0"][0]["raw_bbox"] == [10, 20, 300, 40]
+    else:
+        assert any(i["type"] == "MONKEY_CANDIDATE_REJECTED" for i in ir["issues"])
+    assert p["blocks"][0]["content"]["plain_text"] == "Preserved"
+
+
+def test_merge_marks_composed_geometry(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 30, 20], "First", "pp_structure"),
+        block("b", 0, [1, 21, 30, 40], "Second", "inferred"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    revised = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "join"}]}
+    )
+    assert revised["pages"][0]["blocks"][0]["geometry_source"] == "manual_correction"
+    event = revised["provenance"]["manual-0"]
+    assert event["before"]["geometry_source"] == "pp_structure"
+    assert event["merged_before"]["geometry_source"] == "inferred"
+
+
+def test_footer_join_keeps_both_candidates(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "第\n\n1页"}}]},
+        "ovis",
+    )
+    footer = p["blocks"][0]
+    originals = {c["text"]: c["id"] for c in footer["content_candidates"]}
+    assert set(originals) == {"第", "1页", "第1页"}
+    selected = next(c for c in footer["content_candidates"] if c["selected"])
+    assert set(selected["evidence"]["supersedes"]) == {originals["第"], originals["1页"]}
+
+
+@pytest.mark.parametrize("decoration", [b"10 10 575 820 re S\n", b"50 590 480 190 re S\n"])
+def test_native_container_keeps_editable_text(private_case: Path, decoration: bytes) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "border.pdf"
+    original = make_pdf(source, decoration=decoration)
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    text = "".join(b["content"].get("plain_text", "") for b in ir["pages"][0]["blocks"])
+    assert "".join(original.split()) == "".join(text.split())
+    assert ir["pages"][0]["routing_decision"] == "NEEDS_ROUTE_REVIEW"
+
+
+def test_split_right_candidate_has_supersedes(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    b = block("a", 0, [1, 1, 30, 20], "First Second", "native_pdf")
+    p["blocks"] = [b]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "split", "offset": 6, "reason": "split"}]},
+    )
+    right = result["pages"][0]["blocks"][1]
+    selected = next(c for c in right["content_candidates"] if c["selected"])
+    assert selected["evidence"]["supersedes"] == b["selected_candidate_id"]
+
+
+def test_math_only_output_is_editable(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x^2$"}}]},
+        "ovis",
+    )
+    qa = finish(job, ir)
+    assert qa["omml_formula_count"] == 1
+    assert qa["has_editable_runs"]
+    assert qa["execution_status"] == "COMPLETE"
+
+
+@pytest.mark.parametrize("kind", ["ocr", "formula"])
+def test_pp_fine_boxes_outside_page_fall_back(private_case: Path, kind: str) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    raw = pp["result"]["layoutParsingResults"][0]["prunedResult"]
+    bbox = [-2, 20, 100, 50]
+    if kind == "ocr":
+        raw["overall_ocr_res"]["rec_boxes"].append(bbox)
+    else:
+        raw["formula_res_list"].append({"dt_polys": bbox})
+    before = copy.deepcopy(p["blocks"])
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert ir["metadata"]["layout_validation"]["status"] == "FALLBACK"
+    assert p["blocks"] == before
+
+
+def test_caption_rows_cannot_cross_text(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("f1", 0, [10, 10, 40, 40], "", "inferred", "figure"),
+        block("c1", 0, [10, 40, 40, 45], "第1题", "inferred"),
+        block("middle", 0, [10, 45, 80, 50], "Keep between", "inferred"),
+        block("f2", 0, [50, 10, 80, 40], "", "inferred", "figure"),
+        block("c2", 0, [50, 40, 80, 45], "第2题", "inferred"),
+    ]
+    associate_ovis(ir, p)
+    groups = ir["metadata"]["figure_groups"]
+    assert [len(g["pairs"]) for g in groups] == [1, 1]
+
+
+def test_ambiguous_native_vectors_remain_in_output(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "labeled-vector.pdf"
+    make_pdf(source, decoration=b"50 700 300 70 re S\n")
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    assert any("ambiguous_vector_reference" in b["flags"] for b in ir["pages"][0]["blocks"])
+    assert any(i["type"] == "VECTOR_TEXT_OVERLAP_REVIEW" for i in ir["issues"])
+
+
+def test_option_groups_do_not_cross_body(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "inferred"),
+        block("f1", 0, [1, 20, 20, 40], "", "inferred", "figure"),
+        block("body", 0, [1, 40, 20, 60], "Between", "inferred"),
+        block("b", 0, [30, 1, 50, 20], "B.", "inferred"),
+        block("f2", 0, [30, 20, 50, 40], "", "inferred", "figure"),
+    ]
+    associate_ovis(ir, p)
+    assert [len(g["pairs"]) for g in ir["metadata"]["figure_groups"]] == [1, 1]
+
+
+def test_legacy_pp_rejects_outside_ocr(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    body = response([pp_block("Text")], [{"bbox": [-10, 20, 100, 40], "text": "Text"}])
+    with pytest.raises(common.DemoError, match="PP_REGION_OUT_OF_PAGE"):
+        recover(job, ir, p, {"pp": body}, {"requests": []})
+
+
+def test_manual_crop_rejects_outside_page(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+    p["reading_order"] = ["a"]
+    with pytest.raises(common.DemoError, match="INVALID_CROP"):
+        apply_overrides(
+            job,
+            ir,
+            {
+                "operations": [
+                    {"block_id": "a", "action": "crop", "bbox": [-1, 0, 30, 30], "reason": "crop"}
+                ]
+            },
+        )
+
+
+@pytest.mark.parametrize("outcome", ["success", "worker_failure", "validation_failure"])
+def test_upload_temp_removed(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch, outcome: str
+) -> None:
+    import time
+
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output import server
+
+    upload_root = private_case / "staging"
+    monkeypatch.setattr(server, "PRIVATE", upload_root)
+
+    def work(*args: object, **kwargs: object) -> Path:
+        if outcome == "worker_failure":
+            raise common.DemoError("TEST_FAILURE")
+        return private_case / "done"
+
+    monkeypatch.setattr(server, "convert", work)
+    with TestClient(
+        server.create_app(output_root=private_case / "jobs"), base_url="http://127.0.0.1:8765"
+    ) as client:
+        token = client.get("/api/session").json()["token"]
+        client.post(
+            "/api/upload",
+            files={
+                "file": (
+                    "input.png",
+                    b"" if outcome == "validation_failure" else b"data",
+                    "image/png",
+                )
+            },
+            headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+        )
+        for _ in range(100):
+            if not client.get("/api/status").json()["busy"]:
+                break
+            time.sleep(0.01)
+    assert not list((upload_root / "uploads").glob("*/input.*"))
+
+
+def test_table_image_counts_as_fallback(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    recover(job, ir, p, {"pp": response([pp_block("Table", label="table")])}, {"requests": []})
+    qa = finish(job, ir)
+    assert qa["fallback_region_count"] == 1
+    assert qa["fallback_area_ratio"] > 0
+    assert qa["placed_figure_count"] == 0
+
+
+def test_merge_redirects_issue(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf"),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    common.issue(ir, "CONTENT_CONFLICT", "Review", ["b"])
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "join"}]}
+    )
+    assert result["issues"][0]["block_ids"] == ["a"]
+
+
+def test_legacy_option_groups_preserve_intervening_body(private_case: Path) -> None:
+    from prototypes.docx_output.structure import associate
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 10, 9, 20], "A.", "inferred"),
+        block("f1", 0, [10, 10, 30, 30], "", "inferred", "figure"),
+        block("body", 0, [1, 40, 50, 60], "Middle", "inferred"),
+        block("b", 0, [31, 10, 39, 20], "B.", "inferred"),
+        block("f2", 0, [40, 10, 60, 30], "", "inferred", "figure"),
+    ]
+    associate(ir, p)
+    assert all(len(g["pairs"]) == 1 for g in ir["metadata"]["figure_groups"])
+
+
+def test_layout_acceptance_rejects_noncontiguous_text_group(private_case: Path) -> None:
+    from prototypes.docx_output.layout_rules import accept_candidate
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    apply_pp_layout(job, ir, p, pp, "pp")
+    original = copy.deepcopy(ir)
+    group = ir["metadata"]["text_groups"][0]
+    group["rows"][0] = [group["rows"][0][0], group["rows"][0][-1]]
+    with pytest.raises(common.DemoError, match="NONCONTIGUOUS_LAYOUT_GROUP"):
+        accept_candidate(original, ir, p)
+
+
+def test_pp_ignores_other_page_relations(private_case: Path) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    common.relation(ir, "caption_of", "other-caption", "other-image", {})
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert ir["metadata"]["layout_validation"]["status"] == "APPLIED"
+
+
+def test_merge_transfers_relations(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf", "question"),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf", "question"),
+        block("target", 0, [1, 50, 20, 70], "T", "native_pdf", "figure"),
+    ]
+    p["reading_order"] = ["a", "b", "target"]
+    common.relation(ir, "references", "target", "b", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "join"}]}
+    )
+    assert any(r["from"] == "target" and r["to"] == "a" for r in result["relations"])
+
+
+def test_ovis_figure_has_one_display_group(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 10, 10], "A.", "inferred"),
+        block("f", 0, [10, 10, 30, 30], "", "inferred", "figure"),
+        block("c", 0, [10, 31, 30, 40], "第1题", "inferred"),
+    ]
+    associate_ovis(ir, p)
+    assert (
+        sum(pair["figure"] == "f" for g in ir["metadata"]["figure_groups"] for pair in g["pairs"])
+        == 1
+    )
+    assert any(r["type"] == "caption_of" for r in ir["relations"])
+
+
+def test_legacy_caption_groups_split_vertical_rows(private_case: Path) -> None:
+    from prototypes.docx_output.structure import associate
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("f1", 0, [10, 10, 30, 30], "", "inferred", "figure"),
+        block("c1", 0, [10, 31, 30, 40], "第1题", "inferred"),
+        block("f2", 0, [10, 60, 30, 80], "", "inferred", "figure"),
+        block("c2", 0, [10, 81, 30, 90], "第2题", "inferred"),
+    ]
+    associate(ir, p)
+    assert [len(g["pairs"]) for g in ir["metadata"]["figure_groups"]] == [1, 1]
+
+
+def test_auto_pp_split_retains_parent_candidate(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    text = "First text3. Next question"
+    pp = response(
+        [pp_block(text, bbox=[20, 20, 300, 80])],
+        [
+            {"text": "First text", "bbox": [20, 20, 300, 40]},
+            {"text": "3. Next question", "bbox": [20, 60, 200, 80]},
+        ],
+    )
+    recover(job, ir, p, {"pp": pp}, {})
+    assert len(p["blocks"]) == 2
+    for b in p["blocks"]:
+        selected = next(c for c in b["content_candidates"] if c["selected"])
+        assert selected["evidence"]["supersedes"] == "p0-b0-c0"
+        assert ir["provenance"]["p0-b0"]["original_block"]["content_candidates"][0]["text"] == text
+
+
+@pytest.mark.parametrize("formula", ["$x$", "$$x$$", "$$\nx^2\n$$"])
+def test_formula_delimiters_leave_no_dollar_text(private_case: Path, formula: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": formula}}]},
+        "ovis",
+    )
+    bid = p["blocks"][0]["id"]
+    parts = ir["metadata"]["inline_parts"][bid]
+    assert not any("$" in part.get("text", "") for part in parts)
+    assert next(part for part in parts if "latex" in part)["source_text"] == formula.strip()
+
+
+def test_layout_records_page_left_margin(private_case: Path) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert (
+        ir["metadata"]["layout_by_page"]["0"]["content_left_pt"]
+        == ir["metadata"]["content_left_pt"]
+    )
+
+
+@pytest.mark.parametrize("mode", ["ovis", "pp"])
+def test_duplicate_question_number_never_binds_last(private_case: Path, mode: str) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+    from prototypes.docx_output.structure import associate
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("q1", 0, [1, 1, 90, 10], "1. First", "inferred", "question"),
+        block("f", 0, [10, 20, 30, 40], "", "inferred", "figure"),
+        block("c", 0, [10, 41, 30, 50], "第1题", "inferred"),
+        block("q2", 0, [1, 70, 90, 80], "1. Other section", "inferred", "question"),
+    ]
+    (associate_ovis if mode == "ovis" else associate)(ir, p)
+    assert not any(r["type"] == "references" for r in ir["relations"])
+    assert any(i["type"] == "AMBIGUOUS_QUESTION_NUMBER" for i in ir["issues"])
+
+
+def test_offline_preview_uses_reviewed_order(private_case: Path) -> None:
+    from prototypes.docx_output.review import write_preview
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "First marker", "native_pdf"),
+        block("b", 0, [1, 21, 20, 40], "Second marker", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "b", "action": "move", "delta": -1, "reason": "move"}]},
+    )
+    write_preview(job, result, "reviewed")
+    html = (job / "review" / "reviewed.html").read_text()
+    assert html.index("Second marker") < html.index("First marker")
+
+
+def test_ovis_single_newline_question_boundary(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "1. First\nA. Choice\n2. Second\nA. $$x+\n3. y$$"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert [b["type"] for b in p["blocks"]] == ["question", "option", "question", "option"]
+    assert all(
+        c["evidence"]["raw_markdown_paragraph"] == raw
+        for b in p["blocks"]
+        for c in b["content_candidates"]
+    )
+
+
+def test_pp_provenance_is_page_keyed(private_case: Path) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    ir["provenance"]["pp_layout_only"] = {"earlier": {"request_id": "previous"}}
+    apply_pp_layout(job, ir, p, pp, "current")
+    assert ir["provenance"]["pp_layout_only"]["earlier"]["request_id"] == "previous"
+    assert ir["provenance"]["pp_layout_only"]["0"]["request_id"] == "current"
+
+
+@pytest.mark.parametrize("kind", ["label_of", "caption_of", "references"])
+def test_manual_relation_rejects_wrong_endpoint_types(private_case: Path, kind: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf"),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    with pytest.raises(common.DemoError, match="INVALID_RELATION_TARGET"):
+        apply_overrides(
+            job,
+            ir,
+            {
+                "operations": [
+                    {
+                        "block_id": "a",
+                        "action": "relation",
+                        "target_id": "b",
+                        "relation_type": kind,
+                        "reason": "link",
+                    }
+                ]
+            },
+        )
+
+
+def test_large_native_frame_is_not_ordinary_figure(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "frame.pdf"
+    make_pdf(source, decoration=b"10 10 575 820 re S\n")
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    p = ir["pages"][0]
+    assert all(
+        common.area(b["bbox"]) < p["width_pt"] * p["height_pt"] * 0.5
+        for b in p["blocks"]
+        if b["type"] == "figure"
+    )
+
+
+def test_merge_quarantines_invalid_relation_types(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("q", 0, [1, 1, 20, 20], "1. Q", "native_pdf", "question"),
+        block("c", 0, [1, 21, 20, 40], "Caption", "native_pdf", "caption"),
+        block("f", 0, [1, 50, 20, 70], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["q", "c", "f"]
+    common.relation(ir, "caption_of", "c", "f", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "q", "action": "merge", "reason": "join"}]}
+    )
+    assert not any(r["type"] == "caption_of" for r in result["relations"])
+    assert any(i["type"] == "MERGED_RELATION_REVIEW" for i in result["issues"])
+
+
+def test_background_image_does_not_suppress_native_text(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "background.pdf"
+    original = make_pdf(source, background=True)
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    text = "".join(b["content_candidates"][0]["text"] for b in ir["pages"][0]["blocks"])
+    assert "".join(original.split()) == "".join(text.split())
+
+
+def test_relation_id_never_collides_after_delete() -> None:
+    ir: Json = {"relations": []}
+    common.relation(ir, "references", "a", "b", {})
+    common.relation(ir, "references", "c", "d", {})
+    ir["relations"].pop(0)
+    common.relation(ir, "references", "e", "f", {})
+    assert len({r["id"] for r in ir["relations"]}) == 2
+
+
+@pytest.mark.parametrize("raw", [r"1. 求 \sqrt{x}", r"x\leq0", r"$x$ and \alpha"])
+def test_unprocessed_latex_never_exports_as_plain_text(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_small_background_keeps_native_text_and_requires_review(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "small-bg.pdf"
+    original = make_pdf(source, decoration=b"q 500 0 0 190 40 600 cm /Im0 Do Q\n")
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    p = ir["pages"][0]
+    text = "".join(b["content"].get("plain_text", "") for b in p["blocks"])
+    assert "".join(original.split()) == "".join(text.split())
+    assert p["routing_decision"] == "NEEDS_ROUTE_REVIEW"
+
+
+@pytest.mark.parametrize("raw", [r"C:\Users\Alice", r"regex \w+ and \d+", r"$x$ at C:\Users\Alice"])
+def test_plain_backslashes_remain_editable(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["has_editable_runs"]
+
+
+def test_large_inset_vector_is_retained(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "large-diagram.pdf"
+    make_pdf(source, decoration=b"40 40 500 750 re S\n")
+    job = convert(source, output_root=private_case / "jobs")
+    p = common.read(job / "layout.auto.json")["pages"][0]
+    assert any(
+        common.area(b["bbox"]) > p["width_pt"] * p["height_pt"] * 0.5
+        for b in p["blocks"]
+        if b["type"] == "figure"
+    )
+
+
+def test_crop_label_detaches_inline_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "native_pdf"),
+        block("f", 0, [20, 1, 40, 20], "Figure", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "f"]
+    ir["metadata"]["figure_groups"] = [
+        {
+            "page_index": 0,
+            "kind": "option_grid",
+            "inline_labels": True,
+            "pairs": [{"label": "a", "figure": "f"}],
+        }
+    ]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "crop", "bbox": [1, 1, 20, 20], "reason": "crop"}
+            ]
+        },
+    )
+    assert not result["metadata"]["figure_groups"]
+    finish(job, result)
+
+
+def test_legacy_pp_plain_path_remains_text(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    recover(job, ir, p, {"pp": response([pp_block(r"C:\Users\Alice")])}, {})
+    assert p["blocks"][0]["content"]["kind"] == "text"
+    assert finish(job, ir)["fallback_region_count"] == 0
+
+
+def test_editing_inline_label_releases_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "native_pdf"),
+        block("f", 0, [20, 1, 40, 20], "Figure", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "f"]
+    ir["metadata"]["figure_groups"] = [
+        {
+            "page_index": 0,
+            "kind": "option_grid",
+            "inline_labels": True,
+            "pairs": [{"label": "a", "figure": "f"}],
+        }
+    ]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "text", "text": "A. $x^2$", "reason": "formula"}
+            ]
+        },
+    )
+    assert not result["metadata"]["figure_groups"]
+    assert finish(job, result)["omml_formula_count"] == 1
+
+
+def test_currency_pair_is_not_silently_math(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "Price $5 and $4"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert not ir["metadata"].get("inline_parts")
+    assert finish(job, ir)["has_editable_runs"]
+
+
+def test_pdf_manifest_records_actual_page_count(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "two.pdf"
+    make_pdf(source, pages=2)
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "input-manifest.json")["page_count"] == 2
+
+
+def test_pp_overlap_retains_text(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    pp = response([pp_block("", label="image", bbox=[1, 1, 399, 599]), pp_block("Keep editable")])
+    recover(job, ir, p, {"pp": pp}, {})
+    assert any(b["content"].get("plain_text") == "Keep editable" for b in p["blocks"])
+    assert any(i["type"] == "IMAGE_TEXT_OVERLAP_REVIEW" for i in ir["issues"])
+
+
+def test_split_overlap_issue_targets_children(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    pp = response(
+        [
+            pp_block("", label="image", bbox=[1, 1, 399, 599]),
+            pp_block("First3. Next", bbox=[20, 20, 300, 80]),
+        ],
+        [
+            {"text": "First", "bbox": [20, 20, 300, 40]},
+            {"text": "3. Next", "bbox": [20, 60, 200, 80]},
+        ],
+    )
+    recover(job, ir, p, {"pp": pp}, {})
+    ids = {b["id"] for b in p["blocks"]}
+    assert all(set(i["block_ids"]) <= ids for i in ir["issues"])
+
+
+def test_manual_plain_path_stays_editable(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Original", "native_pdf")]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "text", "text": r"C:\Users\Alice", "reason": "edit"}
+            ]
+        },
+    )
+    assert result["pages"][0]["blocks"][0]["content"]["plain_text"] == r"C:\Users\Alice"
+
+
+def test_split_rejects_parent_ovis_candidate(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    b = block("a", 0, [1, 1, 20, 20], "First Second", "ovis_ocr2")
+    p["blocks"] = [b]
+    p["reading_order"] = ["a"]
+    operations = [
+        {"block_id": "a", "action": "split", "offset": 6, "reason": "split"},
+        {
+            "block_id": "a",
+            "action": "candidate",
+            "candidate_id": b["selected_candidate_id"],
+            "reason": "accept",
+        },
+    ]
+    with pytest.raises(common.DemoError, match="CANDIDATE_NOT_FOUND"):
+        apply_overrides(job, ir, {"operations": operations})
+
+
+@pytest.mark.parametrize("choices", [{"x": 1}, [None], [{"message": None}], None])
+def test_malformed_chat_shapes_raise_domain_error(choices: object) -> None:
+    from prototypes.docx_output.structure import chat_content
+
+    with pytest.raises(common.DemoError, match="INVALID_CANDIDATE_WIRE_TYPE"):
+        chat_content({"choices": choices})
+
+
+@pytest.mark.parametrize("page_level", [False, True])
+def test_issue_resolution_can_empty_queue(private_case: Path, page_level: bool) -> None:
+    job, ir, p = setup_ir(private_case)
+    if not page_level:
+        p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+        p["reading_order"] = ["a"]
+    common.issue(ir, "REVIEW", "Check", [] if page_level else ["a"])
+    op = {
+        "action": "resolve_issue",
+        "issue_id": ir["issues"][0]["id"],
+        "page_index": 0,
+        "reason": "checked",
+    }
+    if not page_level:
+        op["block_id"] = "a"
+    result = apply_overrides(job, ir, {"operations": [op]})
+    assert all(i["status"] == "resolved" for i in result["issues"])
+    assert result["provenance"]["manual-0"]["operation"] == op
+
+
+@pytest.mark.parametrize(
+    "raw", ["**1. Question**", "- Choice", "| A | B |\n|---|---|", "*1. Question*", "_A. Choice_"]
+)
+def test_unsupported_markdown_requires_review(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]},
+        "ovis",
+    )
+    assert ir["provenance"]["ovis_content"]["0"] == raw
+
+    qa = finish(job, ir)
+    assert (job / "auto.docx").exists()
+    assert qa["fallback_area_ratio"] == pytest.approx(1)
+    assert any(i["type"] == "OVIS_MARKDOWN_REVIEW_REQUIRED" for i in ir["issues"])
+
+
+def test_crop_invalidates_text_caption_relation(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("c", 0, [1, 1, 20, 20], "Caption", "native_pdf", "caption"),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["c", "f"]
+    common.relation(ir, "caption_of", "c", "f", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "c", "action": "crop", "reason": "crop"}]}
+    )
+    assert not result["relations"]
+    assert any(i["type"] == "MANUAL_RELATION_REVIEW" for i in result["issues"])
+
+
+def test_resolved_issue_not_listed_as_pending(private_case: Path) -> None:
+    from prototypes.docx_output.review import write_preview
+
+    job, ir, _ = setup_ir(private_case)
+    common.issue(ir, "UNIQUE_RESOLVED", "Already checked", [])
+    ir["issues"][0]["status"] = "resolved"
+    write_preview(job, ir, "reviewed")
+    assert "UNIQUE_RESOLVED" not in (job / "review" / "reviewed.html").read_text()
+
+
+@pytest.mark.parametrize(
+    "text,offset,kind", [("1. First 2. Next", 9, "question"), ("C. First D. Next", 9, "option")]
+)
+def test_manual_split_classifies_right(
+    private_case: Path, text: str, offset: int, kind: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], text, "native_pdf")]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "split", "offset": offset, "reason": "split"}]},
+    )
+    assert result["pages"][0]["blocks"][1]["type"] == kind
+
+
+@pytest.mark.parametrize("raw", ["*1. Question\ncontinued*", "_A. Choice\ncontinued_"])
+def test_multiline_emphasis_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_browser_split_uses_codepoint_offset() -> None:
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node runtime required for browser handler test")
+    script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
+    handler = next(line for line in script.splitlines() if line.startswith("on('split'"))
+    fixture = (
+        "const callbacks={};function on(name,cb){callbacks[name]=cb;}"
+        'function $(id){return {value:"𠮷😀AB",selectionStart:4};}'
+        "function operation(op){console.log(JSON.stringify(op));}"
+    )
+    result = subprocess.run(
+        [node, "-e", fixture + handler + ";callbacks.split();"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(result.stdout)["offset"] == 2
+
+
+@pytest.mark.parametrize(
+    "initial,text,expected",
+    [("paragraph", "1. Correct question", "question"), ("question", "Plain body", "paragraph")],
+)
+def test_edit_reclassifies_confirmed_text(
+    private_case: Path, initial: str, text: str, expected: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf", initial)]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "text", "text": text, "reason": "correct"}]},
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == expected
+
+
+@pytest.mark.parametrize("kind", ["heading", "footer", "caption"])
+def test_text_edit_preserves_nonlexical_type(private_case: Path, kind: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf", kind)]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "text", "text": "Corrected", "reason": "typo"}
+            ]
+        },
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == kind
+
+
+@pytest.mark.parametrize("role", ["member", "question"])
+def test_reclassification_detaches_text_groups(private_case: Path, role: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("q", 0, [1, 1, 20, 20], "1. Q", "native_pdf", "question"),
+        block("a", 0, [1, 21, 20, 40], "A. Choice", "native_pdf", "option"),
+    ]
+    p["reading_order"] = ["q", "a"]
+    ir["metadata"]["text_groups"] = [
+        {"page_index": 0, "question_id": "q", "columns": 1, "rows": [["a"]]}
+    ]
+    op = {
+        "block_id": "a" if role == "member" else "q",
+        "action": "text",
+        "text": "2. New" if role == "member" else "Body",
+        "reason": "correct",
+    }
+    result = apply_overrides(job, ir, {"operations": [op]})
+    assert not result["metadata"]["text_groups"]
+
+
+def test_split_label_detaches_old_association(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "native_pdf", "option"),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["a", "f"]
+    common.relation(ir, "label_of", "a", "f", {})
+    ir["metadata"]["figure_groups"] = [
+        {"page_index": 0, "kind": "option_grid", "pairs": [{"label": "a", "figure": "f"}]}
+    ]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "split", "offset": 1, "reason": "split"}]},
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == "paragraph"
+    assert not result["metadata"]["figure_groups"]
+    assert not result["relations"] or all(r["type"] != "label_of" for r in result["relations"])
+
+
+def test_revision_switch_restores_preview_assets() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
+    handler = next(
+        line for line in script.splitlines() if line.startswith("$('revision').onchange")
+    )
+    fixture = (
+        "let preview=true,unsavedPreview=true,revision='reviewed';"
+        "let data={auto:{},reviewed:{}},layout;const el={value:'auto'};"
+        "function $(){return el;}function message(){}function show(){};"
+    )
+    result = subprocess.run(
+        [
+            node,
+            "-e",
+            fixture
+            + handler
+            + "el.onchange();el.value='reviewed';el.onchange();console.log(preview);",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "true"
+
+
+@pytest.mark.parametrize("raw", ["Price $5", "Price $5 and $4"])
+def test_currency_exports_as_literal_text(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["has_editable_runs"]
+    assert p["blocks"][0]["content"]["plain_text"] == raw
+
+
+def test_invalid_native_xml_char_falls_back(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import pypdfium2 as pdfium  # type: ignore[import-untyped]
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "invalid-char.pdf"
+    make_pdf(source)
+    original = pdfium.raw.FPDFText_GetUnicode
+    monkeypatch.setattr(
+        pdfium.raw,
+        "FPDFText_GetUnicode",
+        lambda page, index: 1 if index == 0 else original(page, index),
+    )
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    assert any(i["type"] == "INVALID_XML_TEXT_FALLBACK" for i in ir["issues"])
+    assert common.read(job / "qa.json")["fallback_region_count"] > 0
+
+
+@pytest.mark.parametrize("raw", [r"\(x^2\)", r"\[a+b\]"])
+def test_standard_latex_delimiters_require_handling(raw: str) -> None:
+    from prototypes.docx_output.formula import unrendered_math
+
+    assert unrendered_math(raw)
+
+
+@pytest.mark.parametrize("raw", ["US$5", "HK$100", "A$20"])
+def test_currency_prefix_remains_literal(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["has_editable_runs"]
+
+
+def test_currency_then_formula_parses_independently(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "US$5 and $x$"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    parts = ir["metadata"]["inline_parts"][p["blocks"][0]["id"]]
+    assert [x["latex"] for x in parts if "latex" in x] == ["x"]
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_preview_crop_does_not_overwrite_saved_bytes(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    first = common.crop(job, ir, p, [1, 1, 20, 20], "same")
+    asset = next(a for a in ir["assets"] if a["id"] == first)
+    path = job / asset["path"]
+    before = path.read_bytes()
+    other = copy.deepcopy(ir)
+    other["assets"] = []
+    common.crop(job, other, p, [1, 1, 100, 100], "same")
+    assert path.read_bytes() == before
+    assert other["assets"][0]["path"] != asset["path"]
+
+
+@pytest.mark.parametrize("mode", ["ovis", "native"])
+def test_alternate_math_exports_reviewable_fallback(private_case: Path, mode: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    if mode == "ovis":
+        job, ir, p = setup_ir(private_case)
+        recover_ovis(
+            job,
+            ir,
+            p,
+            {"choices": [{"finish_reason": "stop", "message": {"content": r"\(x^2\)"}}]},
+            "ovis",
+        )
+        qa = finish(job, ir)
+    else:
+        source = private_case / "math.pdf"
+        text = r"\(x^2\)".encode("utf-16-be").hex()
+        make_pdf(source, decoration=f"BT /F1 12 Tf 60 580 Td <{text}> Tj ET\n".encode())
+        job = convert(source, output_root=private_case / "jobs")
+        qa = common.read(job / "qa.json")
+    assert qa["fallback_region_count"] > 0
+    assert (job / "auto.docx").exists()
+
+
+@pytest.mark.parametrize("punct", [".", "?", "。", "，", "；", "！"])
+def test_currency_punctuation_does_not_capture_following_math(
+    private_case: Path, punct: str
+) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = f"US$5{punct} Then $x$."
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    parts = ir["metadata"]["inline_parts"][p["blocks"][0]["id"]]
+    assert [a["latex"] for a in parts if "latex" in a] == ["x"]
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_native_dollar_math_generates_fallback(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "dollar-math.pdf"
+    text = "1. $x^2$".encode("utf-16-be").hex()
+    make_pdf(source, decoration=f"BT /F1 12 Tf 60 580 Td <{text}> Tj ET\n".encode())
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "qa.json")["fallback_region_count"] > 0
+
+
+@pytest.mark.parametrize("mode", ["ovis", "pp", "manual"])
+def test_provider_and_manual_invalid_xml_fallback(private_case: Path, mode: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "Bad\x01text"
+    if mode == "ovis":
+        recover_ovis(
+            job,
+            ir,
+            p,
+            {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]},
+            "ovis",
+        )
+    elif mode == "pp":
+        recover(job, ir, p, {"pp": response([pp_block(raw)])}, {})
+    else:
+        p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+        p["reading_order"] = ["a"]
+        ir = apply_overrides(
+            job,
+            ir,
+            {"operations": [{"block_id": "a", "action": "text", "text": raw, "reason": "edit"}]},
+        )
+    assert finish(job, ir)["fallback_region_count"] > 0
+
+
+def test_repeated_preview_crops_do_not_accumulate(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        for _ in range(3):
+            response = client.post(
+                "/api/preview/" + job.name,
+                json={"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+                headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+            )
+            assert response.status_code == 200
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_undo_refreshes_selected_editor() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
+    handler = next(line for line in script.splitlines() if line.startswith("on('undo'"))
+    fixture = (
+        "const callbacks={};function on(n,c){callbacks[n]=c;}"
+        "let operations=[{}],selected={id:'a',text:'stale'},layout,preview,unsavedPreview,revision;"
+        "let data={},jobId='demo';function show(){}function $(id){return {};};"
+        "function choose(b){selected=b;}"
+        "async function api(){return {layout:{pages:[{blocks:[{id:'a',text:'restored'}]}]}};}"
+    )
+    result = subprocess.run(
+        [node, "-e", fixture + handler + "callbacks.undo().then(()=>console.log(selected.text));"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "restored"
+
+
+def test_save_crop_writes_only_registered_assets(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        result = client.post(
+            "/api/review/" + job.name,
+            json={"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+            headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+        )
+        assert result.status_code == 200
+    paths = {job / a["path"] for a in common.read(job / "layout.reviewed.json")["assets"]}
+    assert set((job / "assets").glob("a-review*.png")) <= paths
+
+
+@pytest.mark.parametrize("raw", [r"$\sum_{i=1}^n i$", r"$\int_0^1 x dx$"])
+def test_unsupported_ovis_formula_is_reviewable(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_repeated_save_removes_unregistered_crops(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        for _ in range(2):
+            result = client.post(
+                "/api/review/" + job.name,
+                json={"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+                headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+            )
+            assert result.status_code == 200
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_cli_reexport_prunes_replaced_crops(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import export
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    common.save(
+        job / "overrides.json",
+        {"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+    )
+    export(job)
+    export(job)
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_preview_then_save_reclaims_preview_assets(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        headers = {"origin": "http://127.0.0.1:8765", "x-demo-session": token}
+        body = {"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]}
+        assert (
+            client.post("/api/preview/" + job.name, json=body, headers=headers).status_code == 200
+        )
+        assert client.post("/api/review/" + job.name, json=body, headers=headers).status_code == 200
+    assert not (job / "layout.preview.json").exists()
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_rejected_layout_reclaims_trial_crops(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from prototypes.docx_output import pp_layout
+
+    job, ir, p = setup_ir(private_case)
+    before = set((job / "assets").iterdir())
+
+    def rejected(job: Path, trial: Json, page: Json, body: Json, rid: str) -> None:
+        common.crop(job, trial, page, [1, 1, 20, 20], "trial")
+        raise common.DemoError("REJECTED")
+
+    monkeypatch.setattr(pp_layout, "_apply_pp_layout", rejected)
+    pp_layout.apply_pp_layout(job, ir, p, {}, "pp")
+    assert set((job / "assets").iterdir()) == before
+
+
+@pytest.mark.parametrize("raw", ["<table><tr><td>Text</td></tr></table>", "Text<br>More"])
+def test_ovis_html_exports_source_fallback(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_failed_override_reclaims_new_crops(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+    p["reading_order"] = ["a"]
+    before = set((job / "assets").iterdir())
+    with pytest.raises(common.DemoError):
+        apply_overrides(
+            job,
+            ir,
+            {
+                "operations": [
+                    {"block_id": "a", "action": "crop", "reason": "crop"},
+                    {"block_id": "missing", "action": "move", "delta": 1, "reason": "invalid"},
+                ]
+            },
+        )
+    assert set((job / "assets").iterdir()) == before
+
+
+def test_successful_render_removes_attempt(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+    from typing import Any
+
+    from prototypes.docx_output import render as rendering
+    from tests.demo.synthetic import make_pdf
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    monkeypatch.setattr(rendering.shutil, "which", lambda name: "/synthetic/soffice")
+
+    def run(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if "--outdir" in args:
+            make_pdf(Path(args[args.index("--outdir") + 1]) / "auto.pdf")
+        return subprocess.CompletedProcess(args, 0, stdout="Synthetic renderer", stderr="")
+
+    monkeypatch.setattr(rendering.subprocess, "run", run)
+    old_page = job / "rendered/auto/page-3.png"
+    common.private_dir(old_page.parent)
+    old_page.write_bytes(b"old page")
+    assert rendering.render(job)["render_status"] == "RENDERED"
+    assert not old_page.exists()
+    assert (job / "rendered/auto/page-1.png").is_file()
+    assert not list((job / "rendered/auto").glob("attempt-*"))
+
+
+def test_unavailable_revision_keeps_auto_selected() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    handler = next(
+        line
+        for line in (common.ROOT / "prototypes/docx_output/static/app.js").read_text().splitlines()
+        if line.startswith("$('revision').onchange")
+    )
+    fixture = (
+        "let preview=false,unsavedPreview=false,revision='auto',data={auto:{}},layout;"
+        "const el={value:'reviewed'};function $(){return el;}function message(){}function show(){};"
+    )
+    result = subprocess.run(
+        [node, "-e", fixture + handler + "el.onchange();console.log(revision+' '+el.value);"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "auto auto"
+
+
+def test_unclosed_ovis_formula_exports_fallback(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "1. $x^2"}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_revision_switch_clears_stale_selection() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    handler = next(
+        line
+        for line in (common.ROOT / "prototypes/docx_output/static/app.js").read_text().splitlines()
+        if line.startswith("$('revision').onchange")
+    )
+    fixture = (
+        "let preview=true,unsavedPreview=true,revision='reviewed',selected={id:'old'},layout;"
+        "let data={auto:{},reviewed:{}},els={revision:{value:'auto'},text:{value:'stale'}};"
+        "function $(id){return els[id];}function message(){}function show(){};"
+    )
+    result = subprocess.run(
+        [
+            node,
+            "-e",
+            fixture
+            + handler
+            + "els.revision.onchange();console.log(selected===null&&els.text.value==='');",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "true"
+
+
+@pytest.mark.parametrize("mode", ["pp", "manual"])
+def test_mixed_residual_math_falls_back(private_case: Path, mode: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    raw = "$x$ and $y"
+    if mode == "pp":
+        pp = response(
+            [pp_block(raw)], formulas=[{"rec_formula": "x", "dt_polys": [20, 20, 40, 40]}]
+        )
+        recover(job, ir, p, {"pp": pp}, {})
+    else:
+        p["blocks"] = [block("a", 0, [1, 1, 100, 40], "Original", "native_pdf")]
+        p["reading_order"] = ["a"]
+        ir = apply_overrides(
+            job,
+            ir,
+            {"operations": [{"block_id": "a", "action": "text", "text": raw, "reason": "edit"}]},
+        )
+    assert finish(job, ir)["fallback_region_count"] > 0
+
+
+@pytest.mark.parametrize("raw", ["$5-$10", "US$5/kg", "$20/人"])
+def test_currency_units_and_ranges_remain_text(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert p["blocks"][0]["content"].get("plain_text") == raw
+    assert finish(job, ir)["has_editable_runs"]
+
+
+@pytest.mark.parametrize("raw", ["$5/x$", "$5-10$"])
+def test_numeric_formula_not_masked_as_currency(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_residual_pp_skips_formula_crop(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    pp = response(
+        [pp_block("$x$ and $y")], formulas=[{"rec_formula": "x", "dt_polys": [20, 20, 40, 40]}]
+    )
+    recover(job, ir, p, {"pp": pp}, {})
+    assert not any(a["type"] == "formula_image" for a in ir["assets"])
+
+
+def test_currency_unit_then_command_formula(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = r"Cost US$5/kg and $\frac{1}{2}$"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_replaced_ovis_crop_has_evidence_reference(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+    from prototypes.docx_output.pp_layout import _apply_pp_layout as apply_pp_layout
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {
+            "choices": [
+                {
+                    "finish_reason": "stop",
+                    "message": {"content": '<img src="images/bbox_100_100_500_300.jpg" />'},
+                }
+            ]
+        },
+        "ovis",
+    )
+    b = p["blocks"][0]
+    previous = b["content"]["asset_id"]
+    pp = response([pp_block("", label="image", bbox=[40, 60, 200, 180])])
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert ir["provenance"]["pp-layout-" + b["id"]]["previous_asset_id"] == previous
+
+
+def test_source_pages_do_not_force_word_page_break(private_case: Path) -> None:
+    import zipfile
+
+    from lxml import etree
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "flow.pdf"
+    make_pdf(source, pages=2)
+    job = convert(source, output_root=private_case / "jobs")
+    with zipfile.ZipFile(job / "auto.docx") as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    assert not root.xpath('//w:br[@w:type="page"]', namespaces=ns)
+    assert len(common.read(job / "layout.auto.json")["pages"]) == 2
+
+
+def test_surrogate_candidate_survives_fallback_save(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "Bad\ud800text"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    finish(job, ir)
+    assert common.read(job / "layout.auto.json")["provenance"]["ovis_content"]["0"] == raw
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        client.get("/api/session")
+        result = client.get("/api/job/" + job.name)
+        assert result.status_code == 200
+        assert result.json()["auto"]["provenance"]["ovis_content"]["0"] == raw
+
+
+def test_fullpage_background_not_duplicated_as_figure(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "background.pdf"
+    make_pdf(source, background=True)
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    p = ir["pages"][0]
+    assert all(
+        common.area(b["bbox"]) < p["width_pt"] * p["height_pt"] * 0.9
+        for b in p["blocks"]
+        if b["type"] == "figure"
+    )
+    assert ir["provenance"]["pages"]["0"]["background_image_bounds"]
+
+
+@pytest.mark.parametrize(
+    "body", [{}, {"result": {"layoutParsingResults": [{"prunedResult": None}]}}]
+)
+def test_legacy_pp_reconstruction_failure_is_reviewable(private_case: Path, body: Json) -> None:
+    from prototypes.docx_output.pipeline import reconstruct
+
+    job, ir, p = setup_ir(private_case)
+    reconstruct(job, ir, p, {"pp": body}, {"requests": []}, "pp")
+    qa = finish(job, ir)
+    assert qa["fallback_area_ratio"] == pytest.approx(1)
+    assert any(i["type"] == "PP_RECONSTRUCTION_FALLBACK" for i in ir["issues"])
+
+
+@pytest.mark.parametrize(
+    "tag",
+    ["<img src='images/bbox_1_1_10_10.jpg'>", '<img alt="x" src="images/bbox_1_1_10_10.png">'],
+)
+def test_variant_image_tag_exports_fallback(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": tag}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_merge_caption_releases_its_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("f", 0, [1, 1, 20, 20], "Image", "native_pdf"),
+        block("c", 0, [1, 21, 20, 40], "Caption", "native_pdf", "caption"),
+        block("b", 0, [1, 41, 20, 60], "Body", "native_pdf"),
+    ]
+    p["reading_order"] = ["f", "c", "b"]
+    ir["metadata"]["figure_groups"] = [
+        {"page_index": 0, "kind": "shared_row", "pairs": [{"label": "c", "figure": "f"}]}
+    ]
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "c", "action": "merge", "reason": "merge"}]}
+    )
+    assert not result["metadata"]["figure_groups"]
+
+
+def test_image_grid_uses_two_source_rows() -> None:
+    from prototypes.docx_output.pp_layout import image_grid_columns
+
+    boxes = [[10, 10, 40, 40], [50, 10, 80, 40], [10, 60, 40, 90], [50, 60, 80, 90]]
+    pairs = [{"figure": str(i), "label": "l" + str(i)} for i in range(4)]
+    assert image_grid_columns(pairs, {str(i): {"bbox": box} for i, box in enumerate(boxes)}) == 2
+
+
+def test_truncated_image_tag_uses_source_fallback(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = '<img src="https://evil.test/image.png"'
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_missing_primary_page_makes_job_incomplete(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import reconstruct, source_image
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Success", "native_pdf")]
+    p["reading_order"] = ["a"]
+    second = source_image(job, ir, job / "assets/source-0.png", 1)
+    reconstruct(job, ir, second, {}, {"requests": []}, "ovis-pp")
+    qa = finish(job, ir)
+    assert qa["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+    assert second["blocks"][0]["content"]["kind"] == "image"
+
+
+@pytest.mark.parametrize("coords", ["0_0_1001_20", "10_10_5_20", "0_0_0_20"])
+def test_invalid_ovis_image_geometry_falls_back(private_case: Path, coords: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = f'<img src="images/bbox_{coords}.jpg" />'
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_pp_fallback_page_marks_job_incomplete(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import reconstruct, source_image
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Good", "native_pdf")]
+    p["reading_order"] = ["a"]
+    second = source_image(job, ir, job / "assets/source-0.png", 1)
+    reconstruct(job, ir, second, {"pp": {}}, {"requests": []}, "pp")
+    assert finish(job, ir)["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+def test_invalid_native_charbox_preserves_page(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import pypdfium2 as pdfium
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "badbox.pdf"
+    make_pdf(source)
+    original = pdfium.PdfTextPage.get_charbox
+
+    def charbox(self: object, index: int, **kwargs: object) -> tuple[float, float, float, float]:
+        return (0, 0, 0, 0) if index == 0 else original(self, index, **kwargs)
+
+    monkeypatch.setattr(pdfium.PdfTextPage, "get_charbox", charbox)
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "qa.json")["fallback_area_ratio"] == pytest.approx(1)
+    assert any(
+        i["type"] == "NATIVE_GEOMETRY_FALLBACK" for i in common.read(job / "issues.json")["issues"]
+    )
+
+
+@pytest.mark.parametrize("raw", ["<table", "<br"])
+def test_truncated_html_exports_fallback(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_any_image_only_page_marks_job_incomplete(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+    from prototypes.docx_output.pipeline import source_image
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Editable", "native_pdf")]
+    p["reading_order"] = ["a"]
+    other = source_image(job, ir, job / "assets/source-0.png", 1)
+    recover_ovis(
+        job,
+        ir,
+        other,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "<table"}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+@pytest.mark.parametrize("kind,text", [("footer", "1页"), ("caption", "第1题"), ("option", "A.")])
+def test_auxiliary_text_does_not_prove_main_editability(
+    private_case: Path, kind: str, text: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    aid = common.crop(job, ir, p, [0, 0, p["width_pt"], p["height_pt"]], "main")
+    b = block("main", 0, [0, 0, p["width_pt"], p["height_pt"]], "", "inferred")
+    b["content"] = common_image_content(aid)
+    b["render_policy"] = "preserve_image"
+    p["blocks"] = [b, block("aux", 0, [1, 1, 20, 20], text, "native_pdf", kind)]
+    p["reading_order"] = ["main", "aux"]
+    assert finish(job, ir)["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+@pytest.mark.parametrize("raw", ["x<sup", "x<sub", "<section", "<h1"])
+def test_generic_truncated_html_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("raw", ["若 a<b 则继续", "x<y", "a<beta"])
+def test_plain_less_than_is_not_html(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert p["blocks"][0]["content"].get("plain_text") == raw
+    assert finish(job, ir)["has_editable_runs"]
+
+
+@pytest.mark.parametrize("provider", ["pp", "monkey"])
+def test_optional_endpoint_error_preserves_primary(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch, provider: str
+) -> None:
+    from typing import Any
+
+    import httpx
+    from prototypes.docx_output.pipeline import convert
+
+    source = raster(private_case)
+    monkeypatch.setenv(provider.upper() + "_BASE_URL", "http://invalid.example:9999")
+    seen = []
+
+    def post(self: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
+        seen.append(url)
+        return httpx.Response(
+            200,
+            json={
+                "model": "ovis-ocr2",
+                "choices": [{"finish_reason": "stop", "message": {"content": "Main body"}}],
+            },
+        )
+
+    monkeypatch.setattr(httpx.Client, "post", post)
+    job = convert(
+        source,
+        mode="raster",
+        output_root=private_case / "jobs",
+        allow_model_calls=True,
+        confirm_no_auth=True,
+        content_provider="ovis-pp" if provider == "pp" else "ovis",
+        monkey=provider == "monkey",
+    )
+    assert common.read(job / "qa.json")["has_editable_runs"]
+    assert len(seen) == 1
+
+
+@pytest.mark.parametrize("raw", ["<!-- comment", "<!DOCTYPE html", "</img"])
+def test_html_declaration_fragments_fall_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("raw", ["<math", "<mrow", "<svg", "<msqrt", "<path"])
+def test_truncated_xml_markup_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("raw", ["若 (a)<b 则继续", "|x|<y"])
+def test_delimited_left_operand_not_html(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert p["blocks"][0]["content"].get("plain_text") == raw
+    assert finish(job, ir)["has_editable_runs"]
+
+
+def test_move_detaches_swapped_neighbor_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block(i, 0, [1, 1, 20, 20], i, "native_pdf") for i in ["X", "A", "B"]]
+    p["reading_order"] = ["X", "A", "B"]
+    ir["metadata"]["text_groups"] = [{"page_index": 0, "columns": 2, "rows": [["A", "B"]]}]
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "X", "action": "move", "delta": 1, "reason": "move"}]}
+    )
+    assert not result["metadata"]["text_groups"]
+
+
+@pytest.mark.parametrize("raw", ["正文</table", "x</math"])
+def test_adjacent_truncated_closing_tag_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_fullpage_image_retained_when_text_completeness_unknown(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "background.pdf"
+    make_pdf(source, background=True)
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "qa.json")["fallback_area_ratio"] == pytest.approx(1)
+    assert common.read(job / "qa.json")["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+def test_noninline_option_label_precedes_image(private_case: Path) -> None:
+    import zipfile
+
+    from lxml import etree
+
+    job, ir, p = setup_ir(private_case)
+    aid = common.crop(job, ir, p, [20, 20, 40, 40], "figure")
+    f = block("f", 0, [20, 20, 40, 40], "", "inferred", "figure")
+    f["content"] = common_image_content(aid)
+    p["blocks"] = [block("a", 0, [1, 20, 19, 40], "A.", "native_pdf", "option"), f]
+    p["reading_order"] = ["a", "f"]
+    ir["metadata"]["figure_groups"] = [
+        {"page_index": 0, "kind": "option_grid", "pairs": [{"label": "a", "figure": "f"}]}
+    ]
+    finish(job, ir)
+    with zipfile.ZipFile(job / "auto.docx") as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    nodes = root.xpath("//w:tc//w:t | //w:tc//w:drawing", namespaces=ns)
+    assert nodes[0].text == "A."
+
+
+@pytest.mark.parametrize("raw", ["公式：<math", "正文:<table"])
+def test_punctuation_before_truncated_tag_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("raw", ["$x$<y", "$a$<beta"])
+def test_math_left_operand_keeps_comparison_editable(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_caption_body_merge_reclassifies_scope(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("c", 0, [1, 1, 20, 20], "Caption", "native_pdf", "caption"),
+        block("b", 0, [1, 21, 20, 40], "Main body", "native_pdf"),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["c", "b", "f"]
+    common.relation(ir, "caption_of", "c", "f", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "c", "action": "merge", "reason": "merge"}]}
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == "paragraph"
+    assert not any(r["type"] == "caption_of" for r in result["relations"])
+
+
+@pytest.mark.parametrize("tag", ["math", "svg", "table"])
+def test_formula_before_known_truncated_tag_falls_back(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x$<" + tag}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("kind,relation_kind", [("caption", "caption_of"), ("option", "label_of")])
+def test_same_type_merge_quarantines_independent_relations(
+    private_case: Path, kind: str, relation_kind: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf", kind),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf", kind),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+        block("g", 0, [20, 21, 40, 40], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["a", "b", "f", "g"]
+    common.relation(ir, relation_kind, "a", "f", {})
+    common.relation(ir, relation_kind, "b", "g", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "merge"}]}
+    )
+    assert not any(r["type"] == relation_kind for r in result["relations"])
+    assert any(i["type"] == "MERGED_RELATION_REVIEW" for i in result["issues"])
+    assert len(result["provenance"]["merge-collapsed-0"]["before"]) == 2
+
+
+@pytest.mark.parametrize(
+    "tag", ["section", "h1", "p", "foreignObject", "annotation-xml", "feGaussianBlur"]
+)
+def test_formula_before_standard_truncated_tag_falls_back(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x$<" + tag}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("tag", ["m:math", "svg:svg", "mml:annotation-xml"])
+def test_formula_before_namespaced_tag_falls_back(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x$<" + tag}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_heading_only_page_counts_as_editable_main_content(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("h", 0, [1, 1, 90, 30], "Document title", "native_pdf", "heading")]
+    p["reading_order"] = ["h"]
+    qa = finish(job, ir)
+    assert qa["page_editable_content"] == {"0": True}
+
+
+@pytest.mark.parametrize(
+    "raw", ["正文。<section", "提示！<h1", "疑问？<p", "Done.<section", "Note!<h1", "Question?<p"]
+)
+def test_sentence_end_before_truncated_tag_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("codepoint", [0xFFFD, 0xE001, 0xF0001, 0x200B])
+def test_native_abnormal_unicode_line_preserves_source(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch, codepoint: int
+) -> None:
+    import pypdfium2 as pdfium
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "abnormal.pdf"
+    make_pdf(source)
+    original = pdfium.raw.FPDFText_GetUnicode
+    monkeypatch.setattr(
+        pdfium.raw,
+        "FPDFText_GetUnicode",
+        lambda page, index: codepoint if index == 0 else original(page, index),
+    )
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    assert any(i["type"] == "NATIVE_UNICODE_FALLBACK" for i in ir["issues"])
+    assert common.read(job / "qa.json")["fallback_region_count"] > 0
+    assert any(
+        chr(codepoint) in c.get("text", "")
+        for p in ir["pages"]
+        for b in p["blocks"]
+        for c in b["content_candidates"]
+    )
