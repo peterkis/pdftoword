@@ -134,3 +134,43 @@ def to_omml(latex: str) -> str:
     if parser.index != len(parser.tokens) or not result:
         raise DemoError("UNBALANCED_FORMULA")
     return str(etree.tostring(node("oMath", *result), encoding="unicode"))
+
+
+def unrendered_math(text: str) -> bool:
+    """Recognize remaining math delimiters/commands without rejecting ordinary escapes."""
+    if "$" in text:
+        return True
+    commands = set(SYMBOLS) | {
+        "frac",
+        "dfrac",
+        "tfrac",
+        "sqrt",
+        "sum",
+        "prod",
+        "int",
+        "lim",
+        "sin",
+        "cos",
+        "tan",
+        "log",
+        "ln",
+        "left",
+        "right",
+        "begin",
+        "end",
+        "mathrm",
+        "mathbf",
+        "text",
+        "overline",
+        "underline",
+        "vec",
+        "hat",
+        "infty",
+        "le",
+        "ge",
+        "ne",
+    }
+    for match in re.finditer(r"\\([A-Za-z]+)", text):
+        if match[1] in commands or text[match.end() :].lstrip().startswith("{"):
+            return True
+    return False

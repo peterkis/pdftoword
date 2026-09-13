@@ -627,3 +627,57 @@ def test_small_background_keeps_native_text_and_requires_review(private_case: Pa
     text = "".join(b["content"].get("plain_text", "") for b in p["blocks"])
     assert "".join(original.split()) == "".join(text.split())
     assert p["routing_decision"] == "NEEDS_ROUTE_REVIEW"
+
+
+@pytest.mark.parametrize("raw", [r"C:\Users\Alice", r"regex \w+ and \d+", r"$x$ at C:\Users\Alice"])
+def test_plain_backslashes_remain_editable(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["has_editable_runs"]
+
+
+def test_large_inset_vector_is_retained(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "large-diagram.pdf"
+    make_pdf(source, decoration=b"40 40 500 750 re S\n")
+    job = convert(source, output_root=private_case / "jobs")
+    p = common.read(job / "layout.auto.json")["pages"][0]
+    assert any(
+        common.area(b["bbox"]) > p["width_pt"] * p["height_pt"] * 0.5
+        for b in p["blocks"]
+        if b["type"] == "figure"
+    )
+
+
+def test_crop_label_detaches_inline_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "native_pdf"),
+        block("f", 0, [20, 1, 40, 20], "Figure", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "f"]
+    ir["metadata"]["figure_groups"] = [
+        {
+            "page_index": 0,
+            "kind": "option_grid",
+            "inline_labels": True,
+            "pairs": [{"label": "a", "figure": "f"}],
+        }
+    ]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "crop", "bbox": [1, 1, 20, 20], "reason": "crop"}
+            ]
+        },
+    )
+    assert not result["metadata"]["figure_groups"]
+    finish(job, result)

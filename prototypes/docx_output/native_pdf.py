@@ -237,7 +237,12 @@ def extract(
                     ambiguous_figures = [
                         bounds
                         for bounds in cluster_regions(ambiguous_paths)
-                        if area(bounds) / (w * h) < 0.5
+                        if not (
+                            bounds[0] <= w * 0.03
+                            and bounds[1] <= h * 0.03
+                            and bounds[2] >= w * 0.97
+                            and bounds[3] >= h * 0.97
+                        )
                     ]
                     figures.extend(ambiguous_figures)
                     duplicate = len(chars) - len(

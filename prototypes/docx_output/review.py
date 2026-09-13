@@ -263,6 +263,16 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             if action == "crop" or policy == "preserve_image":
                 aid = crop(job, ir, p, bbox, f"{b['id']}-review{n}")
                 b.update(content=image_content(aid), render_policy="preserve_image")
+                ir["metadata"]["figure_groups"] = [
+                    g
+                    for g in ir["metadata"].get("figure_groups", [])
+                    if all(b["id"] not in pair.values() for pair in g["pairs"])
+                ]
+                ir["metadata"]["text_groups"] = [
+                    g
+                    for g in ir["metadata"].get("text_groups", [])
+                    if all(b["id"] not in row for row in g["rows"])
+                ]
                 ir["metadata"].get("inline_parts", {}).pop(b["id"], None)
                 b["bbox"] = bbox
                 b["geometry_source"] = "manual_correction"
