@@ -1065,3 +1065,21 @@ def test_invalid_native_xml_char_falls_back(
     ir = common.read(job / "layout.auto.json")
     assert any(i["type"] == "INVALID_XML_TEXT_FALLBACK" for i in ir["issues"])
     assert common.read(job / "qa.json")["fallback_region_count"] > 0
+
+
+@pytest.mark.parametrize("raw", [r"\(x^2\)", r"\[a+b\]"])
+def test_standard_latex_delimiters_require_handling(raw: str) -> None:
+    from prototypes.docx_output.formula import unrendered_math
+
+    assert unrendered_math(raw)
+
+
+@pytest.mark.parametrize("raw", ["US$5", "HK$100", "A$20"])
+def test_currency_prefix_remains_literal(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["has_editable_runs"]

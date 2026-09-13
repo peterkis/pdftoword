@@ -138,7 +138,9 @@ def to_omml(latex: str) -> str:
 
 def unrendered_math(text: str) -> bool:
     """Recognize remaining math delimiters/commands without rejecting ordinary escapes."""
-    noncurrency = re.sub(r"(?<![\w$])\$\d+(?:[.,]\d+)*", "", text)
+    noncurrency = re.sub(r"(?<![\w$])(?:US|HK|CA|AU|NZ|SG|NT|A|C|S)?\$\d+(?:[.,]\d+)*", "", text)
+    if any(marker in text for marker in (r"\(", r"\)", r"\[", r"\]")):
+        return True
     if "$" in noncurrency:
         return True
     commands = set(SYMBOLS) | {
