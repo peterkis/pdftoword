@@ -1135,3 +1135,30 @@ def test_alternate_math_exports_reviewable_fallback(private_case: Path, mode: st
         qa = common.read(job / "qa.json")
     assert qa["fallback_region_count"] > 0
     assert (job / "auto.docx").exists()
+
+
+@pytest.mark.parametrize("punct", [".", "?", "。", "，", "；", "！"])
+def test_currency_punctuation_does_not_capture_following_math(
+    private_case: Path, punct: str
+) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = f"US$5{punct} Then $x$."
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    parts = ir["metadata"]["inline_parts"][p["blocks"][0]["id"]]
+    assert [a["latex"] for a in parts if "latex" in a] == ["x"]
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_native_dollar_math_generates_fallback(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "dollar-math.pdf"
+    text = "1. $x^2$".encode("utf-16-be").hex()
+    make_pdf(source, decoration=f"BT /F1 12 Tf 60 580 Td <{text}> Tj ET\n".encode())
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "qa.json")["fallback_region_count"] > 0

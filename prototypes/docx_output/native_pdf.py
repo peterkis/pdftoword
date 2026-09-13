@@ -24,6 +24,7 @@ from .common import (
     union,
     union_area,
 )
+from .formula import unrendered_math
 from .structure import QUESTION, image_content
 
 PDFIUM_LOCK = threading.RLock()
@@ -316,9 +317,7 @@ def extract(
                         ]
                         if row[0]["size"] >= 16:
                             b["type"] = "heading"
-                        alternate_formula = any(
-                            marker in text for marker in (r"\(", r"\)", r"\[", r"\]")
-                        )
+                        alternate_formula = unrendered_math(text)
                         if alternate_formula or any(
                             not (
                                 ord(c) in {9, 10, 13}

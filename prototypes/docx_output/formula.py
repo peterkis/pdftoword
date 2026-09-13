@@ -137,9 +137,14 @@ def to_omml(latex: str) -> str:
     return str(etree.tostring(node("oMath", *result), encoding="unicode"))
 
 
+CURRENCY = re.compile(
+    r"(?<![\w$])(?:US|HK|CA|AU|NZ|SG|NT|A|C|S)?\$\d+(?:[.,]\d+)*(?=\s|[.,;:!?，。；：！？、）】》”’)]|$)"
+)
+
+
 def unrendered_math(text: str) -> bool:
     """Recognize remaining math delimiters/commands without rejecting ordinary escapes."""
-    noncurrency = re.sub(r"(?<![\w$])(?:US|HK|CA|AU|NZ|SG|NT|A|C|S)?\$\d+(?:[.,]\d+)*", "", text)
+    noncurrency = CURRENCY.sub("", text)
     if any(marker in text for marker in (r"\(", r"\)", r"\[", r"\]")):
         return True
     if "$" in noncurrency:
@@ -187,9 +192,7 @@ class MathSpans:
         self.pattern = re.compile(
             r"(?<!\$)(?=\$\$[^$]+\$\$(?!\$)|\$[^$]+\$(?!\$))\$\$?([^$]+)\$\$?(?!\$)"
         )
-        self.currency = re.compile(
-            r"(?<![\w$])(?:US|HK|CA|AU|NZ|SG|NT|A|C|S)?\$\d+(?:[.,]\d+)*(?=\s|[;!,)]|$)"
-        )
+        self.currency = CURRENCY
 
     def finditer(self, text: str) -> Iterator[re.Match[str]]:
         """Yield math spans without consuming currency dollar signs."""
