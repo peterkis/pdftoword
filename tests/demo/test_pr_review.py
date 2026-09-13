@@ -2032,3 +2032,11 @@ def test_formula_before_namespaced_tag_falls_back(private_case: Path, tag: str) 
         "ovis",
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_heading_only_page_counts_as_editable_main_content(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("h", 0, [1, 1, 90, 30], "Document title", "native_pdf", "heading")]
+    p["reading_order"] = ["h"]
+    qa = finish(job, ir)
+    assert qa["page_editable_content"] == {"0": True}

@@ -87,7 +87,7 @@ def finish(job: Path, ir: Json, revision: str = "auto") -> Json:
     page_editable_content = {
         str(p["page_index"]): any(
             b["content"]["kind"] == "text"
-            and b["type"] in {"paragraph", "question", "option", "formula", "table"}
+            and b["type"] in {"paragraph", "heading", "question", "option", "formula", "table"}
             and b["id"] not in auxiliary_ids
             and not re.fullmatch(r"[A-D][.．、]?", b["content"].get("plain_text", "").strip())
             and bool(b["content"].get("plain_text", "").strip())
