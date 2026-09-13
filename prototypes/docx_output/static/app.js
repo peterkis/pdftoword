@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 let token='', jobId='', data=null, layout=null, selected=null, operations=[];
-let pageIndex=0, revision='auto', preview=false;
+let pageIndex=0, revision='auto', preview=false, unsavedPreview=false;
 function message(error){$('error').textContent=error ? String(error.message || error) : '';}
 async function api(path, body, form=false){
   const options=body===undefined ? {} : {method:'POST',headers:{'X-Demo-Session':token},body:form?body:JSON.stringify(body)};
@@ -16,7 +16,7 @@ function asset(id){return '/api/asset/'+jobId+'/'+encodeURIComponent(id)+'?revis
 function img(aid,cls){const el=document.createElement('img');el.src=asset(aid);el.className=cls;el.alt='源区域图片';return el;}
 async function refresh(){const result=await api('/api/jobs');$('jobs').replaceChildren();for(const id of result.jobs){const o=document.createElement('option');o.value=id;o.textContent=id;$('jobs').append(o);}if(jobId)$('jobs').value=jobId;}
 async function openJob(id){
-  preview=false;jobId=id;data=await api('/api/job/'+id);operations=data.overrides.operations||[];
+  preview=false;unsavedPreview=false;jobId=id;data=await api('/api/job/'+id);operations=data.overrides.operations||[];
   revision=data.reviewed?'reviewed':'auto';$('revision').value=revision;
   layout=data[revision];pageIndex=layout.pages[0]?.page_index||0;
   $('pages').replaceChildren();for(const p of layout.pages){const o=document.createElement('option');o.value=p.page_index;o.textContent='源第 '+(p.page_index+1)+' 页';$('pages').append(o);}
@@ -65,7 +65,7 @@ async function operation(op){
   const next=[...operations,{block_id:selected?.id,reason:$('reason').value,...op}];
   const result=await api('/api/preview/'+jobId,{operations:next});operations=next;layout=result.layout;
   // Preview crops are registered in the preview revision served by backend.
-  preview=true;revision='reviewed';data.reviewed=layout;data.qa_reviewed=null;$('revision').value=revision;
+  preview=true;unsavedPreview=true;revision='reviewed';data.reviewed=layout;data.qa_reviewed=null;$('revision').value=revision;
   const id=selected?.id;show();const b=layout.pages.flatMap(p=>p.blocks).find(b=>b.id===id);if(b)choose(b);
 }
 async function wait(){
@@ -77,7 +77,7 @@ async function wait(){
 on('replay',async()=>{await api('/api/replay',{content_provider:$('replay-provider').value});await wait();});on('refresh',refresh);
 $('jobs').onchange=()=>openJob($('jobs').value).catch(message);
 $('pages').onchange=()=>{pageIndex=Number($('pages').value);selected=null;show();};
-$('revision').onchange=()=>{preview=false;revision=$('revision').value;if(!data?.[revision]){message('还未保存此版本');return;}layout=data[revision];show();};
+$('revision').onchange=()=>{revision=$('revision').value;preview=revision==='reviewed'&&unsavedPreview;if(!data?.[revision]){message('还未保存此版本');return;}layout=data[revision];show();};
 $('zoom').oninput=()=>{$('source-wrap').style.width=$('zoom').value+'%';};
 $('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
 on('edit',()=>operation({action:'text',text:$('text').value}));
@@ -87,7 +87,7 @@ on('crop',()=>operation({action:'crop',bbox:$('bbox').value.split(',').map(Numbe
 on('set-policy',()=>operation({action:'policy',policy:$('policy').value}));
 on('relate',()=>operation({action:'relation',target_id:$('target').value,relation_type:$('relation-type').value}));
 on('accept',()=>operation({action:'candidate',candidate_id:$('candidate').value}));
-on('undo',async()=>{if(!operations.length)return;const next=operations.slice(0,-1);const result=await api('/api/preview/'+jobId,{operations:next});operations=next;layout=result.layout;preview=true;revision='reviewed';data.reviewed=layout;show();});
+on('undo',async()=>{if(!operations.length)return;const next=operations.slice(0,-1);const result=await api('/api/preview/'+jobId,{operations:next});operations=next;layout=result.layout;preview=true;unsavedPreview=true;revision='reviewed';data.reviewed=layout;show();});
 on('save',async()=>{if(!jobId)throw new Error('请先选择任务');await api('/api/review/'+jobId,{operations});await openJob(jobId);$('status').textContent='已另存 reviewed.docx；auto 保持原样。';});
 on('reconstruction',()=>{$('blocks').hidden=false;$('rendered').hidden=true;});
 on('render',async()=>{if(!jobId)return;if(preview)throw new Error('请先保存修正，再渲染 reviewed.docx');const requested=revision;await api('/api/render/'+jobId,{revision});await wait();revision=requested;$('revision').value=revision;layout=data[revision];show();const qa=revision==='auto'?data.qa:data.qa_reviewed;$('rendered').replaceChildren();$('blocks').hidden=true;$('rendered').hidden=false;if(qa?.render_status!=='RENDERED'){$('rendered').textContent='DOCX_VISUAL_REVIEW_PENDING：请下载 DOCX，在本机 Word 打开检查。';return;}for(let n=1;n<=qa.rendered_page_count;n++)$('rendered').append(img('render-'+n,''));});

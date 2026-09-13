@@ -185,6 +185,40 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 raise DemoError("SPLIT_INSIDE_FORMULA")
             old_parts = ir["metadata"].get("inline_parts", {}).get(b["id"])
             b["content"] = text_content(text[:offset])
+            left_text = text[:offset]
+            b["type"] = (
+                "question"
+                if QUESTION.match(left_text)
+                else "option"
+                if OPTION.match(left_text)
+                else "caption"
+                if CAPTION.match(left_text)
+                else old["type"]
+                if old["type"] in {"heading", "footer", "caption"}
+                else "paragraph"
+            )
+            ir["metadata"]["figure_groups"] = [
+                g
+                for g in ir["metadata"].get("figure_groups", [])
+                if all(b["id"] not in pair.values() for pair in g["pairs"])
+            ]
+            split_relations = [
+                r
+                for r in ir["relations"]
+                if b["id"] in (r["from"], r["to"])
+                and r["type"] in {"label_of", "caption_of", "references"}
+            ]
+            if split_relations:
+                ir["provenance"][f"split-relations-{n}"] = copy.deepcopy(split_relations)
+                ir["relations"] = [r for r in ir["relations"] if r not in split_relations]
+                issue(
+                    ir,
+                    "SPLIT_RELATION_REVIEW",
+                    "拆分改变关联范围，原关联保留待重新确认。",
+                    [b["id"]],
+                    p["page_index"],
+                )
+
             for prior in b["content_candidates"]:
                 prior["evidence"]["review_selectable"] = False
                 prior["evidence"]["selection_blocked_reason"] = (

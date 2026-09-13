@@ -381,3 +381,9 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 人工编辑在无新词法分类证据时保留heading/footer/caption；question/option等词法类型仍随明确内容更新。类型变化解除包含该块或以其为question_id的文字布局组，避免新题目仍留在旧选项表格中。
 
 新增5项回归先失败后通过，全仓373 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第二十五轮审核修复（2026-09-13）
+
+人工拆分同步重分类左块、解除旧图组，并把拆分前语义关联隔离为SPLIT_RELATION_REVIEW。未保存预览使用独立状态，切换auto再返回reviewed仍请求preview资产。
+
+新增2项回归先失败后通过（含Node实际执行版本切换处理器），全仓375 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

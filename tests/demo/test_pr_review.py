@@ -981,3 +981,55 @@ def test_reclassification_detaches_text_groups(private_case: Path, role: str) ->
     }
     result = apply_overrides(job, ir, {"operations": [op]})
     assert not result["metadata"]["text_groups"]
+
+
+def test_split_label_detaches_old_association(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "native_pdf", "option"),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["a", "f"]
+    common.relation(ir, "label_of", "a", "f", {})
+    ir["metadata"]["figure_groups"] = [
+        {"page_index": 0, "kind": "option_grid", "pairs": [{"label": "a", "figure": "f"}]}
+    ]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "split", "offset": 1, "reason": "split"}]},
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == "paragraph"
+    assert not result["metadata"]["figure_groups"]
+    assert not result["relations"] or all(r["type"] != "label_of" for r in result["relations"])
+
+
+def test_revision_switch_restores_preview_assets() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
+    handler = next(
+        line for line in script.splitlines() if line.startswith("$('revision').onchange")
+    )
+    fixture = (
+        "let preview=true,unsavedPreview=true,revision='reviewed';"
+        "let data={auto:{},reviewed:{}},layout;const el={value:'auto'};"
+        "function $(){return el;}function message(){}function show(){};"
+    )
+    result = subprocess.run(
+        [
+            node,
+            "-e",
+            fixture
+            + handler
+            + "el.onchange();el.value='reviewed';el.onchange();console.log(preview);",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "true"
