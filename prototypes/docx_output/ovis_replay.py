@@ -76,7 +76,12 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
                 for m in re.finditer(r"(?<!\S)[A-D][.．、]\s*", paragraph)
                 if not any(f.start() <= m.start() < f.end() for f in MATH.finditer(paragraph))
             ]
-            starts = [0, *[i for i in markers if i > 0]]
+            markers.extend(
+                m.start()
+                for m in re.finditer(r"(?m)^[ \t]*\d+[.．、](?!\d)[ \t]*", paragraph)
+                if not any(f.start() <= m.start() < f.end() for f in MATH.finditer(paragraph))
+            )
+            starts = [0, *sorted({i for i in markers if i > 0})]
             ends = [*starts[1:], len(paragraph)]
             for start, end in zip(starts, ends, strict=True):
                 text = paragraph[start:end].strip()
@@ -84,7 +89,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
                     continue
                 kind = (
                     "heading"
-                    if heading
+                    if heading and start == 0
                     else "question"
                     if QUESTION.match(text)
                     else "option"
@@ -106,7 +111,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
                     {
                         "request_id": request_id,
                         "raw_markdown_paragraph": original,
-                        "split_reason": "explicit_whitespace_delimited_option_marker",
+                        "split_reason": "explicit_option_or_line_start_question_outside_math",
                         "text_geometry": "not_provided_by_provider",
                     },
                 )

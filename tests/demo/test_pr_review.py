@@ -495,3 +495,19 @@ def test_offline_preview_uses_reviewed_order(private_case: Path) -> None:
     write_preview(job, result, "reviewed")
     html = (job / "review" / "reviewed.html").read_text()
     assert html.index("Second marker") < html.index("First marker")
+
+
+def test_ovis_single_newline_question_boundary(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "1. First\nA. Choice\n2. Second\nA. $$x+\n3. y$$"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert [b["type"] for b in p["blocks"]] == ["question", "option", "question", "option"]
+    assert all(
+        c["evidence"]["raw_markdown_paragraph"] == raw
+        for b in p["blocks"]
+        for c in b["content_candidates"]
+    )
