@@ -11,6 +11,7 @@ from .common import (
     DemoError,
     Json,
     area,
+    finish_preview,
     image_size,
     layout,
     new_job,
@@ -202,6 +203,7 @@ def export(job: Path, revision: str = "reviewed") -> Path:
     old_assets = {job / a["path"] for a in previous.get("assets", [])}
     ir = apply_overrides(job, read(job / "layout.auto.json"), read(job / "overrides.json"))
     finish(job, ir, revision)
+    finish_preview(job)
     prune_preview_assets(job, old_assets)
     return job / "reviewed.docx"
 

@@ -408,3 +408,12 @@ def prune_preview_assets(job: Path, candidates: set[Path]) -> None:
     for path in candidates - registered:
         if path.parent == job / "assets" and path.is_file() and not path.is_symlink():
             path.unlink()
+
+
+def finish_preview(job: Path) -> None:
+    """End a preview only after a saved revision exists and reclaim its unused assets."""
+    path = job / "layout.preview.json"
+    if path.exists():
+        assets = {safe_path(job, a["path"]) for a in read(path).get("assets", [])}
+        path.unlink()
+        prune_preview_assets(job, assets)

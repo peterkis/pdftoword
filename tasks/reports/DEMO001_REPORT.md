@@ -431,3 +431,9 @@ Ovis预检美元公式是否可转换，不支持时生成源页图片与审校�
 ## PR #3 第三十三轮审核修复（2026-09-13）
 
 CLI export在成功替换reviewed后，同样清理旧资产中所有持久化layout均未引用的裁图。新增重复CLI导出回归先失败后通过，全仓404 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第三十四轮审核修复（2026-09-13）
+
+HTTP保存及CLI导出成功后结束preview布局并清理其全部持久化layout未引用的资产。PP布局候选回退时回收trial新增且未登记的裁图，不触碰原IR资产。
+
+新增2项回归先失败后通过，全仓406 tests passed，ruff、mypy（49 files）及diff通过。开发中遗漏导入被检查发现，补齐后重新全测通过。无新模型调用。

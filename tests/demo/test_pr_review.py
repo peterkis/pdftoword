@@ -1301,3 +1301,40 @@ def test_cli_reexport_prunes_replaced_crops(private_case: Path) -> None:
     export(job)
     export(job)
     assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_preview_then_save_reclaims_preview_assets(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        headers = {"origin": "http://127.0.0.1:8765", "x-demo-session": token}
+        body = {"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]}
+        assert (
+            client.post("/api/preview/" + job.name, json=body, headers=headers).status_code == 200
+        )
+        assert client.post("/api/review/" + job.name, json=body, headers=headers).status_code == 200
+    assert not (job / "layout.preview.json").exists()
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_rejected_layout_reclaims_trial_crops(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from prototypes.docx_output import pp_layout
+
+    job, ir, p = setup_ir(private_case)
+    before = set((job / "assets").iterdir())
+
+    def rejected(job: Path, trial: Json, page: Json, body: Json, rid: str) -> None:
+        common.crop(job, trial, page, [1, 1, 20, 20], "trial")
+        raise common.DemoError("REJECTED")
+
+    monkeypatch.setattr(pp_layout, "_apply_pp_layout", rejected)
+    pp_layout.apply_pp_layout(job, ir, p, {}, "pp")
+    assert set((job / "assets").iterdir()) == before

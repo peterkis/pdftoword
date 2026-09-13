@@ -21,6 +21,7 @@ from .common import (
     PRIVATE,
     DemoError,
     Json,
+    finish_preview,
     job_path,
     private_dir,
     prune_preview_assets,
@@ -324,6 +325,7 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                 )
             finish(job, ir, "reviewed")
             save(job / "overrides.json", data)
+            finish_preview(job)
             prune_preview_assets(job, old_assets)
         finally:
             lock.release()

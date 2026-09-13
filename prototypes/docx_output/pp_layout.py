@@ -5,7 +5,17 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 
-from .common import DemoError, Json, area, crop, intersection, issue, transform, union
+from .common import (
+    DemoError,
+    Json,
+    area,
+    crop,
+    intersection,
+    issue,
+    prune_preview_assets,
+    transform,
+    union,
+)
 from .layout_rules import RULES, accept_candidate, preflight
 
 
@@ -324,6 +334,10 @@ def apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) -
         _apply_pp_layout(job, trial, trial_page, body, request_id)
         accept_candidate(ir, trial, trial_page)
     except (DemoError, KeyError, TypeError, ValueError, IndexError, AttributeError) as exc:
+        original_paths = {a["path"] for a in ir["assets"]}
+        prune_preview_assets(
+            job, {job / a["path"] for a in trial["assets"] if a["path"] not in original_paths}
+        )
         reason = str(exc) if isinstance(exc, DemoError) else "MALFORMED_PP_GEOMETRY"
         result = {
             "status": "FALLBACK",
