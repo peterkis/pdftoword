@@ -1574,3 +1574,40 @@ def test_source_pages_do_not_force_word_page_break(private_case: Path) -> None:
     ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
     assert not root.xpath('//w:br[@w:type="page"]', namespaces=ns)
     assert len(common.read(job / "layout.auto.json")["pages"]) == 2
+
+
+def test_surrogate_candidate_survives_fallback_save(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "Bad\ud800text"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    finish(job, ir)
+    assert common.read(job / "layout.auto.json")["provenance"]["ovis_content"]["0"] == raw
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        client.get("/api/session")
+        result = client.get("/api/job/" + job.name)
+        assert result.status_code == 200
+        assert result.json()["auto"]["provenance"]["ovis_content"]["0"] == raw
+
+
+def test_fullpage_background_not_duplicated_as_figure(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "background.pdf"
+    make_pdf(source, background=True)
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    p = ir["pages"][0]
+    assert all(
+        common.area(b["bbox"]) < p["width_pt"] * p["height_pt"] * 0.9
+        for b in p["blocks"]
+        if b["type"] == "figure"
+    )
+    assert ir["provenance"]["pages"]["0"]["background_image_bounds"]

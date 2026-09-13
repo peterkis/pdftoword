@@ -215,8 +215,15 @@ def extract(
                         if any(intersection(c["bbox"], bounds) > 0 for c in chars)
                     ]
                     info["ambiguous_vector_bounds"] = ambiguous_paths
+                    backgrounds = [
+                        bounds for bounds in image_boxes if area(bounds) / (w * h) >= 0.9 and chars
+                    ]
+                    info["background_image_bounds"] = backgrounds
                     figures = cluster_regions(
-                        [*image_boxes, *(b for b in path_boxes if b not in ambiguous_paths)]
+                        [
+                            *(b for b in image_boxes if b not in backgrounds),
+                            *(b for b in path_boxes if b not in ambiguous_paths),
+                        ]
                     )
                     # Include adjacent lettering in the composite crop only.
                     for fi, f in enumerate(figures):

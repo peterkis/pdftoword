@@ -481,3 +481,9 @@ PP hybrid及人工公式重排检查MATH消费后的剩余文本，混合未闭�
 ## PR #3 第四十二轮审核修复（2026-09-13）
 
 DOCX不再在每个PDF来源页边界无条件硬分页，正文自然流排；Layout IR来源页和几何证据保持独立。新增两页PDF→DOCX硬分页检查先失败后通过，全仓424 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第四十三轮审核修复（2026-09-13）
+
+私有JSON保存对孤立代理项使用转义编码，API证据JSON也以转义持久/传输，读回仍保留原码位。有原生文字的近整页image对象作为background_image_bounds来源证据，不再与正文重复作为普通figure输出。
+
+新增2项回归先失败后通过，背景过滤接线遗漏经全测发现并补齐后全仓426 tests passed；随后扩展代理项API往返验证通过。ruff、mypy（49 files）及diff通过，无新模型调用。

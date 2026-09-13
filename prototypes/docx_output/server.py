@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import secrets
 import shutil
 import threading
@@ -37,6 +38,15 @@ from .replay import DEFAULT_RUN
 STATIC = Path(__file__).parent / "static"
 
 
+class EvidenceJSONResponse(JSONResponse):
+    """Preserve isolated surrogate evidence as JSON escapes in API responses."""
+
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            content, ensure_ascii=True, allow_nan=False, separators=(",", ":")
+        ).encode("utf-8")
+
+
 class BodyLimit:
     """Bound upload bytes before multipart parsing, including chunked requests."""
 
@@ -59,7 +69,9 @@ class BodyLimit:
 
 def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
     """Create one local session, one worker, and no permissive CORS policy."""
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(
+        docs_url=None, redoc_url=None, openapi_url=None, default_response_class=EvidenceJSONResponse
+    )
     app.add_middleware(BodyLimit)
     token = secrets.token_urlsafe(32)
     origin = f"http://127.0.0.1:{port}"

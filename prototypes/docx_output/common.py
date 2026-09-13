@@ -66,7 +66,9 @@ def save(path: Path, value: Any) -> None:
     """Write UTF-8 private JSON with owner-only access."""
     private_dir(path.parent)
     safe_path(PRIVATE, str(path.absolute().relative_to(PRIVATE)))
-    data = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False).encode("utf-8")
+    data = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False).encode(
+        "utf-8", errors="backslashreplace"
+    )
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "wb") as f:
         f.write(data)
