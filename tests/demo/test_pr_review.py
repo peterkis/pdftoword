@@ -580,3 +580,24 @@ def test_merge_quarantines_invalid_relation_types(private_case: Path) -> None:
     )
     assert not any(r["type"] == "caption_of" for r in result["relations"])
     assert any(i["type"] == "MERGED_RELATION_REVIEW" for i in result["issues"])
+
+
+def test_background_image_does_not_suppress_native_text(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "background.pdf"
+    original = make_pdf(source, background=True)
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    text = "".join(b["content"].get("plain_text", "") for b in ir["pages"][0]["blocks"])
+    assert "".join(original.split()) == "".join(text.split())
+
+
+def test_relation_id_never_collides_after_delete() -> None:
+    ir: Json = {"relations": []}
+    common.relation(ir, "references", "a", "b", {})
+    common.relation(ir, "references", "c", "d", {})
+    ir["relations"].pop(0)
+    common.relation(ir, "references", "e", "f", {})
+    assert len({r["id"] for r in ir["relations"]}) == 2

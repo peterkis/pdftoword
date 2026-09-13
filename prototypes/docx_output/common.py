@@ -318,7 +318,11 @@ def issue(ir: Json, code: str, message: str, blocks: list[str], page_index: int 
 
 def relation(ir: Json, kind: str, origin: str, target: str, evidence: Json) -> None:
     """Separate semantic references from physical placement evidence."""
-    rid = f"rel-{len(ir['relations'])}"
+    existing = {r["id"] for r in ir["relations"]}
+    index = len(existing)
+    while f"rel-{index}" in existing:
+        index += 1
+    rid = f"rel-{index}"
     ir["relations"].append(
         dict(
             id=rid,

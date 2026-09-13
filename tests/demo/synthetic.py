@@ -3,7 +3,14 @@
 from pathlib import Path
 
 
-def make_pdf(path: Path, *, rotation: int = 0, pages: int = 1, decoration: bytes = b"") -> str:
+def make_pdf(
+    path: Path,
+    *,
+    rotation: int = 0,
+    pages: int = 1,
+    decoration: bytes = b"",
+    background: bool = False,
+) -> str:
     """Write a tiny standards-based PDF without importing a second PDF engine."""
     lines = [
         "原生 PDF 测试 Native PDF",
@@ -11,7 +18,7 @@ def make_pdf(path: Path, *, rotation: int = 0, pages: int = 1, decoration: bytes
         "A. 中文 English  B. 2026 年",
         "2. 观察图形并记录结果。",
     ]
-    stream = b""
+    stream = b"q 595.28 0 0 841.89 0 0 cm /Im0 Do Q\n" if background else b""
     for i, text in enumerate(lines):
         size = 18 if i == 0 else 12
         encoded = text.encode("utf-16-be").hex()
@@ -44,8 +51,15 @@ def make_pdf(path: Path, *, rotation: int = 0, pages: int = 1, decoration: bytes
     for _ in range(pages):
         objs.append(
             f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Rotate {rotation} "
-            "/Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>".encode()
+            f"/Resources << /Font << /F1 3 0 R >> /XObject << /Im0 {8 + pages} 0 R >> >> "
+            "/Contents 6 0 R >>".encode()
         )
+    objs.append(
+        b"<< /Type /XObject /Subtype /Image /Width 1 /Height 1 "
+        b"/ColorSpace /DeviceRGB /BitsPerComponent 8 /Length 3 >>\nstream\n"
+        + bytes([255, 255, 255])
+        + b"\nendstream"
+    )
     data = bytearray(b"%PDF-1.4\n")
     offsets = [0]
     for i, obj in enumerate(objs, 1):

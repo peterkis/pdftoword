@@ -231,7 +231,9 @@ def extract(
                         c
                         for c in chars
                         if not any(
-                            intersection(c["bbox"], f) / area(c["bbox"]) > 0.8 for f in figures
+                            area(f) / (w * h) < 0.5
+                            and intersection(c["bbox"], f) / area(c["bbox"]) > 0.8
+                            for f in figures
                         )
                     ]
                     # Keep ambiguous vector ink as an explicit review crop as well;
