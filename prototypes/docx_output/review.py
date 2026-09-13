@@ -417,7 +417,7 @@ def valid_relation(kind: str, source: Json, target: Json) -> bool:
     if source["id"] == target["id"]:
         return False
     if kind == "references":
-        return source["type"] == "figure" and target["type"] == "question"
+        return bool(source["type"] == "figure" and target["type"] == "question")
     allowed = {"caption", "paragraph"} if kind == "caption_of" else {"option", "paragraph"}
     return (
         source["type"] in allowed
