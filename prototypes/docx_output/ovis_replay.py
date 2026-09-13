@@ -228,7 +228,8 @@ def associate_ovis(ir: Json, p: Json) -> None:
                 b["id"],
                 {"reason": "adjacent_Ovis_image_caption"},
             )
-            shared.append({"label": following["id"], "figure": b["id"]})
+            if b["id"] not in associated:
+                shared.append({"label": following["id"], "figure": b["id"]})
             associated.add(b["id"])
             if m[1] in questions:
                 relation(

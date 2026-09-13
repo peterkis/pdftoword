@@ -196,9 +196,21 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 )
             p["blocks"].remove(other)
             order.remove(other["id"])
-            ir["relations"] = [
-                r for r in ir["relations"] if other["id"] not in (r["from"], r["to"])
-            ]
+            for rel in ir["relations"]:
+                for endpoint in ("from", "to"):
+                    if rel[endpoint] == other["id"]:
+                        rel[endpoint] = b["id"]
+            collapsed = [r for r in ir["relations"] if r["from"] == r["to"] == b["id"]]
+            if collapsed:
+                ir["provenance"][f"merge-collapsed-{n}"] = copy.deepcopy(collapsed)
+                issue(
+                    ir,
+                    "MERGED_RELATION_REVIEW",
+                    "块内关系因合并折叠，原关系已记录待复核。",
+                    [b["id"]],
+                    p["page_index"],
+                )
+                ir["relations"] = [r for r in ir["relations"] if r not in collapsed]
             ir["metadata"]["figure_groups"] = [
                 g
                 for g in ir["metadata"].get("figure_groups", [])

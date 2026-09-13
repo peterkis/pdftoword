@@ -355,3 +355,59 @@ def test_layout_acceptance_rejects_noncontiguous_text_group(private_case: Path) 
     group["rows"][0] = [group["rows"][0][0], group["rows"][0][-1]]
     with pytest.raises(common.DemoError, match="NONCONTIGUOUS_LAYOUT_GROUP"):
         accept_candidate(original, ir, p)
+
+
+def test_pp_ignores_other_page_relations(private_case: Path) -> None:
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    common.relation(ir, "caption_of", "other-caption", "other-image", {})
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert ir["metadata"]["layout_validation"]["status"] == "APPLIED"
+
+
+def test_merge_transfers_relations(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf"),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf"),
+        block("target", 0, [1, 50, 20, 70], "T", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "b", "target"]
+    common.relation(ir, "references", "target", "b", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "join"}]}
+    )
+    assert any(r["from"] == "target" and r["to"] == "a" for r in result["relations"])
+
+
+def test_ovis_figure_has_one_display_group(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 10, 10], "A.", "inferred"),
+        block("f", 0, [10, 10, 30, 30], "", "inferred", "figure"),
+        block("c", 0, [10, 31, 30, 40], "第1题", "inferred"),
+    ]
+    associate_ovis(ir, p)
+    assert (
+        sum(pair["figure"] == "f" for g in ir["metadata"]["figure_groups"] for pair in g["pairs"])
+        == 1
+    )
+    assert any(r["type"] == "caption_of" for r in ir["relations"])
+
+
+def test_legacy_caption_groups_split_vertical_rows(private_case: Path) -> None:
+    from prototypes.docx_output.structure import associate
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("f1", 0, [10, 10, 30, 30], "", "inferred", "figure"),
+        block("c1", 0, [10, 31, 30, 40], "第1题", "inferred"),
+        block("f2", 0, [10, 60, 30, 80], "", "inferred", "figure"),
+        block("c2", 0, [10, 81, 30, 90], "第2题", "inferred"),
+    ]
+    associate(ir, p)
+    assert [len(g["pairs"]) for g in ir["metadata"]["figure_groups"]] == [1, 1]

@@ -402,11 +402,21 @@ def associate(ir: Json, p: Json) -> None:
                     [f["id"], b["id"]],
                     p["page_index"],
                 )
-    if caption_pairs:
-        caption_pairs.sort(
-            key=lambda x: next(b["bbox"][0] for b in blocks if b["id"] == x["figure"])
-        )
-        groups.append({"page_index": p["page_index"], "kind": "shared_row", "pairs": caption_pairs})
+    by_id = {b["id"]: b for b in blocks}
+    rows: list[list[Json]] = []
+    for pair in caption_pairs:
+        if positions[pair["label"]] != positions[pair["figure"]] + 1:
+            continue
+        adjacent = bool(rows) and positions[pair["figure"]] == positions[rows[-1][-1]["label"]] + 1
+        box = by_id[pair["figure"]]["bbox"]
+        prior = by_id[rows[-1][-1]["figure"]]["bbox"] if rows else box
+        overlap = min(box[3], prior[3]) - max(box[1], prior[1])
+        if adjacent and overlap > 0:
+            rows[-1].append(pair)
+        else:
+            rows.append([pair])
+    for row in rows:
+        groups.append({"page_index": p["page_index"], "kind": "shared_row", "pairs": row})
     for f in figures:
         if f["id"] not in used:
             issue(

@@ -128,7 +128,11 @@ def _apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) 
         aid = crop(job, ir, p, b["bbox"], b["id"] + "-pp-figure")
         b["content"]["asset_id"] = aid
     for rel in ir["relations"]:
-        if rel["type"] not in {"label_of", "caption_of"}:
+        if (
+            rel["type"] not in {"label_of", "caption_of"}
+            or rel["from"] not in by_id
+            or rel["to"] not in by_id
+        ):
             continue
         b, f = by_id[rel["from"]], by_id[rel["to"]]
         fb = f["bbox"]
