@@ -60,6 +60,8 @@ def write_preview(job: Path, ir: Json, revision: str) -> None:
         chunks.append("</div></section>")
     chunks.append("<h2>待复核</h2>")
     for i in ir["issues"]:
+        if i["status"] != "open":
+            continue
         chunks.append("<p>" + html.escape(i["type"] + ": " + i["message"]) + "</p>")
     chunks.append("</html>")
     target = job / "review" / ("index.html" if revision == "auto" else "reviewed.html")
@@ -331,6 +333,24 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             relation(ir, kind, b["id"], target, {"reason": op["reason"], "manual": True})
         else:
             raise DemoError("UNKNOWN_OVERRIDE_ACTION")
+        by_id = {x["id"]: x for pg in ir["pages"] for x in pg["blocks"]}
+        invalid_relations = [
+            r
+            for r in ir["relations"]
+            if b["id"] in (r["from"], r["to"])
+            and r["type"] in {"references", "caption_of", "label_of"}
+            and not valid_relation(r["type"], by_id[r["from"]], by_id[r["to"]])
+        ]
+        if invalid_relations:
+            ir["provenance"][f"manual-invalid-relations-{n}"] = copy.deepcopy(invalid_relations)
+            ir["relations"] = [r for r in ir["relations"] if r not in invalid_relations]
+            issue(
+                ir,
+                "MANUAL_RELATION_REVIEW",
+                "内容变更后关联端点不适用，原关系保留待复核。",
+                [b["id"]],
+                p["page_index"],
+            )
         b["source_type"] = "manual_correction"
         ir["provenance"][f"manual-{n}"] = {
             "operation": op,

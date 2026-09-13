@@ -353,3 +353,9 @@ PP自动拆块把父级审校引用迁入实际子块。人工重规划复用统
 chat_content逐层验证choices/message结构，统一抛出域错误，调用层可记录失败缓存而保留已完成候选。resolve_issue在块匹配前按问题ID及页面/块范围执行，只记录审计、不新增MANUAL_CHANGE_REVIEW；无块页面级问题也可解决。网页增加相应标记已核对入口。
 
 新增6项回归（5项复现失败、1项既有正确拒绝），全仓354 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第二十轮审核修复（2026-09-13）
+
+有限Ovis入口对未支持的Markdown强调/列表/表格等结构创建OVIS_MARKDOWN_REVIEW_REQUIRED并保留响应，不将标记作为正文输出；现有标题和公式处理保留。各人工内容操作结束后统一校验受影响语义关系，失效关系保留证据并审校。离线待复核列表仅包含open项。
+
+新增5项回归先失败后通过，全仓359 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。尚未新增通用Markdown表格/富文本转换能力。

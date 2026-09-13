@@ -826,3 +826,44 @@ def test_issue_resolution_can_empty_queue(private_case: Path, page_level: bool) 
     result = apply_overrides(job, ir, {"operations": [op]})
     assert all(i["status"] == "resolved" for i in result["issues"])
     assert result["provenance"]["manual-0"]["operation"] == op
+
+
+@pytest.mark.parametrize("raw", ["**1. Question**", "- Choice", "| A | B |\n|---|---|"])
+def test_unsupported_markdown_requires_review(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    with pytest.raises(common.DemoError, match="OVIS_MARKDOWN_REVIEW_REQUIRED"):
+        recover_ovis(
+            job,
+            ir,
+            p,
+            {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]},
+            "ovis",
+        )
+    assert ir["provenance"]["ovis_content"]["0"] == raw
+
+
+def test_crop_invalidates_text_caption_relation(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("c", 0, [1, 1, 20, 20], "Caption", "native_pdf", "caption"),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["c", "f"]
+    common.relation(ir, "caption_of", "c", "f", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "c", "action": "crop", "reason": "crop"}]}
+    )
+    assert not result["relations"]
+    assert any(i["type"] == "MANUAL_RELATION_REVIEW" for i in result["issues"])
+
+
+def test_resolved_issue_not_listed_as_pending(private_case: Path) -> None:
+    from prototypes.docx_output.review import write_preview
+
+    job, ir, _ = setup_ir(private_case)
+    common.issue(ir, "UNIQUE_RESOLVED", "Already checked", [])
+    ir["issues"][0]["status"] = "resolved"
+    write_preview(job, ir, "reviewed")
+    assert "UNIQUE_RESOLVED" not in (job / "review" / "reviewed.html").read_text()

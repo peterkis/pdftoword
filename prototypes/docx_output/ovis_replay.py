@@ -62,6 +62,16 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
             continue
         if re.search(r"<[A-Za-z!/][^>]*>", token):
             raise DemoError("OVIS_UNSUPPORTED_HTML_REGION")
+        plain_context = MATH.sub("", token)
+        if re.search(r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(", plain_context):
+            issue(
+                ir,
+                "OVIS_MARKDOWN_REVIEW_REQUIRED",
+                "当前入口不支持此Markdown结构，保留原响应待审校，不把标记写入正文。",
+                [],
+                p["page_index"],
+            )
+            raise DemoError("OVIS_MARKDOWN_REVIEW_REQUIRED")
         for paragraph in re.split(r"\n\s*\n", token):
             original = paragraph
             paragraph = paragraph.strip()
