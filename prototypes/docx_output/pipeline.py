@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import shutil
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from .common import (
     DemoError,
     Json,
     area,
+    block,
+    crop,
     finish_preview,
     image_size,
     layout,
@@ -24,7 +27,7 @@ from .common import (
     validate_input,
 )
 from .replay import DEFAULT_RUN, load
-from .structure import recover, recover_monkey
+from .structure import image_content, recover, recover_monkey
 from .writer import build
 
 
@@ -125,7 +128,35 @@ def reconstruct(
         )
         return
     if primary == "pp":
-        recover(job, ir, p, responses, manifest)
+        before = copy.deepcopy(ir)
+        before_files = set((job / "assets").glob("*.png"))
+        try:
+            recover(job, ir, p, responses, manifest)
+        except (ValueError, KeyError, TypeError, AttributeError, IndexError) as exc:
+            index = p["page_index"]
+            ir.clear()
+            ir.update(before)
+            restored = next(pg for pg in ir["pages"] if pg["page_index"] == index)
+            p.clear()
+            p.update(restored)
+            ir["pages"] = [p if pg["page_index"] == index else pg for pg in ir["pages"]]
+            prune_preview_assets(job, set((job / "assets").glob("*.png")) - before_files)
+            bounds = [0.0, 0.0, p["width_pt"], p["height_pt"]]
+            bid = f"p{index}-pp-recovery-fallback"
+            aid = crop(job, ir, p, bounds, bid)
+            b = block(bid, index, bounds, "", "inferred")
+            b.update(content=image_content(aid), render_policy="preserve_image")
+            p["blocks"].append(b)
+            p["reading_order"].append(bid)
+            p["routing_decision"] = "PP_RECONSTRUCTION_FALLBACK"
+            ir["provenance"].setdefault("rejected_pp_response", {})[str(index)] = responses["pp"]
+            issue(
+                ir,
+                "PP_RECONSTRUCTION_FALLBACK",
+                "PP内部结果无法安全重建，保留响应及源页图片待审校：" + type(exc).__name__,
+                [bid],
+                index,
+            )
         return
     from .ovis_replay import recover_ovis
     from .pp_layout import apply_pp_layout

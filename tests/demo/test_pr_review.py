@@ -1611,3 +1611,16 @@ def test_fullpage_background_not_duplicated_as_figure(private_case: Path) -> Non
         if b["type"] == "figure"
     )
     assert ir["provenance"]["pages"]["0"]["background_image_bounds"]
+
+
+@pytest.mark.parametrize(
+    "body", [{}, {"result": {"layoutParsingResults": [{"prunedResult": None}]}}]
+)
+def test_legacy_pp_reconstruction_failure_is_reviewable(private_case: Path, body: Json) -> None:
+    from prototypes.docx_output.pipeline import reconstruct
+
+    job, ir, p = setup_ir(private_case)
+    reconstruct(job, ir, p, {"pp": body}, {"requests": []}, "pp")
+    qa = finish(job, ir)
+    assert qa["fallback_area_ratio"] == pytest.approx(1)
+    assert any(i["type"] == "PP_RECONSTRUCTION_FALLBACK" for i in ir["issues"])

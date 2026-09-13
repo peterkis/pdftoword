@@ -487,3 +487,9 @@ DOCX不再在每个PDF来源页边界无条件硬分页，正文自然流排；L
 私有JSON保存对孤立代理项使用转义编码，API证据JSON也以转义持久/传输，读回仍保留原码位。有原生文字的近整页image对象作为background_image_bounds来源证据，不再与正文重复作为普通figure输出。
 
 新增2项回归先失败后通过，背景过滤接线遗漏经全测发现并补齐后全仓426 tests passed；随后扩展代理项API往返验证通过。ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第四十四轮审核修复（2026-09-13）
+
+旧PP编排捕获内部重建的域错误/结构类型错误，恢复原IR并清理试生成裁图，保留被拒PP响应及源页图片，生成PP_RECONSTRUCTION_FALLBACK可审校导出。
+
+新增2项回归先失败后通过，全仓428 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
