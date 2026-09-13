@@ -295,3 +295,9 @@ PP自动按OCR行边界拆块时保留父块完整快照（含原内容候选）
 公式匹配识别完整成对的单/双美元定界符，保留source_text供人工拆分长度与重新排版使用，避免展示公式残留美元符号。正文左边界写入逐页layout_by_page结果，writer按当前页读取，不受最后一页覆盖。
 
 新增4项回归，全仓319 tests passed，ruff、mypy（49 files）与diff通过，无新模型请求。开发中公式正则写入转义错误被完整回归发现，修复后重新全部通过，未发布错误版本。
+
+## PR #3 第十轮审核修复（2026-09-13）
+
+Ovis与旧PP关联都保留同题号的多个题干，只有唯一候选才创建references；重复题号创建AMBIGUOUS_QUESTION_NUMBER，避免绑定最后一题。离线审阅HTML按reading_order输出，与已审阅DOCX保持顺序一致。
+
+新增3项回归先失败后通过，全仓322 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

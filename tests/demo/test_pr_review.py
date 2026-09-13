@@ -459,3 +459,39 @@ def test_layout_records_page_left_margin(private_case: Path) -> None:
         ir["metadata"]["layout_by_page"]["0"]["content_left_pt"]
         == ir["metadata"]["content_left_pt"]
     )
+
+
+@pytest.mark.parametrize("mode", ["ovis", "pp"])
+def test_duplicate_question_number_never_binds_last(private_case: Path, mode: str) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+    from prototypes.docx_output.structure import associate
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("q1", 0, [1, 1, 90, 10], "1. First", "inferred", "question"),
+        block("f", 0, [10, 20, 30, 40], "", "inferred", "figure"),
+        block("c", 0, [10, 41, 30, 50], "第1题", "inferred"),
+        block("q2", 0, [1, 70, 90, 80], "1. Other section", "inferred", "question"),
+    ]
+    (associate_ovis if mode == "ovis" else associate)(ir, p)
+    assert not any(r["type"] == "references" for r in ir["relations"])
+    assert any(i["type"] == "AMBIGUOUS_QUESTION_NUMBER" for i in ir["issues"])
+
+
+def test_offline_preview_uses_reviewed_order(private_case: Path) -> None:
+    from prototypes.docx_output.review import write_preview
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "First marker", "native_pdf"),
+        block("b", 0, [1, 21, 20, 40], "Second marker", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "b", "action": "move", "delta": -1, "reason": "move"}]},
+    )
+    write_preview(job, result, "reviewed")
+    html = (job / "review" / "reviewed.html").read_text()
+    assert html.index("Second marker") < html.index("First marker")

@@ -190,9 +190,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
 def associate_ovis(ir: Json, p: Json) -> None:
     """Use explicit adjacent labels/captions and model sequence, not invented text boxes."""
     blocks = p["blocks"]
-    questions = {
-        m[1]: b for b in blocks if (m := QUESTION.match(b["content"].get("plain_text", "")))
-    }
+    questions: dict[str, list[Json]] = {}
+    for b in blocks:
+        if m := QUESTION.match(b["content"].get("plain_text", "")):
+            questions.setdefault(m[1], []).append(b)
     option_groups: dict[str, list[Json]] = {}
     shared: list[Json] = []
     question_id = ""
@@ -231,19 +232,21 @@ def associate_ovis(ir: Json, p: Json) -> None:
             if b["id"] not in associated:
                 shared.append({"label": following["id"], "figure": b["id"]})
             associated.add(b["id"])
-            if m[1] in questions:
+            if len(questions.get(m[1], [])) == 1:
                 relation(
                     ir,
                     "references",
                     b["id"],
-                    questions[m[1]]["id"],
+                    questions[m[1]][0]["id"],
                     {"explicit_question": m[1], "placement": "source_figure_row"},
                 )
             else:
                 issue(
                     ir,
-                    "target_not_in_input",
-                    "图题指向的题干不在输入中，保留独立图组。",
+                    "AMBIGUOUS_QUESTION_NUMBER" if m[1] in questions else "target_not_in_input",
+                    "重复题号无法唯一关联，保留图组待复核。"
+                    if m[1] in questions
+                    else "图题指向的题干不在输入中，保留独立图组。",
                     [b["id"], following["id"]],
                     p["page_index"],
                 )

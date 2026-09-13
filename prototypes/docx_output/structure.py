@@ -333,9 +333,10 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
 def associate(ir: Json, p: Json) -> None:
     """Associate explicit captions, and keep missing targets independent of placement."""
     blocks = p["blocks"]
-    questions = {
-        m[1]: b for b in blocks if (m := QUESTION.match(b["content"].get("plain_text", "")))
-    }
+    questions: dict[str, list[Json]] = {}
+    for b in blocks:
+        if m := QUESTION.match(b["content"].get("plain_text", "")):
+            questions.setdefault(m[1], []).append(b)
     figures = [b for b in blocks if b["type"] == "figure"]
     groups = ir["metadata"].setdefault("figure_groups", [])
     used = set()
@@ -392,19 +393,21 @@ def associate(ir: Json, p: Json) -> None:
             used.add(f["id"])
             relation(ir, "caption_of", b["id"], f["id"], {"explicit_caption": text})
             caption_pairs.append({"label": b["id"], "figure": f["id"]})
-            if m[1] in questions:
+            if len(questions.get(m[1], [])) == 1:
                 relation(
                     ir,
                     "references",
                     f["id"],
-                    questions[m[1]]["id"],
+                    questions[m[1]][0]["id"],
                     {"explicit_question": m[1], "placement": "original_shared_row"},
                 )
             else:
                 issue(
                     ir,
-                    "target_not_in_input",
-                    "图题指向的题干不在输入中；保留原共享图行，不挂到邻题。",
+                    "AMBIGUOUS_QUESTION_NUMBER" if m[1] in questions else "target_not_in_input",
+                    "重复题号无法唯一关联，保留图组待复核。"
+                    if m[1] in questions
+                    else "图题指向的题干不在输入中；保留原共享图行，不挂到邻题。",
                     [f["id"], b["id"]],
                     p["page_index"],
                 )

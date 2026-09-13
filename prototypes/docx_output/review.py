@@ -43,7 +43,9 @@ def write_preview(job: Path, ir: Json, revision: str) -> None:
     for p in ir["pages"]:
         source = ir["provenance"]["pages"][str(p["page_index"])]["image_path"]
         chunks.append(f'<section><div><img src="../{html.escape(source, quote=True)}"></div><div>')
-        for b in p["blocks"]:
+        by_id = {b["id"]: b for b in p["blocks"]}
+        for bid in p["reading_order"]:
+            b = by_id[bid]
             chunks.append(
                 "<article><b>" + html.escape(b["id"] + " / " + b["render_policy"]) + "</b><br>"
             )
