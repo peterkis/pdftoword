@@ -243,3 +243,9 @@ Replay 与 demo Raster live 现共用 reconstruct，默认 Ovis 内容→PP 几�
 - 历史 129 个文件哈希全部一致；私有目录0700/文件0600；没有 commit/push。
 
 当前证明的是同一样本保持输出、离线变体和故障能受控处理。新的真实图片、复杂表格、多栏、未知公式语法和低清晰度内容仍未完成模型泛化验证。规则保障来源与失败可见性，不能保证文字识别永不下降。该样本用户已认可；其他文档仍需审阅，生产验收未声明。
+
+## PR #3 首轮审核修复（2026-09-13）
+
+Codex 对 7e8abff 提出三项意见，均已通过先失败后通过的回归用例修复：Windows 输入路径使用 relative_to(anchor) 保留盘符/UNC 语义；段落合并保留两侧内容候选、来源引用及第二块完整快照，人工候选 supersedes 指向两侧原选择；可选 Monkey 解析/几何失败转为 MONKEY_CANDIDATE_REJECTED 审校项，保留 PP 主输出且不重试。
+
+新增 7 项回归，全仓 286 tests passed，ruff、mypy（49 source files）和 diff 检查通过。Windows 验证为本机模拟 PureWindowsPath 的盘符及 UNC 锚点语义，不声明真实 Windows 应用验收。没有新增模型调用或改写历史证据，等待最新提交的 Codex 复审。

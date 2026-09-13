@@ -112,7 +112,8 @@ def job_path(job_id: str, output_root: Path = JOBS) -> Path:
 
 def validate_input(path: Path) -> None:
     """Reject empty, oversized, unsupported or symlinked authorized inputs."""
-    safe_path(Path(path.absolute().anchor), str(path.absolute()).lstrip("/"))
+    absolute = path.absolute()
+    safe_path(Path(absolute.anchor), str(absolute.relative_to(absolute.anchor)))
     if not path.is_file():
         raise DemoError("INPUT_MISSING")
     if not 0 < path.stat().st_size <= MAX_BYTES:

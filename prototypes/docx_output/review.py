@@ -87,6 +87,7 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
         p, b = matches[0]
         action = op.get("action")
         old = copy.deepcopy(b)
+        merged_before: Json | None = None
         if action in {"split", "merge", "move"}:
             affected = {b["id"]}
             if action == "merge":
@@ -162,6 +163,11 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             other = next(x for x in p["blocks"] if x["id"] == order[idx + 1])
             if any(x["content"]["kind"] != "text" for x in (b, other)):
                 raise DemoError("MERGE_REQUIRES_PLAIN_TEXT")
+            merged_before = copy.deepcopy(other)
+            b["content_candidates"].extend(copy.deepcopy(other["content_candidates"]))
+            b["provenance_refs"] = list(
+                dict.fromkeys([*b["provenance_refs"], *other["provenance_refs"]])
+            )
             parts = ir["metadata"].get("inline_parts", {})
             if b["id"] in parts or other["id"] in parts:
                 combined = parts.get(b["id"], [{"text": b["content"]["plain_text"]}])
@@ -246,13 +252,22 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             "before": old,
             "after": copy.deepcopy(b),
         }
+        if merged_before is not None:
+            ir["provenance"][f"manual-{n}"]["merged_before"] = merged_before
         b["provenance_refs"].append(f"manual-{n}")
         if action in {"split", "merge"}:
             c = candidate(
                 f"{b['id']}-manual{n}",
                 "manual_correction",
                 b["content"]["plain_text"],
-                {"reason": op["reason"], "supersedes": b["selected_candidate_id"]},
+                {
+                    "reason": op["reason"],
+                    "supersedes": (
+                        [old["selected_candidate_id"], merged_before["selected_candidate_id"]]
+                        if merged_before is not None
+                        else b["selected_candidate_id"]
+                    ),
+                },
             )
             for previous in b["content_candidates"]:
                 previous["selected"] = False
