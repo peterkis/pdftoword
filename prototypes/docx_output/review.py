@@ -155,8 +155,17 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 if OPTION.match(text)
                 else "caption"
                 if CAPTION.match(text)
+                else old["type"]
+                if old["type"] in {"heading", "footer", "caption"}
                 else "paragraph"
             )
+            if b["type"] != old["type"]:
+                ir["metadata"]["text_groups"] = [
+                    g
+                    for g in ir["metadata"].get("text_groups", [])
+                    if g.get("question_id") != b["id"]
+                    and all(b["id"] not in row for row in g["rows"])
+                ]
             replan_text(job, ir, p, b, text, old, n)
             ir["metadata"]["figure_groups"] = [
                 g

@@ -943,3 +943,41 @@ def test_edit_reclassifies_confirmed_text(
         {"operations": [{"block_id": "a", "action": "text", "text": text, "reason": "correct"}]},
     )
     assert result["pages"][0]["blocks"][0]["type"] == expected
+
+
+@pytest.mark.parametrize("kind", ["heading", "footer", "caption"])
+def test_text_edit_preserves_nonlexical_type(private_case: Path, kind: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf", kind)]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "text", "text": "Corrected", "reason": "typo"}
+            ]
+        },
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == kind
+
+
+@pytest.mark.parametrize("role", ["member", "question"])
+def test_reclassification_detaches_text_groups(private_case: Path, role: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("q", 0, [1, 1, 20, 20], "1. Q", "native_pdf", "question"),
+        block("a", 0, [1, 21, 20, 40], "A. Choice", "native_pdf", "option"),
+    ]
+    p["reading_order"] = ["q", "a"]
+    ir["metadata"]["text_groups"] = [
+        {"page_index": 0, "question_id": "q", "columns": 1, "rows": [["a"]]}
+    ]
+    op = {
+        "block_id": "a" if role == "member" else "q",
+        "action": "text",
+        "text": "2. New" if role == "member" else "Body",
+        "reason": "correct",
+    }
+    result = apply_overrides(job, ir, {"operations": [op]})
+    assert not result["metadata"]["text_groups"]

@@ -375,3 +375,9 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 ## PR #3 第二十三轮审核修复（2026-09-13）
 
 人工text/candidate操作按确认后的文本重新分类题目/选项/图题/普通段落，并由既有关系复核处理过期端点。新增双向分类回归先失败后通过，全仓368 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第二十四轮审核修复（2026-09-13）
+
+人工编辑在无新词法分类证据时保留heading/footer/caption；question/option等词法类型仍随明确内容更新。类型变化解除包含该块或以其为question_id的文字布局组，避免新题目仍留在旧选项表格中。
+
+新增5项回归先失败后通过，全仓373 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
