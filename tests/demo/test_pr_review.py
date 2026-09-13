@@ -1468,3 +1468,35 @@ def test_revision_switch_clears_stale_selection() -> None:
         text=True,
     )
     assert result.stdout.strip() == "true"
+
+
+@pytest.mark.parametrize("mode", ["pp", "manual"])
+def test_mixed_residual_math_falls_back(private_case: Path, mode: str) -> None:
+    job, ir, p = setup_ir(private_case)
+    raw = "$x$ and $y"
+    if mode == "pp":
+        pp = response(
+            [pp_block(raw)], formulas=[{"rec_formula": "x", "dt_polys": [20, 20, 40, 40]}]
+        )
+        recover(job, ir, p, {"pp": pp}, {})
+    else:
+        p["blocks"] = [block("a", 0, [1, 1, 100, 40], "Original", "native_pdf")]
+        p["reading_order"] = ["a"]
+        ir = apply_overrides(
+            job,
+            ir,
+            {"operations": [{"block_id": "a", "action": "text", "text": raw, "reason": "edit"}]},
+        )
+    assert finish(job, ir)["fallback_region_count"] > 0
+
+
+@pytest.mark.parametrize("raw", ["$5-$10", "US$5/kg", "$20/人"])
+def test_currency_units_and_ranges_remain_text(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert p["blocks"][0]["content"].get("plain_text") == raw
+    assert finish(job, ir)["has_editable_runs"]

@@ -499,7 +499,7 @@ def replan_text(job: Path, ir: Json, p: Json, b: Json, text: str, old: Json, n: 
     matches = list(MATH.finditer(text))
     result: list[Json] = []
     cursor = 0
-    supported = bool(matches)
+    supported = bool(matches) and not unrendered_math(MATH.sub("", text))
     for m in matches:
         result.append({"text": text[cursor : m.start()]})
         candidates = [

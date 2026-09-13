@@ -138,7 +138,7 @@ def to_omml(latex: str) -> str:
 
 
 CURRENCY = re.compile(
-    r"(?<![\w$])(?:US|HK|CA|AU|NZ|SG|NT|A|C|S)?\$\d+(?:[.,]\d+)*(?=\s|[.,;:!?，。；：！？、）】》”’)]|$)"
+    r"(?<![\w$])(?:US|HK|CA|AU|NZ|SG|NT|A|C|S)?\$\d+(?:[.,]\d+)*(?=\s|[.,;:!?，。；：！？、）】》”’)/–—-]|$)"
 )
 
 
