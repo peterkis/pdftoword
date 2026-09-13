@@ -914,9 +914,9 @@ def test_browser_split_uses_codepoint_offset() -> None:
     script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
     handler = next(line for line in script.splitlines() if line.startswith("on('split'"))
     fixture = (
-        'const callbacks={};function on(name,cb){callbacks[name]=cb;}'
+        "const callbacks={};function on(name,cb){callbacks[name]=cb;}"
         'function $(id){return {value:"𠮷😀AB",selectionStart:4};}'
-        'function operation(op){console.log(JSON.stringify(op));}'
+        "function operation(op){console.log(JSON.stringify(op));}"
     )
     result = subprocess.run(
         [node, "-e", fixture + handler + ";callbacks.split();"],
@@ -925,3 +925,21 @@ def test_browser_split_uses_codepoint_offset() -> None:
         text=True,
     )
     assert json.loads(result.stdout)["offset"] == 2
+
+
+@pytest.mark.parametrize(
+    "initial,text,expected",
+    [("paragraph", "1. Correct question", "question"), ("question", "Plain body", "paragraph")],
+)
+def test_edit_reclassifies_confirmed_text(
+    private_case: Path, initial: str, text: str, expected: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf", initial)]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "text", "text": text, "reason": "correct"}]},
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == expected

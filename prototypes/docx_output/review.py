@@ -148,6 +148,15 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             b.update(
                 content=text_content(text), selected_candidate_id=c["id"], render_policy="editable"
             )
+            b["type"] = (
+                "question"
+                if QUESTION.match(text)
+                else "option"
+                if OPTION.match(text)
+                else "caption"
+                if CAPTION.match(text)
+                else "paragraph"
+            )
             replan_text(job, ir, p, b, text, old, n)
             ir["metadata"]["figure_groups"] = [
                 g

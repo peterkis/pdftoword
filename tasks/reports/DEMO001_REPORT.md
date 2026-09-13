@@ -371,3 +371,7 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 单标记Markdown强调允许跨软换行检测并生成源页降级。网页拆分发送码点偏移，避免UTF-16代理对导致扩展汉字/emoji后的切分错位。
 
 新增3项回归先失败后通过，其中Node实际执行网页拆分处理器；全仓366 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第二十三轮审核修复（2026-09-13）
+
+人工text/candidate操作按确认后的文本重新分类题目/选项/图题/普通段落，并由既有关系复核处理过期端点。新增双向分类回归先失败后通过，全仓368 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
