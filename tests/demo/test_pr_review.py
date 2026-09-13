@@ -1787,3 +1787,15 @@ def test_generic_truncated_html_falls_back(private_case: Path, raw: str) -> None
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("raw", ["若 a<b 则继续", "x<y", "a<beta"])
+def test_plain_less_than_is_not_html(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert p["blocks"][0]["content"].get("plain_text") == raw
+    assert finish(job, ir)["has_editable_runs"]
