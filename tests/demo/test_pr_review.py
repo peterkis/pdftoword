@@ -611,8 +611,7 @@ def test_unprocessed_latex_never_exports_as_plain_text(private_case: Path, raw: 
     recover_ovis(
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
-    with pytest.raises(common.DemoError, match="UNRENDERED_MATH_REQUIRES_REVIEW"):
-        finish(job, ir)
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
 
 
 def test_small_background_keeps_native_text_and_requires_review(private_case: Path) -> None:
@@ -1423,3 +1422,49 @@ def test_unavailable_revision_keeps_auto_selected() -> None:
         text=True,
     )
     assert result.stdout.strip() == "auto auto"
+
+
+def test_unclosed_ovis_formula_exports_fallback(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "1. $x^2"}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_revision_switch_clears_stale_selection() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    handler = next(
+        line
+        for line in (common.ROOT / "prototypes/docx_output/static/app.js").read_text().splitlines()
+        if line.startswith("$('revision').onchange")
+    )
+    fixture = (
+        "let preview=true,unsavedPreview=true,revision='reviewed',selected={id:'old'},layout;"
+        "let data={auto:{},reviewed:{}},els={revision:{value:'auto'},text:{value:'stale'}};"
+        "function $(id){return els[id];}function message(){}function show(){};"
+    )
+    result = subprocess.run(
+        [
+            node,
+            "-e",
+            fixture
+            + handler
+            + "els.revision.onchange();console.log(selected===null&&els.text.value==='');",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "true"

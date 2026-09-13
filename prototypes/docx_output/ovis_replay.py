@@ -16,7 +16,7 @@ from .common import (
     relation,
     transform,
 )
-from .formula import to_omml
+from .formula import to_omml, unrendered_math
 from .structure import CAPTION, MATH, OPTION, QUESTION, chat_content, image_content
 
 IMAGE = re.compile(r'<img\s+src="images/bbox_(\d+)_(\d+)_(\d+)_(\d+)\.jpg"\s*/?>')
@@ -40,7 +40,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
     }
     page_box = [0.0, 0.0, p["width_pt"], p["height_pt"]]
     plain_context = MATH.sub("", IMAGE.sub("", content))
-    alternate_formula = any(marker in content for marker in (r"\(", r"\)", r"\[", r"\]"))
+    residual_math = unrendered_math(MATH.sub("", content))
+    alternate_formula = residual_math or any(
+        marker in content for marker in (r"\(", r"\)", r"\[", r"\]")
+    )
     invalid_xml = invalid_xml_text(content)
     if not invalid_xml:
         try:
