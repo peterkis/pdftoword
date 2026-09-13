@@ -31,7 +31,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
     page_box = [0.0, 0.0, p["width_pt"], p["height_pt"]]
     plain_context = MATH.sub("", IMAGE.sub("", content))
     if re.search(
-        r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_\n]+[*_](?!\w)",
+        r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_]+[*_](?!\w)",
         plain_context,
     ):
         bid = f"p{p['page_index']}-markdown-fallback"

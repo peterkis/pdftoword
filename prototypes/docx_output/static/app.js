@@ -81,7 +81,7 @@ $('revision').onchange=()=>{preview=false;revision=$('revision').value;if(!data?
 $('zoom').oninput=()=>{$('source-wrap').style.width=$('zoom').value+'%';};
 $('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
 on('edit',()=>operation({action:'text',text:$('text').value}));
-on('split',()=>operation({action:'split',offset:$('text').selectionStart}));on('merge',()=>operation({action:'merge'}));
+on('split',()=>operation({action:'split',offset:[...$('text').value.slice(0,$('text').selectionStart)].length}));on('merge',()=>operation({action:'merge'}));
 on('up',()=>operation({action:'move',delta:-1}));on('down',()=>operation({action:'move',delta:1}));
 on('crop',()=>operation({action:'crop',bbox:$('bbox').value.split(',').map(Number)}));
 on('set-policy',()=>operation({action:'policy',policy:$('policy').value}));

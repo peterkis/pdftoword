@@ -890,3 +890,38 @@ def test_manual_split_classifies_right(
         {"operations": [{"block_id": "a", "action": "split", "offset": offset, "reason": "split"}]},
     )
     assert result["pages"][0]["blocks"][1]["type"] == kind
+
+
+@pytest.mark.parametrize("raw", ["*1. Question\ncontinued*", "_A. Choice\ncontinued_"])
+def test_multiline_emphasis_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_browser_split_uses_codepoint_offset() -> None:
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node runtime required for browser handler test")
+    script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
+    handler = next(line for line in script.splitlines() if line.startswith("on('split'"))
+    fixture = (
+        'const callbacks={};function on(name,cb){callbacks[name]=cb;}'
+        'function $(id){return {value:"𠮷😀AB",selectionStart:4};}'
+        'function operation(op){console.log(JSON.stringify(op));}'
+    )
+    result = subprocess.run(
+        [node, "-e", fixture + handler + ";callbacks.split();"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(result.stdout)["offset"] == 2
