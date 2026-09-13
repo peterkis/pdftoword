@@ -319,7 +319,7 @@ def _apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 if b["id"] in (r["from"], r["to"])
                 and (
                     r["from"] == r["to"]
-                    or (mixed_scope and r["type"] in {"caption_of", "label_of"})
+                    or r["type"] in {"caption_of", "label_of"}
                     or (
                         r["type"] in {"references", "caption_of", "label_of"}
                         and not valid_relation(r["type"], by_id[r["from"]], by_id[r["to"]])

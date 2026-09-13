@@ -1963,3 +1963,40 @@ def test_caption_body_merge_reclassifies_scope(private_case: Path) -> None:
     )
     assert result["pages"][0]["blocks"][0]["type"] == "paragraph"
     assert not any(r["type"] == "caption_of" for r in result["relations"])
+
+
+@pytest.mark.parametrize("tag", ["math", "svg", "table"])
+def test_formula_before_known_truncated_tag_falls_back(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x$<" + tag}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("kind,relation_kind", [("caption", "caption_of"), ("option", "label_of")])
+def test_same_type_merge_quarantines_independent_relations(
+    private_case: Path, kind: str, relation_kind: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf", kind),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf", kind),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+        block("g", 0, [20, 21, 40, 40], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["a", "b", "f", "g"]
+    common.relation(ir, relation_kind, "a", "f", {})
+    common.relation(ir, relation_kind, "b", "g", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "merge"}]}
+    )
+    assert not any(r["type"] == relation_kind for r in result["relations"])
+    assert any(i["type"] == "MERGED_RELATION_REVIEW" for i in result["issues"])
+    assert len(result["provenance"]["merge-collapsed-0"]["before"]) == 2
