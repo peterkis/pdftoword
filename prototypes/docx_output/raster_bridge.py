@@ -114,7 +114,33 @@ def recognize(
                 if provider == "ovis" and primary != "pp" and provider not in responses:
                     break
                 continue
-            url, model = endpoint(provider)
+            try:
+                url, model = endpoint(provider)
+            except DemoError as exc:
+                failure = {
+                    "request_id": uuid.uuid4().hex,
+                    "job_id": job.name,
+                    "page_index": page["page_index"],
+                    "region_id": None,
+                    "provider": provider,
+                    "task_type": "configuration_validation",
+                    "input_sha256": digest(source),
+                    "status": str(exc),
+                    "http_attempted": False,
+                }
+                manifest["requests"].append(failure)
+                save(cache, {"status": str(exc), "input_sha256": digest(source), "response": {}})
+                save(job / "request-manifest.json", manifest)
+                issue(
+                    ir,
+                    str(exc),
+                    "模型端点配置无效，未发送请求；保留其他已完成结果。",
+                    [],
+                    page["page_index"],
+                )
+                if provider == "ovis" and primary != "pp":
+                    break
+                continue
             payload = (
                 {"file": encoded, **PP_PARAMETERS}
                 if provider == "pp"

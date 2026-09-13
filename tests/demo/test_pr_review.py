@@ -1799,3 +1799,51 @@ def test_plain_less_than_is_not_html(private_case: Path, raw: str) -> None:
     )
     assert p["blocks"][0]["content"].get("plain_text") == raw
     assert finish(job, ir)["has_editable_runs"]
+
+
+@pytest.mark.parametrize("provider", ["pp", "monkey"])
+def test_optional_endpoint_error_preserves_primary(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch, provider: str
+) -> None:
+    from typing import Any
+
+    import httpx
+    from prototypes.docx_output.pipeline import convert
+
+    source = raster(private_case)
+    monkeypatch.setenv(provider.upper() + "_BASE_URL", "http://invalid.example:9999")
+    seen = []
+
+    def post(self: httpx.Client, url: str, **kwargs: Any) -> httpx.Response:
+        seen.append(url)
+        return httpx.Response(
+            200,
+            json={
+                "model": "ovis-ocr2",
+                "choices": [{"finish_reason": "stop", "message": {"content": "Main body"}}],
+            },
+        )
+
+    monkeypatch.setattr(httpx.Client, "post", post)
+    job = convert(
+        source,
+        mode="raster",
+        output_root=private_case / "jobs",
+        allow_model_calls=True,
+        confirm_no_auth=True,
+        content_provider="ovis-pp" if provider == "pp" else "ovis",
+        monkey=provider == "monkey",
+    )
+    assert common.read(job / "qa.json")["has_editable_runs"]
+    assert len(seen) == 1
+
+
+@pytest.mark.parametrize("raw", ["<!-- comment", "<!DOCTYPE html", "</img"])
+def test_html_declaration_fragments_fall_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)

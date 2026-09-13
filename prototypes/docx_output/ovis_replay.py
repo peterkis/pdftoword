@@ -53,7 +53,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         except DemoError:
             alternate_formula = True
 
-    unknown_image = bool(re.search(r"<img\b", IMAGE.sub("", content), re.IGNORECASE))
+    unknown_image = bool(re.search(r"</?img\b|<!|<\?", IMAGE.sub("", content), re.IGNORECASE))
     for image_match in IMAGE.finditer(content):
         raw_box = [float(v) for v in image_match.groups()]
         if not box_valid(raw_box) or any(v > 1000 for v in raw_box):
