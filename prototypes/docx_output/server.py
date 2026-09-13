@@ -29,7 +29,7 @@ from .common import (
     save,
     validate_input,
 )
-from .pipeline import convert, export, replay
+from .pipeline import convert, finish, replay
 from .render import render
 from .replay import DEFAULT_RUN
 
@@ -309,15 +309,15 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         try:
             from .review import apply_overrides
 
-            apply_overrides(job, read(job / "layout.auto.json"), data)
+            ir = apply_overrides(job, read(job / "layout.auto.json"), data)
             # Preserve every earlier override ledger before replacing the current revision.
             if (job / "overrides.json").exists():
                 save(
                     job / "review-history" / f"{uuid.uuid4().hex}.json",
                     read(job / "overrides.json"),
                 )
+            finish(job, ir, "reviewed")
             save(job / "overrides.json", data)
-            export(job)
         finally:
             lock.release()
         return {"saved": True, "revision": "reviewed"}

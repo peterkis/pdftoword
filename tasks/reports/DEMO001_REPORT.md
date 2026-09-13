@@ -417,3 +417,7 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 模型/人工文字非法XML字符保留候选并降级源图。预览成功替换后清理旧预览及本轮新建且所有layout均未引用的资产，失败时只清理新建未登记资产，保护auto/reviewed。撤销按ID重新绑定恢复块与编辑控件。
 
 新增4项缺陷回归先失败后通过，完整398 tests passed；随后新增Node实际执行undo处理器1项通过（共399项），ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第三十一轮审核修复（2026-09-13）
+
+保存修订复用一次apply_overrides生成的IR直接finish，不再以export重放同一账本；导出成功后更新当前overrides。新增API保存裁图资产登记回归先失败后通过，全仓400 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

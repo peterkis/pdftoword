@@ -1234,3 +1234,23 @@ def test_undo_refreshes_selected_editor() -> None:
         text=True,
     )
     assert result.stdout.strip() == "restored"
+
+
+def test_save_crop_writes_only_registered_assets(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        result = client.post(
+            "/api/review/" + job.name,
+            json={"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+            headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+        )
+        assert result.status_code == 200
+    paths = {job / a["path"] for a in common.read(job / "layout.reviewed.json")["assets"]}
+    assert set((job / "assets").glob("a-review*.png")) <= paths
