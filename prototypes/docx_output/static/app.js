@@ -77,7 +77,7 @@ async function wait(){
 on('replay',async()=>{await api('/api/replay',{content_provider:$('replay-provider').value});await wait();});on('refresh',refresh);
 $('jobs').onchange=()=>openJob($('jobs').value).catch(message);
 $('pages').onchange=()=>{pageIndex=Number($('pages').value);selected=null;show();};
-$('revision').onchange=()=>{revision=$('revision').value;preview=revision==='reviewed'&&unsavedPreview;if(!data?.[revision]){message('还未保存此版本');return;}layout=data[revision];show();};
+$('revision').onchange=()=>{const next=$('revision').value;if(!data?.[next]){$('revision').value=revision;message('还未保存此版本');return;}revision=next;preview=revision==='reviewed'&&unsavedPreview;layout=data[revision];show();};
 $('zoom').oninput=()=>{$('source-wrap').style.width=$('zoom').value+'%';};
 $('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
 on('edit',()=>operation({action:'text',text:$('text').value}));

@@ -107,6 +107,10 @@ def render(job: Path, revision: str = "auto") -> Json:
                 document.close()
         for asset in attempt.iterdir():
             shutil.copyfile(asset, out / asset.name)
+        current_pages = {f"page-{n}.png" for n in range(1, page_count + 1)}
+        for previous_page in out.glob("page-*.png"):
+            if previous_page.name not in current_pages:
+                previous_page.unlink()
         shutil.rmtree(attempt)
         qa.update(
             render_status="RENDERED",

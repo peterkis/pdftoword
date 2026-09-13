@@ -1391,6 +1391,35 @@ def test_successful_render_removes_attempt(
         return subprocess.CompletedProcess(args, 0, stdout="Synthetic renderer", stderr="")
 
     monkeypatch.setattr(rendering.subprocess, "run", run)
+    old_page = job / "rendered/auto/page-3.png"
+    common.private_dir(old_page.parent)
+    old_page.write_bytes(b"old page")
     assert rendering.render(job)["render_status"] == "RENDERED"
+    assert not old_page.exists()
     assert (job / "rendered/auto/page-1.png").is_file()
     assert not list((job / "rendered/auto").glob("attempt-*"))
+
+
+def test_unavailable_revision_keeps_auto_selected() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    handler = next(
+        line
+        for line in (common.ROOT / "prototypes/docx_output/static/app.js").read_text().splitlines()
+        if line.startswith("$('revision').onchange")
+    )
+    fixture = (
+        "let preview=false,unsavedPreview=false,revision='auto',data={auto:{}},layout;"
+        "const el={value:'reviewed'};function $(){return el;}function message(){}function show(){};"
+    )
+    result = subprocess.run(
+        [node, "-e", fixture + handler + "el.onchange();console.log(revision+' '+el.value);"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "auto auto"
