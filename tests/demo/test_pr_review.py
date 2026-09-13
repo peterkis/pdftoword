@@ -1663,3 +1663,14 @@ def test_image_grid_uses_two_source_rows() -> None:
     boxes = [[10, 10, 40, 40], [50, 10, 80, 40], [10, 60, 40, 90], [50, 60, 80, 90]]
     pairs = [{"figure": str(i), "label": "l" + str(i)} for i in range(4)]
     assert image_grid_columns(pairs, {str(i): {"bbox": box} for i, box in enumerate(boxes)}) == 2
+
+
+def test_truncated_image_tag_uses_source_fallback(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = '<img src="https://evil.test/image.png"'
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
