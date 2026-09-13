@@ -591,7 +591,7 @@ def test_background_image_does_not_suppress_native_text(private_case: Path) -> N
     original = make_pdf(source, background=True)
     job = convert(source, output_root=private_case / "jobs")
     ir = common.read(job / "layout.auto.json")
-    text = "".join(b["content"].get("plain_text", "") for b in ir["pages"][0]["blocks"])
+    text = "".join(b["content_candidates"][0]["text"] for b in ir["pages"][0]["blocks"])
     assert "".join(original.split()) == "".join(text.split())
 
 
@@ -1870,3 +1870,36 @@ def test_delimited_left_operand_not_html(private_case: Path, raw: str) -> None:
     )
     assert p["blocks"][0]["content"].get("plain_text") == raw
     assert finish(job, ir)["has_editable_runs"]
+
+
+def test_move_detaches_swapped_neighbor_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block(i, 0, [1, 1, 20, 20], i, "native_pdf") for i in ["X", "A", "B"]]
+    p["reading_order"] = ["X", "A", "B"]
+    ir["metadata"]["text_groups"] = [{"page_index": 0, "columns": 2, "rows": [["A", "B"]]}]
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "X", "action": "move", "delta": 1, "reason": "move"}]}
+    )
+    assert not result["metadata"]["text_groups"]
+
+
+@pytest.mark.parametrize("raw", ["正文</table", "x</math"])
+def test_adjacent_truncated_closing_tag_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_fullpage_image_retained_when_text_completeness_unknown(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "background.pdf"
+    make_pdf(source, background=True)
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "qa.json")["fallback_area_ratio"] == pytest.approx(1)
+    assert common.read(job / "qa.json")["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"

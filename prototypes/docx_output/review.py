@@ -113,6 +113,17 @@ def _apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
         merged_before: Json | None = None
         if action in {"split", "merge", "move"}:
             affected = {b["id"]}
+            if action == "move":
+                order = p["reading_order"]
+                index = order.index(b["id"])
+                delta = op.get("delta")
+                if delta in (-1, 1) and 0 <= index + delta < len(order):
+                    affected.add(order[index + delta])
+                ir["metadata"]["figure_groups"] = [
+                    g
+                    for g in ir["metadata"].get("figure_groups", [])
+                    if not any(bid in affected for pair in g["pairs"] for bid in pair.values())
+                ]
             if action == "merge":
                 order = p["reading_order"]
                 index = order.index(b["id"])

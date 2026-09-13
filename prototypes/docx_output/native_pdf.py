@@ -209,7 +209,11 @@ def extract(
                                 "index": ci,
                             }
                         )
-                    if invalid_box:
+                    full_background = [
+                        bounds for bounds in image_boxes if area(bounds) / (w * h) >= 0.9
+                    ]
+                    info["background_image_bounds"] = full_background
+                    if invalid_box or full_background:
                         bounds = [0.0, 0.0, w, h]
                         bid = f"p{index}-native-geometry-fallback"
                         b = block(
@@ -218,17 +222,27 @@ def extract(
                             bounds,
                             "".join(source_chars),
                             "native_pdf",
-                            evidence={"reason": "invalid_character_geometry"},
+                            evidence={
+                                "reason": "unverified_background_text_layer"
+                                if full_background
+                                else "invalid_character_geometry"
+                            },
                         )
                         aid = crop(job, ir, p, bounds, bid)
                         b.update(content=image_content(aid), render_policy="preserve_image")
                         p["blocks"].append(b)
                         p["reading_order"] = [bid]
-                        p["routing_decision"] = "NATIVE_GEOMETRY_FALLBACK"
+                        p["routing_decision"] = (
+                            "NATIVE_BACKGROUND_FALLBACK"
+                            if full_background
+                            else "NATIVE_GEOMETRY_FALLBACK"
+                        )
                         issue(
                             ir,
-                            "NATIVE_GEOMETRY_FALLBACK",
-                            "原生字符坐标无效，保留完整字符候选并降级源页，避免静默缺字。",
+                            "NATIVE_BACKGROUND_FALLBACK"
+                            if full_background
+                            else "NATIVE_GEOMETRY_FALLBACK",
+                            "原生坐标或背景文字层完整性不确定，保留完整字符候选并降级源页。",
                             [bid],
                             index,
                         )
