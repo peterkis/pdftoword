@@ -247,11 +247,22 @@ def associate_ovis(ir: Json, p: Json) -> None:
                     p["page_index"],
                 )
     groups = ir["metadata"].setdefault("figure_groups", [])
-    for pairs in option_groups.values():
-        groups.append({"page_index": p["page_index"], "kind": "option_grid", "pairs": pairs})
-    # Preserve only genuine figure rows: adjacent captioned figures with overlapping vertical spans.
-    by_id = {b["id"]: b for b in blocks}
     positions = {b["id"]: index for index, b in enumerate(blocks)}
+    for pairs in option_groups.values():
+        contiguous: list[Json] = []
+        for pair in pairs:
+            if contiguous and positions[pair["label"]] != positions[contiguous[-1]["figure"]] + 1:
+                groups.append(
+                    {"page_index": p["page_index"], "kind": "option_grid", "pairs": contiguous}
+                )
+                contiguous = []
+            contiguous.append(pair)
+        if contiguous:
+            groups.append(
+                {"page_index": p["page_index"], "kind": "option_grid", "pairs": contiguous}
+            )
+    # Captioned figures may share a row only when consecutive in reading order.
+    by_id = {b["id"]: b for b in blocks}
     rows: list[list[Json]] = []
     for pair in shared:
         box = by_id[pair["figure"]]["bbox"]

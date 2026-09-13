@@ -225,3 +225,81 @@ def test_ambiguous_native_vectors_remain_in_output(private_case: Path) -> None:
     ir = common.read(job / "layout.auto.json")
     assert any("ambiguous_vector_reference" in b["flags"] for b in ir["pages"][0]["blocks"])
     assert any(i["type"] == "VECTOR_TEXT_OVERLAP_REVIEW" for i in ir["issues"])
+
+
+def test_option_groups_do_not_cross_body(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import associate_ovis
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "inferred"),
+        block("f1", 0, [1, 20, 20, 40], "", "inferred", "figure"),
+        block("body", 0, [1, 40, 20, 60], "Between", "inferred"),
+        block("b", 0, [30, 1, 50, 20], "B.", "inferred"),
+        block("f2", 0, [30, 20, 50, 40], "", "inferred", "figure"),
+    ]
+    associate_ovis(ir, p)
+    assert [len(g["pairs"]) for g in ir["metadata"]["figure_groups"]] == [1, 1]
+
+
+def test_legacy_pp_rejects_outside_ocr(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    body = response([pp_block("Text")], [{"bbox": [-10, 20, 100, 40], "text": "Text"}])
+    with pytest.raises(common.DemoError, match="PP_REGION_OUT_OF_PAGE"):
+        recover(job, ir, p, {"pp": body}, {"requests": []})
+
+
+def test_manual_crop_rejects_outside_page(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+    p["reading_order"] = ["a"]
+    with pytest.raises(common.DemoError, match="INVALID_CROP"):
+        apply_overrides(
+            job,
+            ir,
+            {
+                "operations": [
+                    {"block_id": "a", "action": "crop", "bbox": [-1, 0, 30, 30], "reason": "crop"}
+                ]
+            },
+        )
+
+
+@pytest.mark.parametrize("outcome", ["success", "worker_failure", "validation_failure"])
+def test_upload_temp_removed(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch, outcome: str
+) -> None:
+    import time
+
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output import server
+
+    upload_root = private_case / "staging"
+    monkeypatch.setattr(server, "PRIVATE", upload_root)
+
+    def work(*args: object, **kwargs: object) -> Path:
+        if outcome == "worker_failure":
+            raise common.DemoError("TEST_FAILURE")
+        return private_case / "done"
+
+    monkeypatch.setattr(server, "convert", work)
+    with TestClient(
+        server.create_app(output_root=private_case / "jobs"), base_url="http://127.0.0.1:8765"
+    ) as client:
+        token = client.get("/api/session").json()["token"]
+        client.post(
+            "/api/upload",
+            files={
+                "file": (
+                    "input.png",
+                    b"" if outcome == "validation_failure" else b"data",
+                    "image/png",
+                )
+            },
+            headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+        )
+        for _ in range(100):
+            if not client.get("/api/status").json()["busy"]:
+                break
+            time.sleep(0.01)
+    assert not list((upload_root / "uploads").glob("*/input.*"))

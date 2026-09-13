@@ -215,7 +215,14 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             if policy not in {"editable", "preserve_image", "review_required"}:
                 raise DemoError("INVALID_RENDER_POLICY")
             bbox = op.get("bbox", b["bbox"])
-            if not isinstance(bbox, list) or not box_valid(bbox):
+            if (
+                not isinstance(bbox, list)
+                or not box_valid(bbox)
+                or not (
+                    0 <= bbox[0] < bbox[2] <= p["width_pt"]
+                    and 0 <= bbox[1] < bbox[3] <= p["height_pt"]
+                )
+            ):
                 raise DemoError("INVALID_CROP")
             if action == "crop" or policy == "preserve_image":
                 aid = crop(job, ir, p, bbox, f"{b['id']}-review{n}")

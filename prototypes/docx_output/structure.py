@@ -91,6 +91,13 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
         {"bbox": transform(f["dt_polys"], sx, sy), "latex": f["rec_formula"]}
         for f in raw.get("formula_res_list", [])
     ]
+    all_boxes = [r["bbox"] for r in [*lines, *formulas]]
+    all_boxes += [transform(r["block_bbox"], sx, sy) for r in raw["parsing_res_list"]]
+    for bbox in all_boxes:
+        if not (
+            0 <= bbox[0] < bbox[2] <= p["width_pt"] and 0 <= bbox[1] < bbox[3] <= p["height_pt"]
+        ):
+            raise DemoError("PP_REGION_OUT_OF_PAGE")
     prefix = f"p{p['page_index']}-"
     figures = [
         transform(b["block_bbox"], sx, sy)

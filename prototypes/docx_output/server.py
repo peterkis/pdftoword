@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+import shutil
 import threading
 import uuid
 from collections.abc import Callable
@@ -188,33 +189,46 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         directory = PRIVATE / "uploads" / uuid.uuid4().hex
         private_dir(directory)
         source = directory / ("input" + suffix)
-        total = 0
         try:
-            with source.open("xb") as output:
-                source.chmod(0o600)
-                while chunk := await file.read(1024 * 1024):
-                    total += len(chunk)
-                    if total > MAX_BYTES:
-                        raise DemoError("INPUT_SIZE_LIMIT")
-                    output.write(chunk)
-        finally:
-            await file.close()
-        validate_input(source)
-        mode, pages = str(form.get("mode", "native")), str(form.get("pages", "")).strip() or None
-        return start(
-            lambda: convert(
-                source,
-                pages,
-                mode,
-                output_root,
-                allow_model_calls=form.get("allow_model_calls") == "true",
-                confirm_no_auth=form.get("confirm_no_auth") == "true",
-                confirm_scan=form.get("confirm_scan") == "true",
-                content_provider=str(form.get("content_provider", "ovis-pp")),
-                ovis=form.get("ovis") == "true",
-                monkey=form.get("monkey") == "true",
+            total = 0
+            try:
+                with source.open("xb") as output:
+                    source.chmod(0o600)
+                    while chunk := await file.read(1024 * 1024):
+                        total += len(chunk)
+                        if total > MAX_BYTES:
+                            raise DemoError("INPUT_SIZE_LIMIT")
+                        output.write(chunk)
+            finally:
+                await file.close()
+            validate_input(source)
+            mode, pages = (
+                str(form.get("mode", "native")),
+                str(form.get("pages", "")).strip() or None,
             )
-        )
+
+            def convert_upload() -> Path:
+                try:
+                    return convert(
+                        source,
+                        pages,
+                        mode,
+                        output_root,
+                        allow_model_calls=form.get("allow_model_calls") == "true",
+                        confirm_no_auth=form.get("confirm_no_auth") == "true",
+                        confirm_scan=form.get("confirm_scan") == "true",
+                        content_provider=str(form.get("content_provider", "ovis-pp")),
+                        ovis=form.get("ovis") == "true",
+                        monkey=form.get("monkey") == "true",
+                    )
+                finally:
+                    shutil.rmtree(directory)
+
+            return start(convert_upload)
+        except BaseException:
+            if directory.exists():
+                shutil.rmtree(directory)
+            raise
 
     @app.get("/api/job/{job_id}")
     def job_data(job_id: str) -> Json:
