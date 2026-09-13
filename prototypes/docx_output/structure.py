@@ -22,7 +22,7 @@ from .common import (
     transform,
     union,
 )
-from .formula import to_omml
+from .formula import to_omml, unrendered_math
 
 QUESTION = re.compile(r"^\s*(\d+)[.．、](?!\d)\s*")
 OPTION = re.compile(r"^\s*([A-D])[.．、]\s*")
@@ -265,7 +265,7 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                         [child["id"]],
                         p["page_index"],
                     )
-            if not matches and ("$" in t or re.search(r"\\[A-Za-z]+", t)):
+            if not matches and unrendered_math(t):
                 aid = crop(job, ir, p, child["bbox"], child["id"] + "-unparsed-formula")
                 child.update(content=image_content(aid), render_policy="preserve_image")
                 child["flags"].append("region_fallback")

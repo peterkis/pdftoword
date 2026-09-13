@@ -125,6 +125,11 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 content=text_content(text), selected_candidate_id=c["id"], render_policy="editable"
             )
             replan_text(job, ir, p, b, text, old, n)
+            ir["metadata"]["figure_groups"] = [
+                g
+                for g in ir["metadata"].get("figure_groups", [])
+                if all(b["id"] not in pair.values() for pair in g["pairs"])
+            ]
         elif action == "split":
             text = b["content"].get("plain_text")
             offset = op.get("offset")

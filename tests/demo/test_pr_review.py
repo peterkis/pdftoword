@@ -681,3 +681,38 @@ def test_crop_label_detaches_inline_group(private_case: Path) -> None:
     )
     assert not result["metadata"]["figure_groups"]
     finish(job, result)
+
+
+def test_legacy_pp_plain_path_remains_text(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    recover(job, ir, p, {"pp": response([pp_block(r"C:\Users\Alice")])}, {})
+    assert p["blocks"][0]["content"]["kind"] == "text"
+    assert finish(job, ir)["fallback_region_count"] == 0
+
+
+def test_editing_inline_label_releases_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A.", "native_pdf"),
+        block("f", 0, [20, 1, 40, 20], "Figure", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "f"]
+    ir["metadata"]["figure_groups"] = [
+        {
+            "page_index": 0,
+            "kind": "option_grid",
+            "inline_labels": True,
+            "pairs": [{"label": "a", "figure": "f"}],
+        }
+    ]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "text", "text": "A. $x^2$", "reason": "formula"}
+            ]
+        },
+    )
+    assert not result["metadata"]["figure_groups"]
+    assert finish(job, result)["omml_formula_count"] == 1
