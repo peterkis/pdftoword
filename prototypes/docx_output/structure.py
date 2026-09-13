@@ -200,6 +200,13 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                     [bid],
                     p["page_index"],
                 )
+        if len(children) > 1:
+            for item in ir["issues"]:
+                item["block_ids"] = [
+                    new_id
+                    for old_id in item["block_ids"]
+                    for new_id in ([c["id"] for c in children] if old_id == bid else [old_id])
+                ]
         for child in children:
             t = child["content"]["plain_text"]
             if QUESTION.match(t):

@@ -52,7 +52,7 @@ function choose(b){
   $('text').value=b.content.plain_text||b.content_candidates.find(c=>c.selected)?.text||'';
   $('bbox').value=b.bbox.map(x=>x.toFixed(2)).join(', ');$('policy').value=b.render_policy==='hybrid'?'review_required':b.render_policy;
   const [x,y,r,bt]=b.bbox;const scroll=$('source-wrap').parentElement;const page=layout.pages.find(p=>p.page_index===pageIndex);scroll.scrollTop=Math.max(0,y/page.height_pt*$('source-wrap').clientHeight-scroll.clientHeight/3);for(const [key,value] of Object.entries({x,y,width:r-x,height:bt-y}))$('region').setAttribute(key,value);
-  $('candidate').replaceChildren();for(const c of b.content_candidates.filter(c=>c.provider==='ovis_ocr2')){const o=document.createElement('option');o.value=c.id;o.textContent=c.text;$('candidate').append(o);}
+  $('candidate').replaceChildren();for(const c of b.content_candidates.filter(c=>c.provider==='ovis_ocr2'&&c.evidence?.review_selectable!==false)){const o=document.createElement('option');o.value=c.id;o.textContent=c.text;$('candidate').append(o);}
   $('target').replaceChildren();for(const p of layout.pages)for(const t of p.blocks.filter(t=>['question','figure','caption'].includes(t.type))){const o=document.createElement('option');o.value=t.id;o.textContent=t.id+' '+(t.content.plain_text||'图域').slice(0,45);$('target').append(o);}
   const original=data.auto.pages.flatMap(p=>p.blocks).find(x=>x.id===b.id);
   $('diff').textContent=JSON.stringify({automatic:original?.content,current:b.content,candidates:b.content_candidates,provenance:b.provenance_refs.map(r=>layout.provenance[r]),relations:layout.relations.filter(r=>r.from===b.id||r.to===b.id)},null,2);

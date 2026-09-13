@@ -21,7 +21,7 @@ from .common import (
     union,
     validate,
 )
-from .formula import to_omml
+from .formula import to_omml, unrendered_math
 from .structure import MATH, image_content
 
 
@@ -104,7 +104,12 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             ]
         if action in {"text", "candidate"}:
             if action == "candidate":
-                choices = [c for c in b["content_candidates"] if c["id"] == op.get("candidate_id")]
+                choices = [
+                    c
+                    for c in b["content_candidates"]
+                    if c["id"] == op.get("candidate_id")
+                    and c["evidence"].get("review_selectable", True)
+                ]
                 if len(choices) != 1 or choices[0]["provider"] != "ovis_ocr2":
                     raise DemoError("CANDIDATE_NOT_FOUND")
                 text = choices[0]["text"]
@@ -143,6 +148,11 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 raise DemoError("SPLIT_INSIDE_FORMULA")
             old_parts = ir["metadata"].get("inline_parts", {}).get(b["id"])
             b["content"] = text_content(text[:offset])
+            for prior in b["content_candidates"]:
+                prior["evidence"]["review_selectable"] = False
+                prior["evidence"]["selection_blocked_reason"] = (
+                    "parent_candidate_exceeds_split_scope"
+                )
             c = block(
                 b["id"] + f"-manual{n}",
                 p["page_index"],
@@ -384,7 +394,7 @@ def replan_text(job: Path, ir: Json, p: Json, b: Json, text: str, old: Json, n: 
     """
     mapping = ir["metadata"].setdefault("inline_parts", {})
     previous = mapping.pop(b["id"], [])
-    if "$" not in text and not re.search(r"\\[A-Za-z]+", text):
+    if not unrendered_math(text):
         return
     matches = list(MATH.finditer(text))
     result: list[Json] = []

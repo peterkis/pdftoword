@@ -747,3 +747,54 @@ def test_pp_overlap_retains_text(private_case: Path) -> None:
     recover(job, ir, p, {"pp": pp}, {})
     assert any(b["content"].get("plain_text") == "Keep editable" for b in p["blocks"])
     assert any(i["type"] == "IMAGE_TEXT_OVERLAP_REVIEW" for i in ir["issues"])
+
+
+def test_split_overlap_issue_targets_children(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    pp = response(
+        [
+            pp_block("", label="image", bbox=[1, 1, 399, 599]),
+            pp_block("First3. Next", bbox=[20, 20, 300, 80]),
+        ],
+        [
+            {"text": "First", "bbox": [20, 20, 300, 40]},
+            {"text": "3. Next", "bbox": [20, 60, 200, 80]},
+        ],
+    )
+    recover(job, ir, p, {"pp": pp}, {})
+    ids = {b["id"] for b in p["blocks"]}
+    assert all(set(i["block_ids"]) <= ids for i in ir["issues"])
+
+
+def test_manual_plain_path_stays_editable(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Original", "native_pdf")]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {
+            "operations": [
+                {"block_id": "a", "action": "text", "text": r"C:\Users\Alice", "reason": "edit"}
+            ]
+        },
+    )
+    assert result["pages"][0]["blocks"][0]["content"]["plain_text"] == r"C:\Users\Alice"
+
+
+def test_split_rejects_parent_ovis_candidate(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    b = block("a", 0, [1, 1, 20, 20], "First Second", "ovis_ocr2")
+    p["blocks"] = [b]
+    p["reading_order"] = ["a"]
+    operations = [
+        {"block_id": "a", "action": "split", "offset": 6, "reason": "split"},
+        {
+            "block_id": "a",
+            "action": "candidate",
+            "candidate_id": b["selected_candidate_id"],
+            "reason": "accept",
+        },
+    ]
+    with pytest.raises(common.DemoError, match="CANDIDATE_NOT_FOUND"):
+        apply_overrides(job, ir, {"operations": operations})
