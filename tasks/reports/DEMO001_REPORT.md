@@ -421,3 +421,9 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 ## PR #3 第三十一轮审核修复（2026-09-13）
 
 保存修订复用一次apply_overrides生成的IR直接finish，不再以export重放同一账本；导出成功后更新当前overrides。新增API保存裁图资产登记回归先失败后通过，全仓400 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第三十二轮审核修复（2026-09-13）
+
+Ovis预检美元公式是否可转换，不支持时生成源页图片与审校项并继续finish；原拒绝用例调整为实际降级导出验证。成功保存新reviewed后清理旧reviewed资产中所有layout都未引用的文件。
+
+新增3项回归先失败后通过，全仓403 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

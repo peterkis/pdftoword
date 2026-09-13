@@ -48,8 +48,12 @@ def test_ovis_rejects_unknown_geometry_or_syntax(private_case: Path, content: st
 
     job, ir, p = setup_ir(private_case)
     body = {"choices": [{"finish_reason": "stop", "message": {"content": content}}]}
-    with pytest.raises(DemoError):
+    if "unsupported" in content:
         recover_ovis(job, ir, p, body, "ovis-request")
+        assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+    else:
+        with pytest.raises(DemoError):
+            recover_ovis(job, ir, p, body, "ovis-request")
 
 
 def test_ovis_import_does_not_open_other_provider_evidence(

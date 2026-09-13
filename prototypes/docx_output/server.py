@@ -309,6 +309,12 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         try:
             from .review import apply_overrides
 
+            previous = (
+                read(job / "layout.reviewed.json")
+                if (job / "layout.reviewed.json").exists()
+                else {}
+            )
+            old_assets = {job / a["path"] for a in previous.get("assets", [])}
             ir = apply_overrides(job, read(job / "layout.auto.json"), data)
             # Preserve every earlier override ledger before replacing the current revision.
             if (job / "overrides.json").exists():
@@ -318,6 +324,7 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                 )
             finish(job, ir, "reviewed")
             save(job / "overrides.json", data)
+            prune_preview_assets(job, old_assets)
         finally:
             lock.release()
         return {"saved": True, "revision": "reviewed"}

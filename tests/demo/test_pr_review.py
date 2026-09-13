@@ -1254,3 +1254,34 @@ def test_save_crop_writes_only_registered_assets(private_case: Path) -> None:
         assert result.status_code == 200
     paths = {job / a["path"] for a in common.read(job / "layout.reviewed.json")["assets"]}
     assert set((job / "assets").glob("a-review*.png")) <= paths
+
+
+@pytest.mark.parametrize("raw", [r"$\sum_{i=1}^n i$", r"$\int_0^1 x dx$"])
+def test_unsupported_ovis_formula_is_reviewable(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_repeated_save_removes_unregistered_crops(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        for _ in range(2):
+            result = client.post(
+                "/api/review/" + job.name,
+                json={"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+                headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+            )
+            assert result.status_code == 200
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1

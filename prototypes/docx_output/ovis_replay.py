@@ -42,6 +42,13 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
     plain_context = MATH.sub("", IMAGE.sub("", content))
     alternate_formula = any(marker in content for marker in (r"\(", r"\)", r"\[", r"\]"))
     invalid_xml = invalid_xml_text(content)
+    if not invalid_xml:
+        try:
+            for math_match in MATH.finditer(content):
+                to_omml(math_match[1])
+        except DemoError:
+            alternate_formula = True
+
     if (
         invalid_xml
         or alternate_formula
