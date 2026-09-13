@@ -1936,3 +1936,30 @@ def test_punctuation_before_truncated_tag_falls_back(private_case: Path, raw: st
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("raw", ["$x$<y", "$a$<beta"])
+def test_math_left_operand_keeps_comparison_editable(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_caption_body_merge_reclassifies_scope(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("c", 0, [1, 1, 20, 20], "Caption", "native_pdf", "caption"),
+        block("b", 0, [1, 21, 20, 40], "Main body", "native_pdf"),
+        block("f", 0, [20, 1, 40, 20], "", "inferred", "figure"),
+    ]
+    p["reading_order"] = ["c", "b", "f"]
+    common.relation(ir, "caption_of", "c", "f", {})
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "c", "action": "merge", "reason": "merge"}]}
+    )
+    assert result["pages"][0]["blocks"][0]["type"] == "paragraph"
+    assert not any(r["type"] == "caption_of" for r in result["relations"])

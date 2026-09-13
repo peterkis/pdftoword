@@ -276,6 +276,9 @@ def _apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             if any(x["content"]["kind"] != "text" for x in (b, other)):
                 raise DemoError("MERGE_REQUIRES_PLAIN_TEXT")
             merged_before = copy.deepcopy(other)
+            mixed_scope = b["type"] != other["type"]
+            if mixed_scope:
+                b["type"] = "paragraph"
             b["content_candidates"].extend(copy.deepcopy(other["content_candidates"]))
             b["provenance_refs"] = list(
                 dict.fromkeys([*b["provenance_refs"], *other["provenance_refs"]])
@@ -316,6 +319,7 @@ def _apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 if b["id"] in (r["from"], r["to"])
                 and (
                     r["from"] == r["to"]
+                    or (mixed_scope and r["type"] in {"caption_of", "label_of"})
                     or (
                         r["type"] in {"references", "caption_of", "label_of"}
                         and not valid_relation(r["type"], by_id[r["from"]], by_id[r["to"]])
@@ -330,7 +334,7 @@ def _apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 issue(
                     ir,
                     "MERGED_RELATION_REVIEW",
-                    "合并后关系折叠或端点类型不适用，原关系已记录待复核。",
+                    "合并后关系折叠、作用范围改变或端点类型不适用，原关系已记录待复核。",
                     [b["id"]],
                     p["page_index"],
                 )
