@@ -27,7 +27,9 @@ from .formula import to_omml, unrendered_math
 QUESTION = re.compile(r"^\s*(\d+)[.．、](?!\d)\s*")
 OPTION = re.compile(r"^\s*([A-D])[.．、]\s*")
 CAPTION = re.compile(r"^\s*第\s*(\d+)\s*题\s*$")
-MATH = re.compile(r"(?<!\$)(?=\$\$[^$]+\$\$(?!\$)|\$[^$]+\$(?!\$))\$\$?([^$]+)\$\$?(?!\$)")
+MATH = re.compile(
+    r"(?<!\$)(?!\$\d[^$]*\$\d)(?=\$\$[^$]+\$\$(?!\$)|\$[^$]+\$(?!\$))\$\$?([^$]+)\$\$?(?!\$)"
+)
 
 
 def chat_content(body: Json) -> str:
@@ -137,8 +139,13 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
             p["blocks"].append(b)
             continue
         if any(intersection(bbox, f) / area(bbox) > 0.85 for f in figures):
-            ir["provenance"][bid]["suppressed_reason"] = "figure_internal_text"
-            continue
+            issue(
+                ir,
+                "IMAGE_TEXT_OVERLAP_REVIEW",
+                "正文与图片相交，不能仅凭包含关系认定图内文字；保留正文待复核。",
+                [bid],
+                p["page_index"],
+            )
         if label in {"doc_title", "paragraph_title"}:
             b["type"] = "heading"
         elif label in {"number", "footer"}:

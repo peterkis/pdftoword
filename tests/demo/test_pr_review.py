@@ -716,3 +716,34 @@ def test_editing_inline_label_releases_group(private_case: Path) -> None:
     )
     assert not result["metadata"]["figure_groups"]
     assert finish(job, result)["omml_formula_count"] == 1
+
+
+def test_currency_pair_is_not_silently_math(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "Price $5 and $4"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert not ir["metadata"].get("inline_parts")
+    with pytest.raises(common.DemoError):
+        finish(job, ir)
+
+
+def test_pdf_manifest_records_actual_page_count(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "two.pdf"
+    make_pdf(source, pages=2)
+    job = convert(source, output_root=private_case / "jobs")
+    assert common.read(job / "input-manifest.json")["page_count"] == 2
+
+
+def test_pp_overlap_retains_text(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    pp = response([pp_block("", label="image", bbox=[1, 1, 399, 599]), pp_block("Keep editable")])
+    recover(job, ir, p, {"pp": pp}, {})
+    assert any(b["content"].get("plain_text") == "Keep editable" for b in p["blocks"])
+    assert any(i["type"] == "IMAGE_TEXT_OVERLAP_REVIEW" for i in ir["issues"])

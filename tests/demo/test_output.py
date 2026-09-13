@@ -232,7 +232,8 @@ def test_formula_fallback_no_duplicate_and_fig_internal_text(private_case: Path)
     with zipfile.ZipFile(job / "auto.docx") as z:
         root = etree.fromstring(z.read("word/document.xml"))
         text = "".join(root.itertext())
-        assert "inside secret" not in text and "\\frac" not in text
+        assert "inside secret" in text and "\\frac" not in text
+        assert any(i["type"] == "IMAGE_TEXT_OVERLAP_REVIEW" for i in ir["issues"])
         assert "value" in text
     qa = read(job / "qa.json")
     assert qa["formula_image_count"] == 1 and qa["placed_figure_count"] == 1

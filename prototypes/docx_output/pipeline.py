@@ -241,10 +241,6 @@ def convert(
         "confirm_scan": confirm_scan,
     }
     save(job / "request-manifest.json", manifest)
-    save(
-        job / "input-manifest.json",
-        {**ir["source"], "mode": mode, "synthetic": synthetic, "pages_1based": selection},
-    )
     target = job / ("input" + source.suffix.lower())
     shutil.copyfile(source, target)
     target.chmod(0o600)
@@ -258,6 +254,10 @@ def convert(
             if selection not in {None, "1"}:
                 raise DemoError("IMAGE_HAS_ONE_PAGE")
             source_image(job, ir, target)
+        save(
+            job / "input-manifest.json",
+            {**ir["source"], "mode": mode, "synthetic": synthetic, "pages_1based": selection},
+        )
         if mode == "raster":
             from .raster_bridge import recognize
 
