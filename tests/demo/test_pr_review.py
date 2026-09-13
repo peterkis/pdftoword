@@ -1285,3 +1285,19 @@ def test_repeated_save_removes_unregistered_crops(private_case: Path) -> None:
             )
             assert result.status_code == 200
     assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_cli_reexport_prunes_replaced_crops(private_case: Path) -> None:
+    from prototypes.docx_output.pipeline import export
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    common.save(
+        job / "overrides.json",
+        {"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+    )
+    export(job)
+    export(job)
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1

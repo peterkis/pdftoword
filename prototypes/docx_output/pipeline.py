@@ -15,6 +15,7 @@ from .common import (
     layout,
     new_job,
     page,
+    prune_preview_assets,
     read,
     save,
     secure_tree,
@@ -197,8 +198,11 @@ def export(job: Path, revision: str = "reviewed") -> Path:
         raise DemoError("AUTO_IMMUTABLE")
     from .review import apply_overrides
 
+    previous = read(job / "layout.reviewed.json") if (job / "layout.reviewed.json").exists() else {}
+    old_assets = {job / a["path"] for a in previous.get("assets", [])}
     ir = apply_overrides(job, read(job / "layout.auto.json"), read(job / "overrides.json"))
     finish(job, ir, revision)
+    prune_preview_assets(job, old_assets)
     return job / "reviewed.docx"
 
 

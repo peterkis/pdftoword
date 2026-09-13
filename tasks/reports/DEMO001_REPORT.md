@@ -427,3 +427,7 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 Ovis预检美元公式是否可转换，不支持时生成源页图片与审校项并继续finish；原拒绝用例调整为实际降级导出验证。成功保存新reviewed后清理旧reviewed资产中所有layout都未引用的文件。
 
 新增3项回归先失败后通过，全仓403 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第三十三轮审核修复（2026-09-13）
+
+CLI export在成功替换reviewed后，同样清理旧资产中所有持久化layout均未引用的裁图。新增重复CLI导出回归先失败后通过，全仓404 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
