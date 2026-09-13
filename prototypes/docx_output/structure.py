@@ -241,7 +241,7 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                 last = 0
                 available = list(formulas)
                 reliable = not unrendered_math(MATH.sub("", t))
-                for mi, match in enumerate(matches):
+                for mi, match in enumerate(matches if reliable else []):
                     compatible = [
                         f
                         for f in available
