@@ -199,6 +199,13 @@ class MathSpans:
         masked = list(text)
         for amount in self.currency.finditer(text):
             position = text.index("$", amount.start(), amount.end())
+            paired = self.pattern.match(text, position)
+            if (
+                paired
+                and re.search(r"[+*/^_=<>-]", paired[1])
+                and (paired.end() == len(text) or not text[paired.end()].isalnum())
+            ):
+                continue
             masked[position] = "\x00"
         return self.pattern.finditer("".join(masked))
 

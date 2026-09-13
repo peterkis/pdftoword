@@ -1500,3 +1500,23 @@ def test_currency_units_and_ranges_remain_text(private_case: Path, raw: str) -> 
     )
     assert p["blocks"][0]["content"].get("plain_text") == raw
     assert finish(job, ir)["has_editable_runs"]
+
+
+@pytest.mark.parametrize("raw", ["$5/x$", "$5-10$"])
+def test_numeric_formula_not_masked_as_currency(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_residual_pp_skips_formula_crop(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    pp = response(
+        [pp_block("$x$ and $y")], formulas=[{"rec_formula": "x", "dt_polys": [20, 20, 40, 40]}]
+    )
+    recover(job, ir, p, {"pp": pp}, {})
+    assert not any(a["type"] == "formula_image" for a in ir["assets"])
