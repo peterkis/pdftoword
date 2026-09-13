@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import re
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -160,6 +161,7 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                 if pos > 0 and text.count(needle) == 1:
                     boundaries.append((pos, line))
         if len(boundaries) == 1:
+            ir["provenance"][bid]["original_block"] = copy.deepcopy(b)
             pos, start = boundaries[0]
             for n, part in enumerate((text[:pos].strip(), text[pos:].strip())):
                 chosen = [
@@ -173,7 +175,11 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                     union(chosen) if chosen else bbox,
                     part,
                     "pp_structure",
-                    evidence={"parent_id": bid, "reason": "exact_suffix_at_OCR_line_start"},
+                    evidence={
+                        "parent_id": bid,
+                        "reason": "exact_suffix_at_OCR_line_start",
+                        "supersedes": b["selected_candidate_id"],
+                    },
                 )
                 ir["provenance"][child["id"]] = {"parent_id": bid, "reason": "OCR_line_boundary"}
                 children.append(child)

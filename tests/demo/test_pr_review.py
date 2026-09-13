@@ -411,3 +411,21 @@ def test_legacy_caption_groups_split_vertical_rows(private_case: Path) -> None:
     ]
     associate(ir, p)
     assert [len(g["pairs"]) for g in ir["metadata"]["figure_groups"]] == [1, 1]
+
+
+def test_auto_pp_split_retains_parent_candidate(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    text = "First text3. Next question"
+    pp = response(
+        [pp_block(text, bbox=[20, 20, 300, 80])],
+        [
+            {"text": "First text", "bbox": [20, 20, 300, 40]},
+            {"text": "3. Next question", "bbox": [20, 60, 200, 80]},
+        ],
+    )
+    recover(job, ir, p, {"pp": pp}, {})
+    assert len(p["blocks"]) == 2
+    for b in p["blocks"]:
+        selected = next(c for c in b["content_candidates"] if c["selected"])
+        assert selected["evidence"]["supersedes"] == "p0-b0-c0"
+        assert ir["provenance"]["p0-b0"]["original_block"]["content_candidates"][0]["text"] == text
