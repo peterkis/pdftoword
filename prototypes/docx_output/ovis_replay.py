@@ -60,7 +60,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
             unknown_image = True
     truncated_html = bool(
         re.search(
-            r"</?(?:sup|sub)(?=\s|/|>|$)|(?<!\w)</?[A-Za-z][A-Za-z0-9:_-]*(?=\s|/|>|$)",
+            r"</?(?:sup|sub)(?=\s|/|>|$)|(?<!\S)</?[A-Za-z][A-Za-z0-9:_-]*(?=\s|/|>|$)",
             plain_context,
             re.IGNORECASE,
         )
@@ -75,7 +75,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         or invalid_xml
         or alternate_formula
         or re.search(
-            r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_]+[*_](?!\w)",
+            r"(?m)^\s*(?:[-+*]\s|>|~~~|```|\|?\s*:?-{3,})|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_]+[*_](?!\w)",
             plain_context,
         )
     ):
