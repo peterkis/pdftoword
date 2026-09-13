@@ -80,3 +80,56 @@ def test_optional_monkey_failure_preserves_pp(private_case: Path, content: str) 
     assert any(i["type"] == "MONKEY_CANDIDATE_REJECTED" for i in ir["issues"])
     qa = finish(job, ir)
     assert qa["execution_status"] == "COMPLETE"
+
+
+@pytest.mark.parametrize("mode", ["ovis", "ovis-pp"])
+@pytest.mark.parametrize("valid", [False, True])
+def test_ovis_modes_keep_monkey_candidate(private_case: Path, mode: str, valid: bool) -> None:
+    from prototypes.docx_output.pipeline import reconstruct
+
+    job, ir, p = setup_ir(private_case)
+    content = "[{'label':'text','bbox':[10,20,300,40]}]" if valid else "bad"
+    responses = {
+        "ovis": {"choices": [{"finish_reason": "stop", "message": {"content": "Preserved"}}]},
+        "monkey": {"choices": [{"finish_reason": "stop", "message": {"content": content}}]},
+    }
+    reconstruct(job, ir, p, responses, {"requests": []}, mode)
+    if valid:
+        assert ir["provenance"]["monkey_geometry"]["0"][0]["raw_bbox"] == [10, 20, 300, 40]
+    else:
+        assert any(i["type"] == "MONKEY_CANDIDATE_REJECTED" for i in ir["issues"])
+    assert p["blocks"][0]["content"]["plain_text"] == "Preserved"
+
+
+def test_merge_marks_composed_geometry(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 30, 20], "First", "pp_structure"),
+        block("b", 0, [1, 21, 30, 40], "Second", "inferred"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    revised = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "join"}]}
+    )
+    assert revised["pages"][0]["blocks"][0]["geometry_source"] == "manual_correction"
+    event = revised["provenance"]["manual-0"]
+    assert event["before"]["geometry_source"] == "pp_structure"
+    assert event["merged_before"]["geometry_source"] == "inferred"
+
+
+def test_footer_join_keeps_both_candidates(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "第\n\n1页"}}]},
+        "ovis",
+    )
+    footer = p["blocks"][0]
+    originals = {c["text"]: c["id"] for c in footer["content_candidates"]}
+    assert set(originals) == {"第", "1页", "第1页"}
+    selected = next(c for c in footer["content_candidates"] if c["selected"])
+    assert set(selected["evidence"]["supersedes"]) == {originals["第"], originals["1页"]}

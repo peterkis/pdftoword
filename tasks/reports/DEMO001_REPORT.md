@@ -249,3 +249,9 @@ Replay 与 demo Raster live 现共用 reconstruct，默认 Ovis 内容→PP 几�
 Codex 对 7e8abff 提出三项意见，均已通过先失败后通过的回归用例修复：Windows 输入路径使用 relative_to(anchor) 保留盘符/UNC 语义；段落合并保留两侧内容候选、来源引用及第二块完整快照，人工候选 supersedes 指向两侧原选择；可选 Monkey 解析/几何失败转为 MONKEY_CANDIDATE_REJECTED 审校项，保留 PP 主输出且不重试。
 
 新增 7 项回归，全仓 286 tests passed，ruff、mypy（49 source files）和 diff 检查通过。Windows 验证为本机模拟 PureWindowsPath 的盘符及 UNC 锚点语义，不声明真实 Windows 应用验收。没有新增模型调用或改写历史证据，等待最新提交的 Codex 复审。
+
+## PR #3 第二轮审核修复（2026-09-13）
+
+复审补充了默认 Ovis 模式可选 Monkey 候选遗漏、人工合并几何来源及自动页码合并候选谱系问题。现各内容路径共用 recover_monkey，合法候选可供 UI 展示、非法候选只记录审校项；人工合并后的 bbox 标为 manual_correction，双方原几何保存在审计快照；Ovis 页码合并保留双方候选并显式 supersedes 双方选择。
+
+新增 6 项用例先失败后通过，全仓 292 tests passed，ruff、mypy（49 files）及 diff 检查通过。无新增模型调用，继续等待最新提交的外部复审。

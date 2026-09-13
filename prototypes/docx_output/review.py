@@ -183,6 +183,7 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 b["content"]["plain_text"] + "\n" + other["content"]["plain_text"]
             )
             b["bbox"] = union([b["bbox"], other["bbox"]])
+            b["geometry_source"] = "manual_correction"
             p["blocks"].remove(other)
             order.remove(other["id"])
             ir["relations"] = [

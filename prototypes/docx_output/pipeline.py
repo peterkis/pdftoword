@@ -22,7 +22,7 @@ from .common import (
     validate_input,
 )
 from .replay import DEFAULT_RUN, load
-from .structure import recover
+from .structure import recover, recover_monkey
 from .writer import build
 
 
@@ -142,6 +142,7 @@ def reconstruct(
     recover_ovis(job, ir, p, responses["ovis"], request_id("ovis"))
     if content_provider == "ovis-pp":
         apply_pp_layout(job, ir, p, responses.get("pp", {}), request_id("pp"))
+    recover_monkey(ir, p, responses)
 
 
 def replay(

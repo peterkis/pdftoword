@@ -151,6 +151,8 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         ):
             previous = compact[-1]
             text = previous["content"]["plain_text"] + b["content"]["plain_text"]
+            supersedes = [previous["selected_candidate_id"], b["selected_candidate_id"]]
+            previous["content_candidates"].extend(b["content_candidates"])
             for old in previous["content_candidates"]:
                 old["selected"] = False
             selected = candidate(
@@ -160,6 +162,7 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
                 {
                     "request_id": request_id,
                     "source_blocks": [previous["id"], b["id"]],
+                    "supersedes": supersedes,
                     "reason": "adjacent_page_number_phrase_whitespace_join",
                 },
             )

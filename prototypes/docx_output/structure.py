@@ -262,52 +262,7 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                     p["page_index"],
                 )
             p["blocks"].append(child)
-    if "monkey" in responses:
-        try:
-            try:
-                monkey: Any = ast.literal_eval(chat_content(responses["monkey"]))
-            except (ValueError, SyntaxError) as exc:
-                raise DemoError("MONKEY_PARSE_FAILED") from exc
-            if not isinstance(monkey, list):
-                raise DemoError("INVALID_CANDIDATE_WIRE_TYPE")
-            alternatives = []
-            for m in monkey:
-                if (
-                    not isinstance(m, dict)
-                    or not isinstance(m.get("label"), str)
-                    or not isinstance(m.get("bbox"), list)
-                    or any(
-                        not isinstance(v, int | float) or isinstance(v, bool) or not 0 <= v <= 1000
-                        for v in m["bbox"]
-                    )
-                ):
-                    raise DemoError("MONKEY_INVALID_GEOMETRY")
-                alternatives.append(
-                    {
-                        "label": m["label"],
-                        "raw_bbox": m["bbox"],
-                        "raw_unit": "normalized_1000",
-                        "bbox_pt": transform(
-                            m["bbox"], p["width_pt"] / 1000, p["height_pt"] / 1000
-                        ),
-                    }
-                )
-            ir["provenance"].setdefault("monkey_geometry", {})[str(p["page_index"])] = alternatives
-            issue(
-                ir,
-                "GEOMETRY_ALTERNATIVES",
-                "Monkey几何仅作为可见候选，未覆盖PP。",
-                [],
-                p["page_index"],
-            )
-        except (ValueError, SyntaxError, TypeError, KeyError, AttributeError, RecursionError):
-            issue(
-                ir,
-                "MONKEY_CANDIDATE_REJECTED",
-                "可选Monkey几何无法解析或校验，保留PP主结果；不自动重试。",
-                [],
-                p["page_index"],
-            )
+    recover_monkey(ir, p, responses)
     if "ovis" in responses:
         content = chat_content(responses["ovis"])
         ir["provenance"].setdefault("ovis_content", {})[str(p["page_index"])] = content
@@ -438,3 +393,53 @@ def associate(ir: Json, p: Json) -> None:
                 p["page_index"],
             )
     p["reading_order"] = [b["id"] for b in blocks]
+
+
+def recover_monkey(ir: Json, p: Json, responses: Json) -> None:
+    """Normalize optional geometry consistently without replacing primary content."""
+    if "monkey" in responses:
+        try:
+            try:
+                monkey: Any = ast.literal_eval(chat_content(responses["monkey"]))
+            except (ValueError, SyntaxError) as exc:
+                raise DemoError("MONKEY_PARSE_FAILED") from exc
+            if not isinstance(monkey, list):
+                raise DemoError("INVALID_CANDIDATE_WIRE_TYPE")
+            alternatives = []
+            for m in monkey:
+                if (
+                    not isinstance(m, dict)
+                    or not isinstance(m.get("label"), str)
+                    or not isinstance(m.get("bbox"), list)
+                    or any(
+                        not isinstance(v, int | float) or isinstance(v, bool) or not 0 <= v <= 1000
+                        for v in m["bbox"]
+                    )
+                ):
+                    raise DemoError("MONKEY_INVALID_GEOMETRY")
+                alternatives.append(
+                    {
+                        "label": m["label"],
+                        "raw_bbox": m["bbox"],
+                        "raw_unit": "normalized_1000",
+                        "bbox_pt": transform(
+                            m["bbox"], p["width_pt"] / 1000, p["height_pt"] / 1000
+                        ),
+                    }
+                )
+            ir["provenance"].setdefault("monkey_geometry", {})[str(p["page_index"])] = alternatives
+            issue(
+                ir,
+                "GEOMETRY_ALTERNATIVES",
+                "Monkey几何仅作为可见候选，未覆盖主结果。",
+                [],
+                p["page_index"],
+            )
+        except (ValueError, SyntaxError, TypeError, KeyError, AttributeError, RecursionError):
+            issue(
+                ir,
+                "MONKEY_CANDIDATE_REJECTED",
+                "可选Monkey几何无法解析或校验，保留主结果；不自动重试。",
+                [],
+                p["page_index"],
+            )
