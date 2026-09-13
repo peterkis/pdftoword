@@ -828,20 +828,26 @@ def test_issue_resolution_can_empty_queue(private_case: Path, page_level: bool) 
     assert result["provenance"]["manual-0"]["operation"] == op
 
 
-@pytest.mark.parametrize("raw", ["**1. Question**", "- Choice", "| A | B |\n|---|---|"])
+@pytest.mark.parametrize(
+    "raw", ["**1. Question**", "- Choice", "| A | B |\n|---|---|", "*1. Question*", "_A. Choice_"]
+)
 def test_unsupported_markdown_requires_review(private_case: Path, raw: str) -> None:
     from prototypes.docx_output.ovis_replay import recover_ovis
 
     job, ir, p = setup_ir(private_case)
-    with pytest.raises(common.DemoError, match="OVIS_MARKDOWN_REVIEW_REQUIRED"):
-        recover_ovis(
-            job,
-            ir,
-            p,
-            {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]},
-            "ovis",
-        )
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]},
+        "ovis",
+    )
     assert ir["provenance"]["ovis_content"]["0"] == raw
+
+    qa = finish(job, ir)
+    assert (job / "auto.docx").exists()
+    assert qa["fallback_area_ratio"] == pytest.approx(1)
+    assert any(i["type"] == "OVIS_MARKDOWN_REVIEW_REQUIRED" for i in ir["issues"])
 
 
 def test_crop_invalidates_text_caption_relation(private_case: Path) -> None:
@@ -867,3 +873,20 @@ def test_resolved_issue_not_listed_as_pending(private_case: Path) -> None:
     ir["issues"][0]["status"] = "resolved"
     write_preview(job, ir, "reviewed")
     assert "UNIQUE_RESOLVED" not in (job / "review" / "reviewed.html").read_text()
+
+
+@pytest.mark.parametrize(
+    "text,offset,kind", [("1. First 2. Next", 9, "question"), ("C. First D. Next", 9, "option")]
+)
+def test_manual_split_classifies_right(
+    private_case: Path, text: str, offset: int, kind: str
+) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], text, "native_pdf")]
+    p["reading_order"] = ["a"]
+    result = apply_overrides(
+        job,
+        ir,
+        {"operations": [{"block_id": "a", "action": "split", "offset": offset, "reason": "split"}]},
+    )
+    assert result["pages"][0]["blocks"][1]["type"] == kind

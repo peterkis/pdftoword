@@ -359,3 +359,9 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 有限Ovis入口对未支持的Markdown强调/列表/表格等结构创建OVIS_MARKDOWN_REVIEW_REQUIRED并保留响应，不将标记作为正文输出；现有标题和公式处理保留。各人工内容操作结束后统一校验受影响语义关系，失效关系保留证据并审校。离线待复核列表仅包含open项。
 
 新增5项回归先失败后通过，全仓359 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。尚未新增通用Markdown表格/富文本转换能力。
+
+## PR #3 第二十一轮审核修复（2026-09-13）
+
+不支持Markdown改为源页图片降级并继续finish，生成可打开DOCX、issues和审阅页；保留原始响应且QA明确不可编辑/整页降级。增加单星号/下划线强调检测。人工拆分右侧按明确题号、选项和图题重新分类。
+
+更新3项原拒绝测试为实际降级导出验证，新增4项（强调2、拆分2），7项均先失败后通过；全仓363 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

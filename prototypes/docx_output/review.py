@@ -22,7 +22,7 @@ from .common import (
     validate,
 )
 from .formula import to_omml, unrendered_math
-from .structure import MATH, image_content
+from .structure import CAPTION, MATH, OPTION, QUESTION, image_content
 
 
 def write_preview(job: Path, ir: Json, revision: str) -> None:
@@ -178,6 +178,13 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
                 b["bbox"],
                 text[offset:],
                 "manual_correction",
+                "question"
+                if QUESTION.match(text[offset:])
+                else "option"
+                if OPTION.match(text[offset:])
+                else "caption"
+                if CAPTION.match(text[offset:])
+                else "paragraph",
                 evidence={
                     "parent": b["id"],
                     "reason": op["reason"],

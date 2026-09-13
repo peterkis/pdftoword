@@ -29,6 +29,34 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         "text_bbox": "unknown; full-page source reference only",
     }
     page_box = [0.0, 0.0, p["width_pt"], p["height_pt"]]
+    plain_context = MATH.sub("", IMAGE.sub("", content))
+    if re.search(
+        r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_\n]+[*_](?!\w)",
+        plain_context,
+    ):
+        bid = f"p{p['page_index']}-markdown-fallback"
+        aid = crop(job, ir, p, page_box, bid)
+        b = block(
+            bid,
+            p["page_index"],
+            page_box,
+            "",
+            "inferred",
+            evidence={"request_id": request_id, "reason": "unsupported_markdown_source_page"},
+        )
+        b.update(content=image_content(aid), render_policy="preserve_image")
+        b["flags"].append("full_page_markdown_fallback")
+        p["blocks"].append(b)
+        p["reading_order"] = [b["id"] for b in p["blocks"]]
+        p["routing_decision"] = "OVIS_MARKDOWN_SOURCE_FALLBACK"
+        issue(
+            ir,
+            "OVIS_MARKDOWN_REVIEW_REQUIRED",
+            "不支持的Markdown结构已降级为源页图片，原响应保留；待人工转写或确认。",
+            [bid],
+            p["page_index"],
+        )
+        return
     for token in re.split(r"(<img\b[^>]*>)", content):
         if not token.strip():
             continue
@@ -62,16 +90,6 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
             continue
         if re.search(r"<[A-Za-z!/][^>]*>", token):
             raise DemoError("OVIS_UNSUPPORTED_HTML_REGION")
-        plain_context = MATH.sub("", token)
-        if re.search(r"(?m)^\s*(?:[-+*]\s|\||>|~~~|```)|\*\*|__|~~|`|\[[^\]]+\]\(", plain_context):
-            issue(
-                ir,
-                "OVIS_MARKDOWN_REVIEW_REQUIRED",
-                "当前入口不支持此Markdown结构，保留原响应待审校，不把标记写入正文。",
-                [],
-                p["page_index"],
-            )
-            raise DemoError("OVIS_MARKDOWN_REVIEW_REQUIRED")
         for paragraph in re.split(r"\n\s*\n", token):
             original = paragraph
             paragraph = paragraph.strip()
