@@ -387,3 +387,9 @@ chat_content逐层验证choices/message结构，统一抛出域错误，调用�
 人工拆分同步重分类左块、解除旧图组，并把拆分前语义关联隔离为SPLIT_RELATION_REVIEW。未保存预览使用独立状态，切换auto再返回reviewed仍请求preview资产。
 
 新增2项回归先失败后通过（含Node实际执行版本切换处理器），全仓375 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第二十六轮审核修复（2026-09-13）
+
+数学拒绝检测排除普通金额token，单个/成对金额原样可编辑导出；成对金额测试由拒绝改为明确原样输出。Native含XML非法字符的行保留原候选并降级源图，创建INVALID_XML_TEXT_FALLBACK。
+
+新增3项回归先失败后通过，全仓378 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。非法字符用PDFium边界注入验证，不代表新增真实损坏PDF样本验收。

@@ -138,7 +138,8 @@ def to_omml(latex: str) -> str:
 
 def unrendered_math(text: str) -> bool:
     """Recognize remaining math delimiters/commands without rejecting ordinary escapes."""
-    if "$" in text:
+    noncurrency = re.sub(r"(?<![\w$])\$\d+(?:[.,]\d+)*", "", text)
+    if "$" in noncurrency:
         return True
     commands = set(SYMBOLS) | {
         "frac",

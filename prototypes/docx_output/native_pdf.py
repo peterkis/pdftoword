@@ -316,6 +316,25 @@ def extract(
                         ]
                         if row[0]["size"] >= 16:
                             b["type"] = "heading"
+                        if any(
+                            not (
+                                ord(c) in {9, 10, 13}
+                                or 32 <= ord(c) <= 0xD7FF
+                                or 0xE000 <= ord(c) <= 0xFFFD
+                                or 0x10000 <= ord(c) <= 0x10FFFF
+                            )
+                            for c in text
+                        ):
+                            aid = crop(job, ir, p, bbox, bid + "-invalid-xml")
+                            b.update(content=image_content(aid), render_policy="preserve_image")
+                            b["flags"].append("invalid_xml_text_fallback")
+                            issue(
+                                ir,
+                                "INVALID_XML_TEXT_FALLBACK",
+                                "原生行含XML非法字符，保留候选并降级源图待审校。",
+                                [bid],
+                                index,
+                            )
                         p["blocks"].append(b)
                         ir["provenance"][bid] = {"pdf_char_indices": [c["index"] for c in row]}
                     for fi, f in enumerate(figures):

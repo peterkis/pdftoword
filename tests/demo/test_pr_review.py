@@ -727,8 +727,7 @@ def test_currency_pair_is_not_silently_math(private_case: Path) -> None:
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert not ir["metadata"].get("inline_parts")
-    with pytest.raises(common.DemoError):
-        finish(job, ir)
+    assert finish(job, ir)["has_editable_runs"]
 
 
 def test_pdf_manifest_records_actual_page_count(private_case: Path) -> None:
@@ -1033,3 +1032,36 @@ def test_revision_switch_restores_preview_assets() -> None:
         text=True,
     )
     assert result.stdout.strip() == "true"
+
+
+@pytest.mark.parametrize("raw", ["Price $5", "Price $5 and $4"])
+def test_currency_exports_as_literal_text(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["has_editable_runs"]
+    assert p["blocks"][0]["content"]["plain_text"] == raw
+
+
+def test_invalid_native_xml_char_falls_back(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import pypdfium2 as pdfium
+    from prototypes.docx_output.pipeline import convert
+    from tests.demo.synthetic import make_pdf
+
+    source = private_case / "invalid-char.pdf"
+    make_pdf(source)
+    original = pdfium.raw.FPDFText_GetUnicode
+    monkeypatch.setattr(
+        pdfium.raw,
+        "FPDFText_GetUnicode",
+        lambda page, index: 1 if index == 0 else original(page, index),
+    )
+    job = convert(source, output_root=private_case / "jobs")
+    ir = common.read(job / "layout.auto.json")
+    assert any(i["type"] == "INVALID_XML_TEXT_FALLBACK" for i in ir["issues"])
+    assert common.read(job / "qa.json")["fallback_region_count"] > 0
