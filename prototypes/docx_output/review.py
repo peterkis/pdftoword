@@ -327,7 +327,10 @@ def _apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             ir["metadata"]["figure_groups"] = [
                 g
                 for g in ir["metadata"].get("figure_groups", [])
-                if all(other["id"] not in pair.values() for pair in g["pairs"])
+                if all(
+                    b["id"] not in pair.values() and other["id"] not in pair.values()
+                    for pair in g["pairs"]
+                )
             ]
         elif action == "move":
             order = p["reading_order"]

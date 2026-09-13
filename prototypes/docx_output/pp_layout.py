@@ -304,7 +304,7 @@ def _apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) 
         if group["page_index"] != p["page_index"]:
             continue
         if group["kind"] == "option_grid":
-            group["columns"] = len(group["pairs"])
+            group["columns"] = image_grid_columns(group["pairs"], by_id)
             group["inline_labels"] = True
     ir["metadata"]["content_left_pt"] = left
     remaining = [
@@ -391,3 +391,15 @@ def record_validation(ir: Json, p: Json, result: Json) -> None:
         "status": next(iter(statuses)) if len(statuses) == 1 else "PARTIAL",
         "pages": copy.deepcopy(pages),
     }
+
+
+def image_grid_columns(pairs: list[Json], by_id: Json) -> int:
+    """Preserve mapped image rows without changing the model reading sequence."""
+    boxes = [by_id[pair["figure"]]["bbox"] for pair in pairs]
+    rows = rows_of(boxes)
+    if not rows or [box for row in rows for box in row] != boxes:
+        raise DemoError("IMAGE_GRID_ORDER_REVIEW")
+    columns = max(len(row) for row in rows)
+    if any(len(row) != columns for row in rows[:-1]):
+        raise DemoError("IMAGE_GRID_SHAPE_REVIEW")
+    return columns

@@ -1624,3 +1624,42 @@ def test_legacy_pp_reconstruction_failure_is_reviewable(private_case: Path, body
     qa = finish(job, ir)
     assert qa["fallback_area_ratio"] == pytest.approx(1)
     assert any(i["type"] == "PP_RECONSTRUCTION_FALLBACK" for i in ir["issues"])
+
+
+@pytest.mark.parametrize(
+    "tag",
+    ["<img src='images/bbox_1_1_10_10.jpg'>", '<img alt="x" src="images/bbox_1_1_10_10.png">'],
+)
+def test_variant_image_tag_exports_fallback(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": tag}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+def test_merge_caption_releases_its_group(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("f", 0, [1, 1, 20, 20], "Image", "native_pdf"),
+        block("c", 0, [1, 21, 20, 40], "Caption", "native_pdf", "caption"),
+        block("b", 0, [1, 41, 20, 60], "Body", "native_pdf"),
+    ]
+    p["reading_order"] = ["f", "c", "b"]
+    ir["metadata"]["figure_groups"] = [
+        {"page_index": 0, "kind": "shared_row", "pairs": [{"label": "c", "figure": "f"}]}
+    ]
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "c", "action": "merge", "reason": "merge"}]}
+    )
+    assert not result["metadata"]["figure_groups"]
+
+
+def test_image_grid_uses_two_source_rows() -> None:
+    from prototypes.docx_output.pp_layout import image_grid_columns
+
+    boxes = [[10, 10, 40, 40], [50, 10, 80, 40], [10, 60, 40, 90], [50, 60, 80, 90]]
+    pairs = [{"figure": str(i), "label": "l" + str(i)} for i in range(4)]
+    assert image_grid_columns(pairs, {str(i): {"bbox": box} for i, box in enumerate(boxes)}) == 2

@@ -52,7 +52,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         except DemoError:
             alternate_formula = True
 
-    unsupported_html = bool(re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content)))
+    unknown_image = any(not IMAGE.fullmatch(tag) for tag in re.findall(r"<img\b[^>]*>", content))
+    unsupported_html = unknown_image or bool(
+        re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content))
+    )
     if (
         unsupported_html
         or invalid_xml
