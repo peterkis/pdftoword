@@ -2017,3 +2017,18 @@ def test_formula_before_standard_truncated_tag_falls_back(private_case: Path, ta
         "ovis",
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("tag", ["m:math", "svg:svg", "mml:annotation-xml"])
+def test_formula_before_namespaced_tag_falls_back(private_case: Path, tag: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {"choices": [{"finish_reason": "stop", "message": {"content": "$x$<" + tag}}]},
+        "ovis",
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)

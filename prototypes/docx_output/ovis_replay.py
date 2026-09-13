@@ -98,7 +98,10 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
     )
     truncated_html = truncated_html or any(
         match[1].lower() in STANDARD_MARKUP_TAGS
-        for match in re.finditer(r"\ufffc<([A-Za-z][A-Za-z0-9:_-]*)(?=\s|/|>|$)", plain_context)
+        for match in re.finditer(
+            r"\ufffc<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?([A-Za-z][A-Za-z0-9_-]*)(?=\s|/|>|$)",
+            plain_context,
+        )
     )
     unsupported_html = (
         unknown_image
