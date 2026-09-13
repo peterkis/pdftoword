@@ -23,6 +23,7 @@ from .common import (
     Json,
     job_path,
     private_dir,
+    prune_preview_assets,
     read,
     safe_path,
     save,
@@ -284,8 +285,17 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         try:
             from .review import apply_overrides
 
-            ir = apply_overrides(job, read(job / "layout.auto.json"), data)
-            save(job / "layout.preview.json", ir)
+            before = set((job / "assets").glob("*.png"))
+            previous = (
+                read(job / "layout.preview.json") if (job / "layout.preview.json").exists() else {}
+            )
+            candidates = {job / a["path"] for a in previous.get("assets", [])}
+            try:
+                ir = apply_overrides(job, read(job / "layout.auto.json"), data)
+                save(job / "layout.preview.json", ir)
+            finally:
+                candidates.update(set((job / "assets").glob("*.png")) - before)
+                prune_preview_assets(job, candidates)
         finally:
             lock.release()
         return {"layout": ir}

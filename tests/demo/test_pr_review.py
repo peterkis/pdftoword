@@ -1162,3 +1162,75 @@ def test_native_dollar_math_generates_fallback(private_case: Path) -> None:
     make_pdf(source, decoration=f"BT /F1 12 Tf 60 580 Td <{text}> Tj ET\n".encode())
     job = convert(source, output_root=private_case / "jobs")
     assert common.read(job / "qa.json")["fallback_region_count"] > 0
+
+
+@pytest.mark.parametrize("mode", ["ovis", "pp", "manual"])
+def test_provider_and_manual_invalid_xml_fallback(private_case: Path, mode: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = "Bad\x01text"
+    if mode == "ovis":
+        recover_ovis(
+            job,
+            ir,
+            p,
+            {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]},
+            "ovis",
+        )
+    elif mode == "pp":
+        recover(job, ir, p, {"pp": response([pp_block(raw)])}, {})
+    else:
+        p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+        p["reading_order"] = ["a"]
+        ir = apply_overrides(
+            job,
+            ir,
+            {"operations": [{"block_id": "a", "action": "text", "text": raw, "reason": "edit"}]},
+        )
+    assert finish(job, ir)["fallback_region_count"] > 0
+
+
+def test_repeated_preview_crops_do_not_accumulate(private_case: Path) -> None:
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Old", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    with TestClient(create_app(output_root=job.parent), base_url="http://127.0.0.1:8765") as client:
+        token = client.get("/api/session").json()["token"]
+        for _ in range(3):
+            response = client.post(
+                "/api/preview/" + job.name,
+                json={"operations": [{"block_id": "a", "action": "crop", "reason": "crop"}]},
+                headers={"origin": "http://127.0.0.1:8765", "x-demo-session": token},
+            )
+            assert response.status_code == 200
+    assert len(list((job / "assets").glob("a-review*.png"))) == 1
+
+
+def test_undo_refreshes_selected_editor() -> None:
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node required")
+    script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
+    handler = next(line for line in script.splitlines() if line.startswith("on('undo'"))
+    fixture = (
+        "const callbacks={};function on(n,c){callbacks[n]=c;}"
+        "let operations=[{}],selected={id:'a',text:'stale'},layout,preview,unsavedPreview,revision;"
+        "let data={},jobId='demo';function show(){}function $(id){return {};};"
+        "function choose(b){selected=b;}"
+        "async function api(){return {layout:{pages:[{blocks:[{id:'a',text:'restored'}]}]}};}"
+    )
+    result = subprocess.run(
+        [node, "-e", fixture + handler + "callbacks.undo().then(()=>console.log(selected.text));"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "restored"

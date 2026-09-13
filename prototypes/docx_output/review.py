@@ -14,6 +14,7 @@ from .common import (
     box_valid,
     candidate,
     crop,
+    invalid_xml_text,
     issue,
     private_dir,
     relation,
@@ -481,6 +482,17 @@ def replan_text(job: Path, ir: Json, p: Json, b: Json, text: str, old: Json, n: 
     """
     mapping = ir["metadata"].setdefault("inline_parts", {})
     previous = mapping.pop(b["id"], [])
+    if invalid_xml_text(text):
+        aid = crop(job, ir, p, b["bbox"], b["id"] + f"-xml{n}")
+        b.update(content=image_content(aid), render_policy="preserve_image")
+        issue(
+            ir,
+            "INVALID_XML_TEXT_FALLBACK",
+            "人工候选含非法XML字符，已保留候选并降级源图。",
+            [b["id"]],
+            p["page_index"],
+        )
+        return
     if not unrendered_math(text):
         return
     matches = list(MATH.finditer(text))

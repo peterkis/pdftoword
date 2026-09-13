@@ -17,6 +17,7 @@ from .common import (
     candidate,
     crop,
     intersection,
+    invalid_xml_text,
     issue,
     relation,
     transform,
@@ -127,6 +128,18 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
             },
         )
         ir["provenance"][bid] = {"parent_parsing_block": source, "request_id": pp_request}
+        if invalid_xml_text(text) and label not in {"image", "chart", "table"}:
+            aid = crop(job, ir, p, bbox, bid + "-xml-fallback")
+            b.update(content=image_content(aid), render_policy="preserve_image")
+            issue(
+                ir,
+                "INVALID_XML_TEXT_FALLBACK",
+                "候选含非法XML字符，保留原候选并降级源图。",
+                [bid],
+                p["page_index"],
+            )
+            p["blocks"].append(b)
+            continue
         if label in {"image", "chart", "table"}:
             aid = crop(job, ir, p, bbox, bid + "-image")
             b.update(

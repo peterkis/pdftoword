@@ -384,3 +384,27 @@ def crop(
     )
     ir["provenance"][aid] = {"raw_bbox_pt": bbox, "padding_px": padding, "crop_bbox_px": bound}
     return aid
+
+
+def invalid_xml_text(text: str) -> bool:
+    """Identify XML 1.0 incompatible characters without altering source text."""
+    return any(
+        not (
+            ord(c) in {9, 10, 13}
+            or 32 <= ord(c) <= 0xD7FF
+            or 0xE000 <= ord(c) <= 0xFFFD
+            or 0x10000 <= ord(c) <= 0x10FFFF
+        )
+        for c in text
+    )
+
+
+def prune_preview_assets(job: Path, candidates: set[Path]) -> None:
+    """Remove only preview-owned files unreferenced by every persisted layout."""
+    registered = set()
+    for layout_path in job.glob("layout.*.json"):
+        for asset in read(layout_path).get("assets", []):
+            registered.add(safe_path(job, asset["path"]))
+    for path in candidates - registered:
+        if path.parent == job / "assets" and path.is_file() and not path.is_symlink():
+            path.unlink()
