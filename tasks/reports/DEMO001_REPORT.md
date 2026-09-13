@@ -539,3 +539,9 @@ DOCX不再在每个PDF来源页边界无条件硬分页，正文自然流排；L
 端点校验错误进入逐Provider失败缓存/清单，明确http_attempted=false，不计模型调用、不废弃已成功主结果。截断HTML声明、注释、处理指令和img结束标记进入源页降级。
 
 新增5项回归先失败后通过，全仓457 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第五十三轮审核修复（2026-09-13）
+
+截断标记以行首/空白等非单词边界的标签上下文统一检测HTML/MathML/SVG/XML名称，不再遗漏特定格式名；紧邻字母的a<b比较式保持原文，明确sup/sub内联语义继续审校。
+
+新增5项回归先失败后通过，全仓462 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

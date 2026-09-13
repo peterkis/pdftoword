@@ -1847,3 +1847,14 @@ def test_html_declaration_fragments_fall_back(private_case: Path, raw: str) -> N
         job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
     )
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
+
+
+@pytest.mark.parametrize("raw", ["<math", "<mrow", "<svg", "<msqrt", "<path"])
+def test_truncated_xml_markup_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
