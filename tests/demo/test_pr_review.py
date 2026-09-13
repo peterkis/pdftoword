@@ -1903,3 +1903,36 @@ def test_fullpage_image_retained_when_text_completeness_unknown(private_case: Pa
     job = convert(source, output_root=private_case / "jobs")
     assert common.read(job / "qa.json")["fallback_area_ratio"] == pytest.approx(1)
     assert common.read(job / "qa.json")["execution_status"] == "DEMO_OUTPUT_INSUFFICIENT"
+
+
+def test_noninline_option_label_precedes_image(private_case: Path) -> None:
+    import zipfile
+
+    from lxml import etree
+
+    job, ir, p = setup_ir(private_case)
+    aid = common.crop(job, ir, p, [20, 20, 40, 40], "figure")
+    f = block("f", 0, [20, 20, 40, 40], "", "inferred", "figure")
+    f["content"] = common_image_content(aid)
+    p["blocks"] = [block("a", 0, [1, 20, 19, 40], "A.", "native_pdf", "option"), f]
+    p["reading_order"] = ["a", "f"]
+    ir["metadata"]["figure_groups"] = [
+        {"page_index": 0, "kind": "option_grid", "pairs": [{"label": "a", "figure": "f"}]}
+    ]
+    finish(job, ir)
+    with zipfile.ZipFile(job / "auto.docx") as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    nodes = root.xpath("//w:tc//w:t | //w:tc//w:drawing", namespaces=ns)
+    assert nodes[0].text == "A."
+
+
+@pytest.mark.parametrize("raw", ["公式：<math", "正文:<table"])
+def test_punctuation_before_truncated_tag_falls_back(private_case: Path, raw: str) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)

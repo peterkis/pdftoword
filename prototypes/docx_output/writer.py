@@ -290,13 +290,16 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                     counts["placed_figure_count"] += 1
                     para.paragraph_format.space_after = Pt(6)
                 else:
+                    first, second = (
+                        ("label", "figure") if g["kind"] == "option_grid" else ("figure", "label")
+                    )
                     write_block(
                         cell,
-                        by_id[pair["figure"]],
+                        by_id[pair[first]],
                         available / cols - 16,
                         cell.paragraphs[0] if spatial else None,
                     )
-                    write_block(cell, by_id[pair["label"]], available / cols - 16)
+                    write_block(cell, by_id[pair[second]], available / cols - 16)
                     cell.paragraphs[-2].paragraph_format.keep_with_next = True
                     cell.paragraphs[-1].paragraph_format.keep_with_next = False
                 done.update(pair.values())
