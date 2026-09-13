@@ -188,6 +188,12 @@ def apply_overrides(job: Path, automatic: Json, overrides: Json) -> Json:
             )
             b["bbox"] = union([b["bbox"], other["bbox"]])
             b["geometry_source"] = "manual_correction"
+            for item in ir["issues"]:
+                item["block_ids"] = list(
+                    dict.fromkeys(
+                        b["id"] if bid == other["id"] else bid for bid in item["block_ids"]
+                    )
+                )
             p["blocks"].remove(other)
             order.remove(other["id"])
             ir["relations"] = [

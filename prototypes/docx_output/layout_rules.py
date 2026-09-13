@@ -103,12 +103,20 @@ def accept_candidate(original: Json, candidate: Json, p: Json) -> None:
     by_id = {b["id"]: b for b in p["blocks"]}
     if len(by_id) != len(p["blocks"]) or set(p["reading_order"]) != set(by_id):
         raise DemoError("INVALID_BLOCK_COVERAGE")
+    positions = {bid: i for i, bid in enumerate(p["reading_order"])}
+
+    def contiguous(ids: list[str]) -> None:
+        indices = sorted(positions[bid] for bid in ids)
+        if indices and indices != list(range(indices[0], indices[-1] + 1)):
+            raise DemoError("NONCONTIGUOUS_LAYOUT_GROUP")
+
     owned = set()
     for group in candidate["metadata"].get("text_groups", []):
         if group["page_index"] != p["page_index"]:
             continue
         if not 1 <= group["columns"] <= RULES.max_columns:
             raise DemoError("UNSUPPORTED_COLUMN_COUNT")
+        contiguous([bid for row in group["rows"] for bid in row])
         for row in group["rows"]:
             if not row or len(row) > group["columns"]:
                 raise DemoError("INVALID_LAYOUT_ROW")
@@ -119,6 +127,7 @@ def accept_candidate(original: Json, candidate: Json, p: Json) -> None:
     for group in candidate["metadata"].get("figure_groups", []):
         if group["page_index"] != p["page_index"]:
             continue
+        contiguous([bid for pair in group["pairs"] for bid in pair.values()])
         for pair in group["pairs"]:
             for bid in pair.values():
                 if bid not in by_id or bid in owned:

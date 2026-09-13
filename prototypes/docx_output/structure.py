@@ -126,7 +126,9 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
         if label in {"image", "chart", "table"}:
             aid = crop(job, ir, p, bbox, bid + "-image")
             b.update(
-                type="figure", content=image_content(aid, text), render_policy="preserve_image"
+                type="table" if label == "table" else "figure",
+                content=image_content(aid, text),
+                render_policy="preserve_image",
             )
             if label == "table":
                 b["flags"].append("table_image_fallback")
@@ -348,9 +350,24 @@ def associate(ir: Json, p: Json) -> None:
                 used.add(f["id"])
                 relation(ir, "label_of", b["id"], f["id"], {"reason": "adjacent_label"})
                 pairs.append({"label": b["id"], "figure": f["id"]})
-    if pairs:
-        pairs.sort(key=lambda x: next(b["bbox"][0] for b in blocks if b["id"] == x["figure"]))
-        groups.append({"page_index": p["page_index"], "kind": "option_grid", "pairs": pairs})
+    positions = {b["id"]: i for i, b in enumerate(blocks)}
+    contiguous: list[Json] = []
+    for pair in pairs:
+        if positions[pair["figure"]] != positions[pair["label"]] + 1:
+            if contiguous:
+                groups.append(
+                    {"page_index": p["page_index"], "kind": "option_grid", "pairs": contiguous}
+                )
+                contiguous = []
+            continue
+        if contiguous and positions[pair["label"]] != positions[contiguous[-1]["figure"]] + 1:
+            groups.append(
+                {"page_index": p["page_index"], "kind": "option_grid", "pairs": contiguous}
+            )
+            contiguous = []
+        contiguous.append(pair)
+    if contiguous:
+        groups.append({"page_index": p["page_index"], "kind": "option_grid", "pairs": contiguous})
     caption_pairs = []
     for b in blocks:
         text = b["content"].get("plain_text", "")

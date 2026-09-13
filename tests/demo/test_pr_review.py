@@ -303,3 +303,55 @@ def test_upload_temp_removed(
                 break
             time.sleep(0.01)
     assert not list((upload_root / "uploads").glob("*/input.*"))
+
+
+def test_table_image_counts_as_fallback(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    recover(job, ir, p, {"pp": response([pp_block("Table", label="table")])}, {"requests": []})
+    qa = finish(job, ir)
+    assert qa["fallback_region_count"] == 1
+    assert qa["fallback_area_ratio"] > 0
+    assert qa["placed_figure_count"] == 0
+
+
+def test_merge_redirects_issue(private_case: Path) -> None:
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 1, 20, 20], "A", "native_pdf"),
+        block("b", 0, [1, 21, 20, 40], "B", "native_pdf"),
+    ]
+    p["reading_order"] = ["a", "b"]
+    common.issue(ir, "CONTENT_CONFLICT", "Review", ["b"])
+    result = apply_overrides(
+        job, ir, {"operations": [{"block_id": "a", "action": "merge", "reason": "join"}]}
+    )
+    assert result["issues"][0]["block_ids"] == ["a"]
+
+
+def test_legacy_option_groups_preserve_intervening_body(private_case: Path) -> None:
+    from prototypes.docx_output.structure import associate
+
+    _, ir, p = setup_ir(private_case)
+    p["blocks"] = [
+        block("a", 0, [1, 10, 9, 20], "A.", "inferred"),
+        block("f1", 0, [10, 10, 30, 30], "", "inferred", "figure"),
+        block("body", 0, [1, 40, 50, 60], "Middle", "inferred"),
+        block("b", 0, [31, 10, 39, 20], "B.", "inferred"),
+        block("f2", 0, [40, 10, 60, 30], "", "inferred", "figure"),
+    ]
+    associate(ir, p)
+    assert all(len(g["pairs"]) == 1 for g in ir["metadata"]["figure_groups"])
+
+
+def test_layout_acceptance_rejects_noncontiguous_text_group(private_case: Path) -> None:
+    from prototypes.docx_output.layout_rules import accept_candidate
+    from prototypes.docx_output.pp_layout import apply_pp_layout
+    from tests.demo.test_layout_rules import case
+
+    job, ir, p, pp = case(private_case)
+    apply_pp_layout(job, ir, p, pp, "pp")
+    original = copy.deepcopy(ir)
+    group = ir["metadata"]["text_groups"][0]
+    group["rows"][0] = [group["rows"][0][0], group["rows"][0][-1]]
+    with pytest.raises(common.DemoError, match="NONCONTIGUOUS_LAYOUT_GROUP"):
+        accept_candidate(original, ir, p)
