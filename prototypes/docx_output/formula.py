@@ -202,6 +202,8 @@ class MathSpans:
             paired = self.pattern.match(text, position)
             if (
                 paired
+                and amount.start() == position
+                and not re.search(r"\s+[A-Za-z]{2,}\b", paired[1])
                 and re.search(r"[+*/^_=<>-]", paired[1])
                 and (paired.end() == len(text) or not text[paired.end()].isalnum())
             ):

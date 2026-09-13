@@ -1520,3 +1520,40 @@ def test_residual_pp_skips_formula_crop(private_case: Path) -> None:
     )
     recover(job, ir, p, {"pp": pp}, {})
     assert not any(a["type"] == "formula_image" for a in ir["assets"])
+
+
+def test_currency_unit_then_command_formula(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+
+    job, ir, p = setup_ir(private_case)
+    raw = r"Cost US$5/kg and $\frac{1}{2}$"
+    recover_ovis(
+        job, ir, p, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}, "ovis"
+    )
+    assert finish(job, ir)["omml_formula_count"] == 1
+
+
+def test_replaced_ovis_crop_has_evidence_reference(private_case: Path) -> None:
+    from prototypes.docx_output.ovis_replay import recover_ovis
+    from prototypes.docx_output.pp_layout import _apply_pp_layout as apply_pp_layout
+
+    job, ir, p = setup_ir(private_case)
+    recover_ovis(
+        job,
+        ir,
+        p,
+        {
+            "choices": [
+                {
+                    "finish_reason": "stop",
+                    "message": {"content": '<img src="images/bbox_100_100_500_300.jpg" />'},
+                }
+            ]
+        },
+        "ovis",
+    )
+    b = p["blocks"][0]
+    previous = b["content"]["asset_id"]
+    pp = response([pp_block("", label="image", bbox=[40, 60, 200, 180])])
+    apply_pp_layout(job, ir, p, pp, "pp")
+    assert ir["provenance"]["pp-layout-" + b["id"]]["previous_asset_id"] == previous

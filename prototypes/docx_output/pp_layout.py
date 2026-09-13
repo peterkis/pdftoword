@@ -133,7 +133,13 @@ def _apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) 
         mark(
             b,
             r["bbox"],
-            {"region_id": r["id"], "reason": "unique_overlap_with_Ovis_figure", "iou": score},
+            {
+                "region_id": r["id"],
+                "reason": "unique_overlap_with_Ovis_figure",
+                "iou": score,
+                "previous_asset_id": b["content"]["asset_id"],
+                "previous_asset_role": "pre_projection_geometry_comparison_evidence",
+            },
         )
         aid = crop(job, ir, p, b["bbox"], b["id"] + "-pp-figure")
         b["content"]["asset_id"] = aid

@@ -471,3 +471,9 @@ PP hybrid及人工公式重排检查MATH消费后的剩余文本，混合未闭�
 金额屏蔽前保留明确闭合、结束后非金额数字/字母且含运算符的数字公式，覆盖$5/x$和$5-10$。PP已知残留语法导致区域降级时不再执行公式裁图循环。
 
 新增3项回归先失败后通过，全仓421 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。
+
+## PR #3 第四十一轮审核修复（2026-09-13）
+
+金额免屏蔽分支要求无币种前缀且区间不含多字母说明词，避免US$5/kg借用后续命令公式的起始美元。PP图域投影记录previous_asset_id和明确的pre_projection_geometry_comparison_evidence用途，使保留的Ovis裁图可追溯至替换前几何对照。
+
+新增金额回归及投影证据单元检查，全仓423 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。上一轮两个已修复线程状态更新受GitHub GraphQL服务错误影响，已在PR评论记录修复提交。
