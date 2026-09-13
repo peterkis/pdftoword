@@ -443,3 +443,7 @@ HTTP保存及CLI导出成功后结束preview布局并清理其全部持久化lay
 Ovis非图片HTML结构进入源页降级并继续审校导出；非法图片标签仍拒绝。apply_overrides统一在失败时回收本次新增且所有layout均未引用的裁图，覆盖保存/CLI/预览入口。
 
 新增3项回归先失败后通过，全仓409 tests passed，ruff、mypy（49 files）及diff通过。条件分支遗漏在检查中发现并修复后重跑通过，无新模型调用。
+
+## PR #3 第三十六轮审核修复（2026-09-13）
+
+成功渲染完成正式文件复制后删除本次attempt目录，失败诊断仍保留。新增合成PDF渲染清理回归先失败后通过（LibreOffice进程为模拟，PDFium页面处理实际执行），全仓410 tests passed，ruff、mypy（49 files）及diff通过，无新模型调用。

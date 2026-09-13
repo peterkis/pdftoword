@@ -107,6 +107,7 @@ def render(job: Path, revision: str = "auto") -> Json:
                 document.close()
         for asset in attempt.iterdir():
             shutil.copyfile(asset, out / asset.name)
+        shutil.rmtree(attempt)
         qa.update(
             render_status="RENDERED",
             renderer="LibreOffice",

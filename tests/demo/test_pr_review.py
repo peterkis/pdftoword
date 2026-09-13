@@ -1368,3 +1368,29 @@ def test_failed_override_reclaims_new_crops(private_case: Path) -> None:
             },
         )
     assert set((job / "assets").iterdir()) == before
+
+
+def test_successful_render_removes_attempt(
+    private_case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+    from typing import Any
+
+    from prototypes.docx_output import render as rendering
+    from tests.demo.synthetic import make_pdf
+
+    job, ir, p = setup_ir(private_case)
+    p["blocks"] = [block("a", 0, [1, 1, 20, 20], "Text", "native_pdf")]
+    p["reading_order"] = ["a"]
+    finish(job, ir)
+    monkeypatch.setattr(rendering.shutil, "which", lambda name: "/synthetic/soffice")
+
+    def run(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if "--outdir" in args:
+            make_pdf(Path(args[args.index("--outdir") + 1]) / "auto.pdf")
+        return subprocess.CompletedProcess(args, 0, stdout="Synthetic renderer", stderr="")
+
+    monkeypatch.setattr(rendering.subprocess, "run", run)
+    assert rendering.render(job)["render_status"] == "RENDERED"
+    assert (job / "rendered/auto/page-1.png").is_file()
+    assert not list((job / "rendered/auto").glob("attempt-*"))
