@@ -400,8 +400,13 @@ def _check_payload_structure(document: Any) -> None:
         f"{{{NS['m']}}}oMath": {w("p"), f"{{{NS['m']}}}oMathPara"},
         f"{{{NS['m']}}}oMathPara": {w("p")},
     }
+    for marker in ("bookmarkStart", "bookmarkEnd"):
+        allowed[w(marker)] = {
+            w(name) for name in ("p", "hyperlink", "sdtContent", "body", "tbl", "tr", "tc")
+        }
     for payload in document.xpath(
-        "//w:body//w:p | //w:body//w:r | //w:body//w:t | //w:body//w:drawing | //w:body//m:oMath",
+        "//w:body//w:p | //w:body//w:r | //w:body//w:t | //w:body//w:drawing | //w:body//m:oMath"
+        " | //w:body//w:bookmarkStart | //w:body//w:bookmarkEnd",
         namespaces=NS,
     ):
         if payload.xpath("ancestor::m:oMath", namespaces=NS):
@@ -563,6 +568,9 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        for spacing in properties.findall(".//w:tblCellSpacing", NS):
+            if spacing.get(f"{{{NS['w']}}}w", "0") != "0":
+                raise ValueError("UNSUPPORTED_CELL_MARGINS")
         for margins in properties.xpath(".//w:tcMar | .//w:tblCellMar", namespaces=NS):
             for side in margins:
                 if not isinstance(side.tag, str):
