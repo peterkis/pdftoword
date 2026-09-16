@@ -909,6 +909,8 @@ def inspect(path: Path) -> Json:
             for extent in root.xpath("//wp:extent", namespaces=NS):
                 if int(extent.get("cx", "0")) <= 0 or int(extent.get("cy", "0")) <= 0:
                     raise ValueError("INVALID_IMAGE_EXTENT")
+    except Image.DecompressionBombError:
+        result["errors"].append("IMAGE_PIXEL_LIMIT")
     except (zipfile.BadZipFile, KeyError, etree.XMLSyntaxError, ValueError, OSError) as exc:
         known = {
             "DUPLICATE_ZIP_MEMBER",

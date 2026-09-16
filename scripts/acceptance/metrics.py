@@ -334,6 +334,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     metrics: Json = {"text": text_metric}
     boxes_by_page: dict[int, list[list[float]]] = {}
     preserved_anchors: set[str] = set()
+    fallback_anchors: set[str] = set()
     claimed_image_paragraphs: set[int] = set()
     unclaimed_images = {
         (i, j) for i, paragraph in enumerate(paragraphs) for j in range(len(paragraph["images"]))
@@ -369,13 +370,15 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
                     box[0] <= a[0] and box[1] <= a[1] and box[2] >= a[2] and box[3] >= a[3]
                 ):
                     preserved_anchors.add(aid)
+                    if image["fallback"]:
+                        fallback_anchors.add(aid)
         # Legacy/minimal synthetic provenance can only report declared fallback area.
         if block.get("fallback") and "images" not in block:
             boxes_by_page.setdefault(block["page"], []).append(block["bbox"])
     if unclaimed_images:
         errors.append("UNALIGNED_IMAGE")
     image_preserved_unit_ids = {
-        u["unit_id"] for u in units if u["reference"].get("source_anchor_id") in preserved_anchors
+        u["unit_id"] for u in units if u["reference"].get("source_anchor_id") in fallback_anchors
     }
     from .structure import score_structure
 
@@ -463,7 +466,12 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     preserved_units = {
         u["unit_id"]
         for u in content_units
-        if u["reference"].get("source_anchor_id") in preserved_anchors
+        if u["reference"].get("source_anchor_id") in fallback_anchors
+        or (
+            u["kind"] == "text"
+            and u["reference"].get("content_scope") == "figure_text"
+            and u["reference"].get("source_anchor_id") in preserved_anchors
+        )
     }
     unsupported_present: set[str] = set()
     for unit in content_units:
