@@ -9,6 +9,7 @@ import re
 import zipfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from docx.opc.constants import CONTENT_TYPE as CT
 from lxml import etree
@@ -21,6 +22,7 @@ NS = {
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
     "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
     "wp": "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+    "pic": "http://schemas.openxmlformats.org/drawingml/2006/picture",
 }
 
 
@@ -387,6 +389,126 @@ def _numbered_content(document: Any, styles: Any, numbering: Any) -> bool:
     return any(numbered(p) for p in document.xpath(".//w:p", namespaces=NS))
 
 
+def _check_picture_containers(root: Any) -> None:
+    """Accept complete inline rectangular pictures, not hashes in orphan blips."""
+
+    def one(node: Any, path: str) -> Any:
+        found = node.findall(path, NS)
+        if len(found) != 1:
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        return found[0]
+
+    def integer(node: Any, attr: str, positive: bool = False) -> int:
+        try:
+            value = int(node.get(attr, ""))
+        except ValueError as exc:
+            raise ValueError("INVALID_DRAWING_CONTAINER") from exc
+        if value < (1 if positive else 0) or value > 2**63 - 1:
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        return value
+
+    def elements(node: Any) -> list[Any]:
+        return [child for child in node if isinstance(child.tag, str)]
+
+    seen = set()
+    drawing_ids: set[int] = set()
+    for drawing in root.xpath("//w:body//w:drawing", namespaces=NS):
+        blips = drawing.xpath(".//a:blip", namespaces=NS)
+        if not blips:
+            continue  # Non-image drawings are rejected by the unsupported-body check.
+        if drawing.getparent().tag != f"{{{NS['w']}}}r":
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        children = elements(drawing)
+        if len(children) != 1 or children[0].tag != f"{{{NS['wp']}}}inline":
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        inline = children[0]
+        extent = one(inline, "wp:extent")
+        size = (integer(extent, "cx", True), integer(extent, "cy", True))
+        docpr = one(inline, "wp:docPr")
+        drawing_id = integer(docpr, "id")
+        if drawing_id in drawing_ids or docpr.get("name") is None:
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        drawing_ids.add(drawing_id)
+        if docpr.get("hidden", "0") not in {"0", "false"}:
+            raise ValueError("HIDDEN_CONTENT")
+        graphic = one(inline, "a:graphic")
+        data = one(graphic, "a:graphicData")
+        if data.get("uri") != NS["pic"] or len(elements(data)) != 1:
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        picture = one(data, "pic:pic")
+        one(picture, "pic:nvPicPr/pic:cNvPr")
+        one(picture, "pic:nvPicPr/pic:cNvPicPr")
+        fill = one(picture, "pic:blipFill")
+        blip = one(fill, "a:blip")
+        if len(blips) != 1 or blips[0] != blip:
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        seen.add(blip)
+        stretch = one(fill, "a:stretch/a:fillRect")
+        crops = [*fill.findall("a:srcRect", NS), stretch]
+        if any(value != "0" for crop in crops for value in crop.attrib.values()):
+            raise ValueError("UNSUPPORTED_IMAGE_RENDERING")
+        shape = one(picture, "pic:spPr")
+        transform = one(shape, "a:xfrm")
+        if transform.get("rot", "0") != "0" or any(
+            transform.get(key, "0") not in {"0", "false"} for key in ["flipH", "flipV"]
+        ):
+            raise ValueError("UNSUPPORTED_IMAGE_RENDERING")
+        offset, shape_size = one(transform, "a:off"), one(transform, "a:ext")
+        if (integer(offset, "x"), integer(offset, "y")) != (0, 0) or (
+            integer(shape_size, "cx", True),
+            integer(shape_size, "cy", True),
+        ) != size:
+            raise ValueError("INVALID_DRAWING_CONTAINER")
+        if one(shape, "a:prstGeom").get("prst") != "rect":
+            raise ValueError("UNSUPPORTED_IMAGE_RENDERING")
+        for child in elements(shape):
+            if child.tag in {f"{{{NS['a']}}}xfrm", f"{{{NS['a']}}}prstGeom"}:
+                continue
+            if child.tag == f"{{{NS['a']}}}effectLst" and not elements(child):
+                continue
+            if child.tag == f"{{{NS['a']}}}ln" and [n.tag for n in elements(child)] == [
+                f"{{{NS['a']}}}noFill"
+            ]:
+                continue
+            raise ValueError("UNSUPPORTED_IMAGE_RENDERING")
+        # A common Office DPI annotation is harmless; image effects/alternate sources are not.
+        for child in elements(blip):
+            if child.tag != f"{{{NS['a']}}}extLst":
+                raise ValueError("UNSUPPORTED_IMAGE_RENDERING")
+            for extension in elements(child):
+                annotations = elements(extension)
+                if (
+                    extension.tag != f"{{{NS['a']}}}ext"
+                    or len(annotations) != 1
+                    or annotations[0].tag
+                    != "{http://schemas.microsoft.com/office/drawing/2010/main}useLocalDpi"
+                    or annotations[0].get("val") not in {"0", "1", "false", "true"}
+                    or elements(annotations[0])
+                ):
+                    raise ValueError("UNSUPPORTED_IMAGE_RENDERING")
+    if any(blip not in seen for blip in root.xpath("//w:body//a:blip", namespaces=NS)):
+        raise ValueError("INVALID_DRAWING_CONTAINER")
+
+
+def _relationship_type_valid(value: str | None) -> bool:
+    """Validate an absolute relationship-type URI without resolving or fetching it."""
+    if (
+        not value
+        or any(c.isspace() or ord(c) < 32 for c in value)
+        or re.search(r"%(?![0-9a-fA-F]{2})", value)
+    ):
+        return False
+    try:
+        uri = urlsplit(value)
+    except ValueError:
+        return False
+    return bool(
+        uri.scheme
+        and (uri.netloc or uri.path)
+        and (uri.scheme not in {"http", "https"} or uri.netloc)
+    )
+
+
 def inspect(path: Path) -> Json:
     """Return body, table, math, image and bookmark evidence with safe error codes."""
     result: Json = {"errors": [], "paragraphs": [], "tables": [], "media_count": 0}
@@ -415,6 +537,15 @@ def inspect(path: Path) -> Json:
                         for relation in root:
                             if not isinstance(relation.tag, str):
                                 continue
+                            if not _relationship_type_valid(relation.get("Type")):
+                                raise ValueError("OPC_RELATIONSHIP_TYPE_INVALID")
+                            if not relation.get("Target"):
+                                raise ValueError("OPC_RELATIONSHIP_TARGET_INVALID")
+                            if relation.get("TargetMode", "Internal") not in {
+                                "Internal",
+                                "External",
+                            }:
+                                raise ValueError("OPC_RELATIONSHIP_MODE_INVALID")
                             rid = relation.get("Id", "")
                             if not rid or any(c in rid for c in "{}:"):
                                 raise ValueError("OPC_RELATIONSHIP_ID_INVALID")
@@ -488,6 +619,7 @@ def inspect(path: Path) -> Json:
                 if numbering_target is not None
                 else etree.Element(f"{{{NS['w']}}}numbering")
             )
+            _check_picture_containers(root)
             if _numbered_content(root, styles, numbering):
                 result["errors"].append("UNSUPPORTED_NUMBERING")
             if _hidden_content(root, styles):
@@ -576,6 +708,12 @@ def inspect(path: Path) -> Json:
             "OPC_DUPLICATE_RELATIONSHIP_ID",
             "OPC_DUPLICATE_CONTENT_TYPE",
             "UNSUPPORTED_NUMBERING",
+            "OPC_RELATIONSHIP_TYPE_INVALID",
+            "OPC_RELATIONSHIP_TARGET_INVALID",
+            "OPC_RELATIONSHIP_MODE_INVALID",
+            "INVALID_DRAWING_CONTAINER",
+            "UNSUPPORTED_IMAGE_RENDERING",
+            "HIDDEN_CONTENT",
         }
         code = str(exc) if str(exc) in known else type(exc).__name__.upper()
         result["errors"].append(code)
