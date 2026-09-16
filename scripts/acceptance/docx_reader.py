@@ -31,6 +31,9 @@ UNSUPPORTED_WORD_CONTENT = [
     "sym",
     "ptab",
     "pgNum",
+    "commentReference",
+    "commentRangeStart",
+    "commentRangeEnd",
     "altChunk",
     "pict",
     "object",
@@ -652,6 +655,14 @@ def inspect(path: Path) -> Json:
             for name in names:
                 if name.endswith("/"):
                     continue
+                if content_types.get(name) == CT.WML_COMMENTS:
+                    comments = xml(archive.read(name))
+                    if comments.tag != f"{{{NS['w']}}}comments":
+                        raise ValueError("OPC_WORD_ROOT_INVALID")
+                    if any(isinstance(child.tag, str) for child in comments) or (
+                        comments.text and comments.text.strip()
+                    ):
+                        raise ValueError("UNSUPPORTED_COMMENTS")
                 if name.endswith((".xml", ".rels")):
                     root = xml(archive.read(name))
                     if name.endswith(".rels"):
@@ -727,11 +738,13 @@ def inspect(path: Path) -> Json:
                         if numbering_target is not None:
                             raise ValueError("OPC_INVALID_DECLARATION")
                         numbering_target = target
-                    if kind == "styles":
+                    if rel.get("Type") == NS["r"] + "/styles":
                         if styles_target is not None:
                             raise ValueError("OPC_STYLE_RELATIONSHIP_INVALID")
                         styles_target = target
-                    if kind in {"header", "footer", "footnotes", "endnotes"}:
+                    if kind in {"header", "footer", "footnotes", "endnotes"} and (
+                        rel.get("Type") == NS["r"] + "/" + kind
+                    ):
                         story_relationships.append((rel.get("Id", ""), kind, target))
             root = xml(archive.read("word/document.xml"))
             if _has_revisions(root):
@@ -754,6 +767,8 @@ def inspect(path: Path) -> Json:
                 if numbering_target is not None
                 else etree.Element(f"{{{NS['w']}}}numbering")
             )
+            if styles.tag != f"{{{NS['w']}}}styles" or numbering.tag != f"{{{NS['w']}}}numbering":
+                raise ValueError("OPC_WORD_ROOT_INVALID")
             if any(_has_revisions(part) for part in [styles, numbering]):
                 result["errors"].append("UNSUPPORTED_REVISIONS")
                 return result
@@ -768,6 +783,11 @@ def inspect(path: Path) -> Json:
                 result["errors"].append("UNSUPPORTED_NUMBERING")
             if _hidden_content(root, styles):
                 result["errors"].append("HIDDEN_CONTENT")
+            story_types = {rid: kind for rid, kind, _ in story_relationships}
+            for reference in root.xpath("//w:headerReference | //w:footerReference", namespaces=NS):
+                kind = etree.QName(reference).localname.removesuffix("Reference")
+                if story_types.get(reference.get(f"{{{NS['r']}}}id", "")) != kind:
+                    raise ValueError("OPC_STORY_REFERENCE_INVALID")
             referenced_stories = set(
                 root.xpath("//w:headerReference/@r:id | //w:footerReference/@r:id", namespaces=NS)
             )
@@ -843,6 +863,9 @@ def inspect(path: Path) -> Json:
             "INVALID_TABLE_GRID",
             "INVALID_BOOKMARK",
             "OPC_STORY_ROOT_INVALID",
+            "OPC_STORY_REFERENCE_INVALID",
+            "OPC_WORD_ROOT_INVALID",
+            "UNSUPPORTED_COMMENTS",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
