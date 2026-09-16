@@ -136,6 +136,19 @@ def evaluate_only(bundle: Path, output: Path) -> Json:
     return result
 
 
+def conversion_source_files() -> dict[str, str]:
+    """Fingerprint conversion code and the static contracts consumed at runtime."""
+    paths = [
+        *sorted((ROOT / "prototypes/docx_output").rglob("*.py")),
+        *sorted((ROOT / "scripts/acceptance").glob("*.py")),
+        ROOT / "scripts/product_acceptance.py",
+        ROOT / "scripts/docx_demo.py",
+        ROOT / "specs/layout-ir.schema.json",
+        ROOT / "uv.lock",
+    ]
+    return {p.relative_to(ROOT).as_posix(): digest(p) for p in paths}
+
+
 def run_sample(dataset: Path, sample_id: str, entry: str, output: Path) -> Json:
     """Run one explicitly selected frozen native sample and seal its real output."""
     dataset_seal = read(dataset / "seal.json")
@@ -227,13 +240,7 @@ def run_sample(dataset: Path, sample_id: str, entry: str, output: Path) -> Json:
                 for p in sorted((output / "rendered").glob("*"))
                 if p.is_file()
             }
-        code_paths = [
-            *sorted((ROOT / "prototypes/docx_output").rglob("*.py")),
-            *sorted((ROOT / "scripts/acceptance").glob("*.py")),
-            ROOT / "scripts/product_acceptance.py",
-            ROOT / "scripts/docx_demo.py",
-        ]
-        source_tree = {str(p.relative_to(ROOT)): digest(p) for p in code_paths}
+        source_tree = conversion_source_files()
         environment = {
             "python": platform.python_version(),
             "platform": platform.system(),

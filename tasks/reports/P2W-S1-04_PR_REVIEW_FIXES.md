@@ -468,3 +468,13 @@ Ruff、mypy（96文件）、两个既有校验器通过，旧封存评分不重�
 的保守范围约束，clear操作不误报，普通制表符仍参与严格文字比较。
 新增11项回归，修复前7 failed / 4 passed；独立检出1040 passed，
 Ruff、mypy（97文件）、两个既有校验器通过，原始证据不变。
+
+## 第四十一轮：单元格适配与转换静态契约
+
+审查版本fa87b47，两项反馈修复。
+启用tcFitText在直接单元格及已用样式中均明确不支持，关闭对照保留。
+转换源码文件表包含运行时validate读取的Layout IR Schema，以及IR provenance实际读取的
+uv.lock；run_sample使用统一conversion_source_files生成指纹，路径键统一仓库相对形式。
+未把仅供页面显示且不被本轮转换入口请求的静态HTML冒充转换依赖。
+新增6项回归，修复前4 failed / 2 passed；独立检出1046 passed，
+Ruff、mypy（98文件）、两个既有校验器通过，原始证据不变。

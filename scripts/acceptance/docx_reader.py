@@ -495,6 +495,8 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        if any(enabled(node) for node in properties.findall(".//w:tcFitText", NS)):
+            raise ValueError("UNSUPPORTED_TEXT_POSITION")
         if properties.find(".//w:tblpPr", NS) is not None:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
         for tab in properties.findall(".//w:tabs/w:tab", NS):
