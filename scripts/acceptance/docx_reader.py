@@ -197,6 +197,8 @@ def word_text(node: Any) -> str:
 
 def table_grid(table: Any) -> Json:
     """Count each physical logical cell once, including gridSpan and vMerge."""
+    if table.find(".//w:tcPr/w:hMerge", NS) is not None:
+        raise ValueError("UNSUPPORTED_HORIZONTAL_MERGE")
     cells: list[Json] = []
     active: dict[int, Json] = {}
     rows = table.findall("w:tr", NS)
@@ -388,15 +390,11 @@ def _numbered_content(document: Any, styles: Any, numbering: Any) -> bool:
     """Reject generated numbering from direct properties and applicable style chains."""
     val = f"{{{NS['w']}}}val"
     style_map = {s.get(f"{{{NS['w']}}}styleId"): s for s in styles.findall("w:style", NS)}
-    default_style = next(
-        (
-            sid
-            for sid, s in style_map.items()
-            if s.get(f"{{{NS['w']}}}type") == "paragraph"
-            and s.get(f"{{{NS['w']}}}default") in {"1", "true", "on"}
-        ),
-        None,
-    )
+    defaults = {
+        s.get(f"{{{NS['w']}}}type"): sid
+        for sid, s in style_map.items()
+        if s.get(f"{{{NS['w']}}}default") in {"1", "true", "on"}
+    }
     used_abstracts = {n.get(val) for n in numbering.findall("w:num/w:abstractNumId", NS)}
     associated_styles = set()
     for abstract in numbering.findall("w:abstractNum", NS):
@@ -420,7 +418,7 @@ def _numbered_content(document: Any, styles: Any, numbering: Any) -> bool:
 
     def numbered(paragraph: Any) -> bool:
         pstyle = paragraph.find("w:pPr/w:pStyle", NS)
-        styles_used = chain(pstyle.get(val) if pstyle is not None else default_style)
+        styles_used = chain(pstyle.get(val) if pstyle is not None else defaults.get("paragraph"))
         properties = [paragraph.find("w:pPr/w:numPr", NS)]
         properties.extend(s.find("w:pPr/w:numPr", NS) for s in styles_used)
         table_properties = []
@@ -428,7 +426,9 @@ def _numbered_content(document: Any, styles: Any, numbering: Any) -> bool:
         tables = paragraph.xpath("ancestor::w:tbl", namespaces=NS)
         if tables:
             table_style = tables[-1].find("w:tblPr/w:tblStyle", NS)
-            for style in chain(table_style.get(val) if table_style is not None else None):
+            for style in chain(
+                table_style.get(val) if table_style is not None else defaults.get("table")
+            ):
                 conditional |= bool(style.findall(".//w:tblStylePr/w:pPr/w:numPr", NS))
                 table_properties.append(style.find("w:pPr/w:numPr", NS))
         unresolved = False
@@ -773,6 +773,7 @@ def inspect(path: Path) -> Json:
             "CORRUPT_MEDIA",
             "INVALID_IMAGE_EXTENT",
             "UNSUPPORTED_NESTED_TABLE",
+            "UNSUPPORTED_HORIZONTAL_MERGE",
             "INVALID_TABLE_GRID",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
