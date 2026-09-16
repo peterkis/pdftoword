@@ -9,6 +9,7 @@ import pytest
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.shared import Inches
 from tests.productization.test_acceptance_harness import specimen
 
 from acceptance.metrics import evaluate
@@ -59,7 +60,7 @@ def test_verified_source_image_preserves_content_but_not_editability(
     doc = Document(str(path))
     for run in doc.paragraphs[0].runs:
         run.text = "XYZ" if case == "mismatch" else ""
-    doc.paragraphs[0].add_run().add_picture(str(tmp_path / "figure.png"))
+    doc.paragraphs[0].add_run().add_picture(str(tmp_path / "figure.png"), width=Inches(1))
     image = copy.deepcopy(sources["blocks"][-1]["images"][0])
     image.update(bbox=[0, 0, 100, 20], fallback=True)
     sources["blocks"][0]["images"] = [image]

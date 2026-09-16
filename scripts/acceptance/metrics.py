@@ -353,6 +353,11 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
             if drawing is None:
                 errors.append("MISSING_OR_REPLACED_IMAGE")
                 continue
+            display = paragraphs[drawing[0]]["image_sizes"][drawing[1]]
+            box = image["bbox"]
+            if display[0] < (box[2] - box[0]) * 0.25 or display[1] < (box[3] - box[1]) * 0.25:
+                errors.append("IMAGE_DISPLAY_SCALE_INVALID")
+                continue
             unclaimed_images.remove(drawing)
             claimed_image_paragraphs.add(drawing[0])
             if image["fallback"]:
@@ -533,7 +538,9 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         structures["table_editable"],
         structures["formulas"]["supported_coverage"],
     ]
-    if any(m["status"] == "FAIL" for m in editable_metrics):
+    if {"UNSUPPORTED_DOCUMENT_PROTECTION", "UNSUPPORTED_CONTENT_LOCK"}.intersection(errors) or any(
+        m["status"] == "FAIL" for m in editable_metrics
+    ):
         result["editability_status"] = "FAIL"
     elif any(m["scored_count"] for m in editable_metrics):
         result["editability_status"] = (

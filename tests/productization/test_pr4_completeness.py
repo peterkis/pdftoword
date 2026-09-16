@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from docx import Document
+from docx.shared import Inches
 from tests.productization.test_acceptance_harness import specimen
 
 from acceptance.metrics import evaluate
@@ -33,7 +34,7 @@ def test_unsupported_formula_must_still_be_present(tmp_path: Path, retained: str
     elif retained != "math":
         paragraph._p.remove(paragraph._p[-1])
     if retained == "image":
-        paragraph.add_run().add_picture(str(tmp_path / "figure.png"))
+        paragraph.add_run().add_picture(str(tmp_path / "figure.png"), width=Inches(1))
         image = copy.deepcopy(sources["blocks"][-1]["images"][0])
         image["bbox"] = [0, 30, 100, 50]
         image["fallback"] = True
@@ -61,7 +62,7 @@ def test_referenced_nonbody_story_is_checked(tmp_path: Path, story: str, content
     elif content == "formula":
         paragraph._p.append(copy.deepcopy(doc.paragraphs[2]._p[-1]))
     elif content == "image":
-        paragraph.add_run().add_picture(str(tmp_path / "figure.png"))
+        paragraph.add_run().add_picture(str(tmp_path / "figure.png"), width=Inches(1))
     doc.save(str(path))
     result = evaluate(path, truth, sources)
     assert ("UNSUPPORTED_VISIBLE_STORY" in result["errors"]) is (content != "empty")

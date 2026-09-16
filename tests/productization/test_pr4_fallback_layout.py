@@ -9,6 +9,7 @@ from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.shared import Inches
 from tests.productization.test_acceptance_harness import specimen
 
 from acceptance.metrics import evaluate
@@ -74,7 +75,7 @@ def test_verified_image_replacement_is_reviewable_but_wrong_structure_still_fail
             table = doc.tables[0]._tbl
             table.getparent().replace(table, saved)
             paragraph = doc.paragraphs[3]
-    paragraph.add_run().add_picture(str(tmp_path / "figure.png"))
+    paragraph.add_run().add_picture(str(tmp_path / "figure.png"), width=Inches(1))
     image = copy.deepcopy(sources["blocks"][-1]["images"][0])
     image.update(bbox=block["bbox"], fallback=True)
     block["images"] = [image]

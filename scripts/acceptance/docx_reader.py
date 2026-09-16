@@ -537,7 +537,7 @@ def _numbered_content(document: Any, styles: Any, numbering: Any) -> bool:
     return any(numbered(p) for p in document.xpath(".//w:p", namespaces=NS))
 
 
-def _check_picture_containers(root: Any) -> None:
+def _check_picture_containers(root: Any, image_sizes: dict[str, tuple[int, int]]) -> None:
     """Accept complete inline rectangular pictures, not hashes in orphan blips."""
 
     def one(node: Any, path: str) -> Any:
@@ -592,6 +592,13 @@ def _check_picture_containers(root: Any) -> None:
         blip = one(fill, "a:blip")
         if len(blips) != 1 or blips[0] != blip:
             raise ValueError("INVALID_DRAWING_CONTAINER")
+        if blip.get(f"{{{NS['r']}}}link") is not None:
+            raise ValueError("UNSUPPORTED_LINKED_IMAGE")
+        pixels = image_sizes.get(blip.get(f"{{{NS['r']}}}embed", ""))
+        if pixels is None or min(size) < 12700 or abs(
+            size[0] * pixels[1] - size[1] * pixels[0]
+        ) > 0.02 * max(size[0] * pixels[1], size[1] * pixels[0]):
+            raise ValueError("IMAGE_DISPLAY_SCALE_INVALID")
         seen.add(blip)
         stretch = one(fill, "a:stretch/a:fillRect")
         crops = [*fill.findall("a:srcRect", NS), stretch]
@@ -734,6 +741,7 @@ def inspect(path: Path) -> Json:
                         raise ValueError("CORRUPT_MEDIA") from exc
                     result["media_count"] += 1
             relationships = {}
+            image_sizes: dict[str, tuple[int, int]] = {}
             styles_target: str | None = None
             numbering_target: str | None = None
             settings_target: str | None = None
@@ -748,6 +756,7 @@ def inspect(path: Path) -> Json:
                         data = archive.read(target)
                         with Image.open(io.BytesIO(data)) as picture:
                             actual_type = Image.MIME.get(picture.format or "")
+                            image_sizes[rel.get("Id", "")] = picture.size
                             picture.verify()
                         if actual_type is None or content_types.get(target) != actual_type:
                             raise ValueError("IMAGE_CONTENT_TYPE_INVALID")
@@ -815,7 +824,7 @@ def inspect(path: Path) -> Json:
                 if lock.get(f"{{{NS['w']}}}val") not in {"unlocked", "sdtLocked"}:
                     raise ValueError("UNSUPPORTED_CONTENT_LOCK")
             _check_bookmarks(root)
-            _check_picture_containers(root)
+            _check_picture_containers(root, image_sizes)
             if _numbered_content(root, styles, numbering):
                 result["errors"].append("UNSUPPORTED_NUMBERING")
             if _hidden_content(root, styles):
@@ -882,6 +891,17 @@ def inspect(path: Path) -> Json:
                             relationships[rid]
                             for rid in paragraph.xpath(".//a:blip/@r:embed", namespaces=NS)
                         ],
+                        "image_sizes": [
+                            [
+                                int(
+                                    blip.xpath(
+                                        "ancestor::wp:inline/wp:extent", namespaces=NS
+                                    )[0].get(axis)
+                                ) / 12700
+                                for axis in ("cx", "cy")
+                            ]
+                            for blip in paragraph.xpath(".//a:blip", namespaces=NS)
+                        ],
                         "markers": paragraph.xpath(".//w:bookmarkStart/@w:name", namespaces=NS),
                         "table": tables.index(parents[-1]) if parents else None,
                     }
@@ -897,6 +917,8 @@ def inspect(path: Path) -> Json:
             "MISSING_RELATIONSHIP_TARGET",
             "CORRUPT_MEDIA",
             "INVALID_IMAGE_EXTENT",
+            "IMAGE_DISPLAY_SCALE_INVALID",
+            "UNSUPPORTED_LINKED_IMAGE",
             "UNSUPPORTED_NESTED_TABLE",
             "UNSUPPORTED_BLOCK_MATH",
             "UNSUPPORTED_HORIZONTAL_MERGE",
