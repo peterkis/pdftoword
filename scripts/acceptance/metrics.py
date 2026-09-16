@@ -243,13 +243,25 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     metrics["pages"] = page_metrics
     boxes_by_page: dict[int, list[list[float]]] = {}
     preserved_anchors: set[str] = set()
+    unclaimed_images = {
+        (i, j) for i, paragraph in enumerate(paragraphs) for j in range(len(paragraph["images"]))
+    }
     for block in sources["blocks"]:
         image_indexes = [i for i, p in enumerate(paragraphs) if block["marker"] in p["markers"]]
-        present_images = [image for i in image_indexes for image in paragraphs[i]["images"]]
         for image in block.get("images", []):
-            if image["sha256"] not in present_images:
+            drawing = next(
+                (
+                    (i, j)
+                    for i in image_indexes
+                    for j, actual_hash in enumerate(paragraphs[i]["images"])
+                    if actual_hash == image["sha256"] and (i, j) in unclaimed_images
+                ),
+                None,
+            )
+            if drawing is None:
                 errors.append("MISSING_OR_REPLACED_IMAGE")
                 continue
+            unclaimed_images.remove(drawing)
             if image["fallback"]:
                 boxes_by_page.setdefault(block["page"], []).append(image["bbox"])
             box = image["bbox"]
@@ -262,6 +274,8 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         # Legacy/minimal synthetic provenance can only report declared fallback area.
         if block.get("fallback") and "images" not in block:
             boxes_by_page.setdefault(block["page"], []).append(block["bbox"])
+    if unclaimed_images:
+        errors.append("UNALIGNED_IMAGE")
     total_area = sum(p["width"] * p["height"] for p in sources["pages"])
     fallback_area = 0.0
     for page in sources["pages"]:

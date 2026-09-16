@@ -98,6 +98,7 @@ def test_actual_table_cells_are_not_counted_as_body(tmp_path: Path) -> None:
 # It does not call the production converter to manufacture expected output.
 def specimen(root: Path, fault: str = "") -> tuple[Path, dict, dict]:
     import copy
+    import hashlib
     import zipfile
 
     from docx.oxml import OxmlElement
@@ -182,6 +183,13 @@ def specimen(root: Path, fault: str = "") -> tuple[Path, dict, dict]:
     picture = doc.add_paragraph()
     picture.add_run().add_picture(str(root / "figure.png"), width=Inches(1))
     bind(picture, "g", 1, [0, 90, 100, 190], "figure")
+    blocks[-1]["images"] = [
+        {
+            "sha256": hashlib.sha256((root / "figure.png").read_bytes()).hexdigest(),
+            "bbox": [0, 90, 100, 190],
+            "fallback": False,
+        }
+    ]
     units.append(
         {
             "unit_id": "edge",

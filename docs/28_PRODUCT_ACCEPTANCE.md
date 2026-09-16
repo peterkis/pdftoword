@@ -53,6 +53,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
   与 table/formula 共用锚点的重复 text 标注不再次进入正文 CER，并列出排除数量。
 - 必要内容包含确认 text/table/formula。图片哈希匹配且源框包含参考框才登记源图保留，
   这种几何保留仍是 REVIEW_REQUIRED，视觉裁剪验收单列 PENDING。
+  每个实际绘图按出现位置逐一认领；额外绘图或同一绘图被多次认领均报错，不能只凭哈希存在就通过。
 - data_table 按 gridSpan/vMerge 重建逻辑 cell，空 cell 也计分；无边框布局表不因是 w:tbl 就被当作数据表。
   当前比较各标注的表格片段；跨页 continuation 与重复表头的全局语义仍需人工核对，不宣称已验收。
 - 公式支持字面 token、分组、分数、上下标和明确列举的符号命令；独立解析参考结构与 OMML。
