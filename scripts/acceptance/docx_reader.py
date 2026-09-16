@@ -595,7 +595,10 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
                     raise ValueError("UNSUPPORTED_TEXT_POSITION")
         if properties.find(".//w:framePr", NS) is not None:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
-        if any(enabled(node) for node in properties.findall(".//w:bidiVisual", NS)):
+        if any(
+            enabled(node)
+            for node in properties.xpath(".//w:bidiVisual | .//w:bidi | .//w:rtl", namespaces=NS)
+        ):
             raise ValueError("UNSUPPORTED_BIDI_OVERRIDE")
         if properties.find(".//w:bdo", NS) is not None:
             raise ValueError("UNSUPPORTED_BIDI_OVERRIDE")
