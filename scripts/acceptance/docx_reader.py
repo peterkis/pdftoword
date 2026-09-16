@@ -357,6 +357,11 @@ def _hidden_content(document: Any, styles: Any) -> bool:
     def check_background(properties: Any) -> None:
         if properties is None:
             return
+        if any(
+            isinstance(node.tag, str) and etree.QName(node).namespace != NS["w"]
+            for node in properties.iterdescendants()
+        ):
+            raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
         for color in properties.findall(".//w:color", NS):
             if color.get(val) not in {"auto", "000000"} or any(
                 "theme" in etree.QName(key).localname.lower() for key in color.attrib
@@ -798,6 +803,9 @@ def inspect(path: Path) -> Json:
             ):
                 result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
                 return result
+            for lock in root.xpath("//w:body//w:sdtPr/w:lock", namespaces=NS):
+                if lock.get(f"{{{NS['w']}}}val") not in {"unlocked", "sdtLocked"}:
+                    raise ValueError("UNSUPPORTED_CONTENT_LOCK")
             _check_bookmarks(root)
             _check_picture_containers(root)
             if _numbered_content(root, styles, numbering):
@@ -891,6 +899,7 @@ def inspect(path: Path) -> Json:
             "OPC_WORD_ROOT_INVALID",
             "UNSUPPORTED_COMMENTS",
             "UNSUPPORTED_DOCUMENT_PROTECTION",
+            "UNSUPPORTED_CONTENT_LOCK",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",

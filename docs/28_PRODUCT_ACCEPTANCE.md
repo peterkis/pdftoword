@@ -40,6 +40,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 读取器目前只支持黑色/auto前景及缺省/显式白色页面；其他颜色、主题色和复杂背景明确报不支持。动态页码不解析；来源书签必须配对且ID/名称唯一，引用story的根类型须与关系一致。
 导入前需移除批注；非空批注部件和批注标记明确不支持。页眉页脚引用必须指向正确类型部件，样式/编号根元素必须符合契约。
 隐藏行（含样式继承）不可参与验收；启用强制documentProtection时明确拒绝，不认定为可编辑。
+内容锁定SDT及已用格式中的非标准命名空间文字效果明确不支持；不将受锁保护内容计为可编辑。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。

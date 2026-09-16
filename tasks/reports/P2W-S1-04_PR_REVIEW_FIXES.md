@@ -322,3 +322,12 @@ Ruff、mypy（80文件）、两个既有校验器通过，原工作与证据不�
 不能从XML可提取性推断Word可编辑性；缺省/关闭enforcement不误报。
 新增15项回归，直接入口修复前6 failed / 5 passed，样式入口另有3 failed；
 最终独立检出843 passed，Ruff、mypy（81文件）、两个既有校验器通过。
+
+## 第二十五轮：内容锁定与扩展文字效果
+
+审查版本9b9056f，两项反馈修复。
+内容控件contentLocked/sdtContentLocked明确拒绝；无锁、unlocked和仅限制删除控件的
+sdtLocked不误判为内容不可编辑。已用格式中的非Word标准命名空间扩展节点明确不支持，
+覆盖w14文本填充/轮廓在正文、公式、已用样式和默认格式中的不可见效果。
+新增13项回归，修复前10 failed / 3 passed；独立检出856 passed，
+Ruff、mypy（82文件）、两个既有校验器通过。原证据不改写。
