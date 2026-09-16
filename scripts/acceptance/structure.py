@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from itertools import pairwise
 from typing import Any
 
@@ -21,6 +22,7 @@ def score_structure(
     unscored_math_nodes: set[tuple[int, int]] | None = None,
     image_preserved_unit_ids: set[str] | None = None,
     uncertain_formulas: list[Json] | None = None,
+    uncertain_edges: list[Json] | None = None,
 ) -> tuple[Json, list[Json], set[int]]:
     """Score actual table grids, OMML and source-bound predicted edges."""
     from .metrics import _has_math_content, metric
@@ -167,10 +169,22 @@ def score_structure(
     expected_edges = {
         (u["reference"]["from"], u["reference"]["to"], u["reference"]["relation"]) for u in edges
     }
+    uncertain_remaining = Counter(
+        (u["reference"]["from"], u["reference"]["to"], u["reference"]["relation"])
+        for u in uncertain_edges or []
+        if isinstance(u.get("reference"), dict)
+        and all(k in u["reference"] for k in ("from", "to", "relation"))
+    )
     matched_edges = set()
+    excluded_edges = 0
     for edge in predicted:
-        if edge in expected_edges and bound.get(edge[0] or "") and bound.get(edge[1] or ""):
+        if not bound.get(edge[0] or "") or not bound.get(edge[1] or ""):
+            continue
+        if edge in expected_edges:
             matched_edges.add(edge)
+        elif uncertain_remaining[edge]:
+            uncertain_remaining[edge] -= 1
+            excluded_edges += 1
     # A reference edge is consumed once; repeated predictions remain in the denominator.
     correct_edges = covered = len(matched_edges)
     for u in edges:
@@ -202,11 +216,19 @@ def score_structure(
         "table_editable": metric(cells_total, cells_total, cells_editable),
         "formulas": metric(len(formulas), supported - len(fallback_formula_ids), formula_correct),
         "relation_precision": metric(
-            len(predicted), len(predicted) if edges or complete_relations else 0, correct_edges
+            len(predicted),
+            len(predicted) - excluded_edges if edges or complete_relations else 0,
+            correct_edges,
+            excluded_edges,
         ),
         "relation_coverage": metric(len(edges), len(edges), covered),
         "reading_order": metric(order_total, order_total - order_missing, order_correct),
     }
+    # Keep eligible/unscored diagnostics, but precision only divides scored predictions.
+    precision = metrics["relation_precision"]
+    precision["value"] = (
+        correct_edges / precision["scored_count"] if precision["scored_count"] else None
+    )
     continuation_ids = {
         u["reference"]["logical_table_id"]
         for u in table_units

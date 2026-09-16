@@ -35,6 +35,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 
 `import-reviewed` 新建完整版本包，原 auto 字节保留；新 DOCX 使用保留下来的来源书签对齐。
 缺省表格样式中的自动编号同样拒绝；旧式水平合并 `w:hMerge` 报 `UNSUPPORTED_HORIZONTAL_MERGE`，需转换为受支持的 `gridSpan` 后再验收。
+垂直合并续格必须无可见载荷；混合confirmed/uncertain关系按边逐条认领，uncertain预测保留未评分计数并排除precision分母，重复或无关预测不豁免。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。

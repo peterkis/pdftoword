@@ -215,7 +215,7 @@ def table_grid(table: Any) -> Json:
             if width < 1 or ci + width > columns:
                 raise ValueError("INVALID_TABLE_GRID")
             if continuation:
-                if cell.xpath(".//w:t/text()", namespaces=NS):
+                if word_text(cell) or cell.xpath(".//m:oMath | .//w:drawing", namespaces=NS):
                     raise ValueError("INVALID_TABLE_MERGE")
                 parent = active.get(ci)
                 if parent is None or parent["colspan"] != width:

@@ -383,6 +383,9 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         unscored_math_nodes=unscored_math_nodes,
         image_preserved_unit_ids=image_preserved_unit_ids,
         uncertain_formulas=[u for u in uncertain_units if u["kind"] == "formula"],
+        uncertain_edges=[
+            u for u in truth["units"] if u["status"] != "confirmed" and u["kind"] == "figure_edge"
+        ],
         complete_relations=(
             truth.get("coverage_complete") is True
             and not any(
