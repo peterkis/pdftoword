@@ -204,7 +204,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
             )
         if uncertain["kind"] in {"text", "table"}:
             claimed.update(uncertain_indexes)
-        if uncertain["kind"] in {"formula", "table"}:
+        if uncertain["kind"] == "table":
             unscored_math_nodes.update(
                 (i, j) for i in uncertain_indexes for j in range(len(paragraphs[i]["math"]))
             )
@@ -382,6 +382,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         sources,
         unscored_math_nodes=unscored_math_nodes,
         image_preserved_unit_ids=image_preserved_unit_ids,
+        uncertain_formulas=[u for u in uncertain_units if u["kind"] == "formula"],
         complete_relations=(
             truth.get("coverage_complete") is True
             and not any(
@@ -467,8 +468,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
             continue
         if unit["unit_id"] in preserved_units:
             continue
-        formula_indexes = bound.get(unit["reference"]["source_anchor_id"], [])
-        if any(_has_math_content(m) for i in formula_indexes for m in paragraphs[i]["math"]):
+        if unit["unit_id"] in structures["formulas"]["present_unit_ids"]:
             unsupported_present.add(unit["unit_id"])
         else:
             failures.append(

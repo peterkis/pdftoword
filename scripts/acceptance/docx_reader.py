@@ -26,6 +26,7 @@ NS = {
 
 UNSUPPORTED_WORD_CONTENT = [
     "sym",
+    "ptab",
     "altChunk",
     "pict",
     "object",
@@ -229,7 +230,7 @@ def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str]:
             raise ValueError("OPC_PART_CONTENT_TYPE_MISSING")
         media_type = content_type.split(";", 1)[0]
         mime_token = r"[!#$%&'*+.^_`|~0-9A-Za-z-]+"
-        if not re.fullmatch(mime_token + '/' + mime_token, media_type):
+        if not re.fullmatch(mime_token + "/" + mime_token, media_type):
             raise ValueError("OPC_PART_CONTENT_TYPE_INVALID")
         if name.endswith(".rels") and content_type != CT.OPC_RELATIONSHIPS:
             raise ValueError("OPC_RELATIONSHIPS_CONTENT_TYPE_INVALID")
@@ -325,8 +326,31 @@ def inspect(path: Path) -> Json:
                 if name.endswith((".xml", ".rels")):
                     root = xml(archive.read(name))
                     if name.endswith(".rels"):
+                        rel_ns = "http://schemas.openxmlformats.org/package/2006/relationships"
+                        if root.tag != f"{{{rel_ns}}}Relationships" or any(
+                            r.tag != f"{{{rel_ns}}}Relationship"
+                            for r in root
+                            if isinstance(r.tag, str)
+                        ):
+                            raise ValueError("OPC_INVALID_DECLARATION")
+                        relationship_ids: set[str] = set()
+                        for relation in root:
+                            if not isinstance(relation.tag, str):
+                                continue
+                            rid = relation.get("Id", "")
+                            if not rid or any(c in rid for c in "{}:"):
+                                raise ValueError("OPC_RELATIONSHIP_ID_INVALID")
+                            try:
+                                etree.Element(rid)  # XML NCName syntax, including valid Unicode.
+                            except ValueError as exc:
+                                raise ValueError("OPC_RELATIONSHIP_ID_INVALID") from exc
+                            if rid in relationship_ids:
+                                raise ValueError("OPC_DUPLICATE_RELATIONSHIP_ID")
+                            relationship_ids.add(rid)
                         base = posixpath.dirname(posixpath.dirname(name))
                         for rel in root:
+                            if not isinstance(rel.tag, str):
+                                continue
                             if rel.get("TargetMode") == "External":
                                 raise ValueError("EXTERNAL_RELATIONSHIP")
                             target = posixpath.normpath(posixpath.join(base, rel.get("Target", "")))
@@ -348,6 +372,8 @@ def inspect(path: Path) -> Json:
             rel_path = "word/_rels/document.xml.rels"
             if rel_path in names:
                 for rel in xml(archive.read(rel_path)):
+                    if not isinstance(rel.tag, str):
+                        continue
                     target = posixpath.normpath(posixpath.join("word", rel.get("Target", "")))
                     if rel.get("Type") == NS["r"] + "/image":
                         data = archive.read(target)
@@ -456,6 +482,8 @@ def inspect(path: Path) -> Json:
             "OPC_PART_CONTENT_TYPE_INVALID",
             "OPC_RELATIONSHIPS_CONTENT_TYPE_INVALID",
             "OPC_WORD_CONTENT_TYPE_INVALID",
+            "OPC_RELATIONSHIP_ID_INVALID",
+            "OPC_DUPLICATE_RELATIONSHIP_ID",
         }
         code = str(exc) if str(exc) in known else type(exc).__name__.upper()
         result["errors"].append(code)

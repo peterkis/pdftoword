@@ -20,6 +20,7 @@ def score_structure(
     complete_relations: bool = False,
     unscored_math_nodes: set[tuple[int, int]] | None = None,
     image_preserved_unit_ids: set[str] | None = None,
+    uncertain_formulas: list[Json] | None = None,
 ) -> tuple[Json, list[Json], set[int]]:
     """Score actual table grids, OMML and source-bound predicted edges."""
     from .metrics import _has_math_content, metric
@@ -85,39 +86,79 @@ def score_structure(
         ):
             failures.append({"unit_id": u["unit_id"], "page": u["page"], "code": "TABLE_MISMATCH"})
     formulas = [u for u in units if u["kind"] == "formula"]
-    supported = formula_correct = 0
-    bound_maths = {
-        (i, j)
-        for u in formulas
-        for i in bound.get(u["reference"]["source_anchor_id"], [])
-        for j in range(len(paragraphs[i]["math"]))
-    }
-    bound_maths.update(unscored_math_nodes or set())
     all_maths = {(i, j) for i, p in enumerate(paragraphs) for j in range(len(p["math"]))}
-    consumed_maths: set[tuple[int, int]] = set()
-    for u in formulas:
-        ref = u["reference"]
-        expected = reference_tree(ref["text"])
-        if expected is None:
-            continue
-        supported += 1
-        indexes = bound.get(ref["source_anchor_id"], [])
-        maths = [m for i in indexes for m in paragraphs[i]["math"]]
-        if u["unit_id"] in preserved and not any(_has_math_content(m) for m in maths):
-            fallback_formula_ids.append(u["unit_id"])
-            continue
-        nodes = {(i, j) for i in indexes for j in range(len(paragraphs[i]["math"]))}
-        correct = (
-            len(maths) == 1
-            and not nodes.intersection(consumed_maths)
-            and output_tree(maths[0]) == expected
+    actual_trees = {node: output_tree(paragraphs[node[0]]["math"][node[1]]) for node in all_maths}
+
+    def nodes_for(unit: Json) -> list[tuple[int, int]]:
+        reference = unit.get("reference")
+        indexes = (
+            bound.get(reference.get("source_anchor_id", ""), [])
+            if isinstance(reference, dict)
+            else []
         )
-        consumed_maths.update(nodes)
-        formula_correct += correct
-        if not correct:
+        return sorted({(i, j) for i in indexes for j in range(len(paragraphs[i]["math"]))})
+
+    expected_trees = {i: reference_tree(u["reference"]["text"]) for i, u in enumerate(formulas)}
+    supported = sum(tree is not None for tree in expected_trees.values())
+    candidates = {
+        i: [node for node in nodes_for(formulas[i]) if actual_trees[node] == tree]
+        for i, tree in expected_trees.items()
+        if tree is not None
+    }
+    owners: dict[tuple[int, int], int] = {}
+
+    def allocate(index: int, visited: set[tuple[int, int]]) -> bool:
+        for node in candidates[index]:
+            if node not in owners:
+                owners[node] = index
+                return True
+        for node in candidates[index]:
+            if node in visited:
+                continue
+            visited.add(node)
+            if allocate(owners[node], visited):
+                owners[node] = index
+                return True
+        return False
+
+    for index in candidates:
+        allocate(index, set())
+    matched_units = set(owners.values())
+    consumed_maths = set(owners)
+    present_formula_ids = {formulas[i]["unit_id"] for i in matched_units}
+    formula_correct = len(matched_units)
+
+    def claim_remaining(unit: Json) -> bool:
+        node = next(
+            (
+                node
+                for node in nodes_for(unit)
+                if node not in consumed_maths
+                and _has_math_content(paragraphs[node[0]]["math"][node[1]])
+            ),
+            None,
+        )
+        if node is None:
+            return False
+        consumed_maths.add(node)
+        present_formula_ids.add(unit["unit_id"])
+        return True
+
+    for index, unit in enumerate(formulas):
+        if expected_trees[index] is None or index in matched_units:
+            continue
+        present = claim_remaining(unit)
+        if not present and unit["unit_id"] in preserved:
+            fallback_formula_ids.append(unit["unit_id"])
+        else:
             failures.append(
-                {"unit_id": u["unit_id"], "page": u["page"], "code": "FORMULA_MISMATCH"}
+                {"unit_id": unit["unit_id"], "page": unit["page"], "code": "FORMULA_MISMATCH"}
             )
+    for index, unit in enumerate(formulas):
+        if expected_trees[index] is None:
+            claim_remaining(unit)
+    for unit in uncertain_formulas or []:
+        claim_remaining(unit)
     edges = [u for u in units if u["kind"] == "figure_edge"]
     predicted: list[tuple[str | None, str | None, str]] = []
     for edge in sources.get("relations", []):
@@ -176,7 +217,10 @@ def score_structure(
     metrics["formulas"]["fallback_count"] = len(fallback_formula_ids)
     metrics["tables"]["continuation"] = metric(len(continuation_ids), 0, 0)
     metrics["table_cells"]["repeated_header_cells_excluded"] = repeated_header_cells
-    metrics["formulas"]["unmatched_output_count"] = len(all_maths - bound_maths)
+    metrics["formulas"]["unmatched_output_count"] = len(
+        all_maths - consumed_maths - (unscored_math_nodes or set())
+    )
+    metrics["formulas"]["present_unit_ids"] = sorted(present_formula_ids)
     metrics["formulas"]["unsupported_count"] = len(formulas) - supported
     metrics["formulas"]["supported_coverage"] = metric(supported, supported, formula_correct)
     metrics["reading_order"]["missing_count"] = order_missing
