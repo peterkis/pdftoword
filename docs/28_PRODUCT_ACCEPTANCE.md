@@ -55,6 +55,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
   这种几何保留仍是 REVIEW_REQUIRED，视觉裁剪验收单列 PENDING。
   每个实际绘图按出现位置逐一认领；额外绘图或同一绘图被多次认领均报错，不能只凭哈希存在就通过。
 - data_table 按 gridSpan/vMerge 重建逻辑 cell，空 cell 也计分；无边框布局表不因是 w:tbl 就被当作数据表。
+  非数据布局表仅按确认文字评分，不加入数据表拓扑分母；同锚点文字参考不重复计数。
   当前比较各标注的表格片段；跨页 continuation 与重复表头的全局语义仍需人工核对，不宣称已验收。
 - 公式支持字面 token、分组、分数、上下标和明确列举的符号命令；独立解析参考结构与 OMML。
   支持的命令见 `scripts/acceptance/formula.py`。矩阵、分段、未知命令显式 unsupported，
@@ -66,6 +67,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 
 结果 Schema：`specs/product-quality/result.schema.json`。
 文件结构合法、自动内容、可编辑性、真实渲染、人工验收是不同状态。
+评分前检查 OPC 必需部件和主文档关系；隐藏运行及其继承样式会明确拒绝，不计作已验收可见内容。
 LibreOffice PDF/PNG 是真实渲染；HTML 从不作为 Word 渲染证据。
 
 ## 回归与后续人工验收

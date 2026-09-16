@@ -126,7 +126,36 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
                 block_anchor[block["block_id"]] = candidates[0][1]
             for _, aid in candidates:
                 bound[aid].extend(found)
-    units = [u for u in truth["units"] if u["status"] == "confirmed"]
+    confirmed = [u for u in truth["units"] if u["status"] == "confirmed"]
+    text_anchors = {u["reference"]["source_anchor_id"] for u in confirmed if u["kind"] == "text"}
+    units = []
+    for unit in confirmed:
+        ref = unit["reference"]
+        if unit["kind"] == "table" and ref.get("is_data_table") is False:
+            aid = ref["source_anchor_id"]
+            layout_indexes = bound.get(aid, [])
+            layout_tables = {paragraphs[i]["table"] for i in layout_indexes} - {None}
+            bound[aid] = sorted(
+                set(layout_indexes)
+                | {i for i, p in enumerate(paragraphs) if p["table"] in layout_tables}
+            )
+            if aid not in text_anchors:
+                units.append(
+                    {
+                        **unit,
+                        "kind": "text",
+                        "reference": {
+                            "source_anchor_id": aid,
+                            "text": "".join(
+                                c["text"]
+                                for c in sorted(ref["cells"], key=lambda c: (c["row"], c["col"]))
+                            ),
+                            "content_scope": "body",
+                        },
+                    }
+                )
+        else:
+            units.append(unit)
     structural_anchors = {
         u["reference"].get("source_anchor_id") for u in units if u["kind"] in {"table", "formula"}
     }
