@@ -48,6 +48,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 已用sz/szCs字号格式低于6pt或非法时返回UNSUPPORTED_FONT_SCALE；不修改原文字号，不将门槛通过等同于人工可读性确认。
 非零运行position及dataBinding内容控件明确不支持，不对页面外位置或动态绑定缓存声明验收通过。
 非100%水平文字缩放、fitText和精确表格行高明确不支持；WordML验收载荷必须处于受支持的合法父链中。
+非零运行字符间距及启用caps/smallCaps明确不支持，避免显示字形与严格文字比较不一致。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。

@@ -417,6 +417,12 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        for spacing in properties.findall(".//w:spacing", NS):
+            if spacing.getparent().tag == f"{{{NS['w']}}}rPr" and spacing.get(val) != "0":
+                raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        for effect in properties.xpath(".//w:caps | .//w:smallCaps", namespaces=NS):
+            if enabled(effect):
+                raise ValueError("UNSUPPORTED_TEXT_CASE")
         for width in properties.findall(".//w:w", NS):
             if width.get(val) != "100":
                 raise ValueError("UNSUPPORTED_TEXT_POSITION")
@@ -1007,6 +1013,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_DATA_BINDING",
             "INVALID_WORD_STRUCTURE",
             "UNSUPPORTED_ROW_HEIGHT",
+            "UNSUPPORTED_TEXT_CASE",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
