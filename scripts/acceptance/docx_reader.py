@@ -417,6 +417,8 @@ def _hidden_content(document: Any, styles: Any) -> bool:
         check_background(paragraph.find("w:pPr", NS))
         for cell in paragraph.xpath("ancestor::w:tc", namespaces=NS):
             check_background(cell.find("w:tcPr", NS))
+        for row in paragraph.xpath("ancestor::w:tr", namespaces=NS):
+            check_background(row.find("w:tblPrEx", NS))
         pstyle = paragraph.find("w:pPr/w:pStyle", NS)
         table_hidden = default_hidden
         tables = paragraph.xpath("ancestor::w:tbl", namespaces=NS)
@@ -826,6 +828,8 @@ def inspect(path: Path) -> Json:
             )
             if unsupported_body or unknown_drawings:
                 result["errors"].append("UNSUPPORTED_BODY_CONTENT")
+            if root.xpath("//w:body//m:oMath[not(ancestor::w:p)]", namespaces=NS):
+                raise ValueError("UNSUPPORTED_BLOCK_MATH")
             tables = root.xpath("//w:tbl", namespaces=NS)
             for table in tables:
                 if table.xpath("ancestor::w:tbl", namespaces=NS):
@@ -859,6 +863,7 @@ def inspect(path: Path) -> Json:
             "CORRUPT_MEDIA",
             "INVALID_IMAGE_EXTENT",
             "UNSUPPORTED_NESTED_TABLE",
+            "UNSUPPORTED_BLOCK_MATH",
             "UNSUPPORTED_HORIZONTAL_MERGE",
             "INVALID_TABLE_GRID",
             "INVALID_BOOKMARK",
