@@ -562,6 +562,8 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
                     raise ValueError("UNSUPPORTED_TEXT_POSITION")
         if properties.find(".//w:framePr", NS) is not None:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        if properties.find(".//w:bdo", NS) is not None:
+            raise ValueError("UNSUPPORTED_BIDI_OVERRIDE")
         for fonts in properties.findall(".//w:rFonts", NS):
             for key, name in fonts.attrib.items():
                 attribute = etree.QName(key).localname
@@ -1075,6 +1077,8 @@ def inspect(path: Path) -> Json:
             for lock in root.xpath("//w:body//w:sdtPr/w:lock", namespaces=NS):
                 if lock.get(f"{{{NS['w']}}}val") not in {"unlocked", "sdtLocked"}:
                     raise ValueError("UNSUPPORTED_CONTENT_LOCK")
+            if root.xpath("//w:body//w:bdo", namespaces=NS):
+                raise ValueError("UNSUPPORTED_BIDI_OVERRIDE")
             _check_extension_wrappers(root)
             _check_payload_structure(root)
             _check_bookmarks(root)
@@ -1211,6 +1215,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_FONT_MAPPING",
             "UNSUPPORTED_ALTERNATE_CONTENT",
             "UNSUPPORTED_TABLE_WIDTH",
+            "UNSUPPORTED_BIDI_OVERRIDE",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",

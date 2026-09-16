@@ -487,3 +487,14 @@ Ruff、mypy（98文件）、两个既有校验器通过，原始证据不变。
 正常固定布局对照通过，不根据仅有列数就宣称所有单元格可见。
 新增6项回归，修复前5 failed / 1 passed；独立检出1052 passed，
 Ruff、mypy（99文件）、两个既有校验器通过，原始证据不变。
+
+## 第四十三轮：双向覆盖结构与非法属性位置
+
+审查版本611d699，核对后修复。
+Microsoft Open XML文档将bdo定义为运行容器，父元素不含rPr：
+https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bidirectionaloverride?view=openxml-3.0.1
+正确位置的bdo容器此前已由父链检查拒绝；本次统一返回UNSUPPORTED_BIDI_OVERRIDE，
+并补齐直接/样式/默认/OMML属性区非法bdo被忽略的入口。没有把非法rPr结构宣称为
+标准Word运行格式，也未实现双向显示算法。
+新增6项回归（含既有失败容器的诊断细化），独立检出1058 passed，
+Ruff、mypy（100文件）、两个既有校验器通过，原始证据不变。
