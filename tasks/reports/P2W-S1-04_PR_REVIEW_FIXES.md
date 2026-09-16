@@ -278,3 +278,19 @@ coverage_complete不再因存在uncertain边整体失效：逐条匹配的预测
 
 新增6个回归，修复前3 failed / 3 passed，修复后独立检出779 passed；
 Ruff、mypy（77文件）、两个既有校验器通过。旧封存证据保持不变。
+
+## 第二十一轮：颜色、动态页码、story根与书签契约
+
+审查版本0fc7889，四项反馈修复。
+
+- 当前仅支持黑色/auto前景及缺省/显式白色页面；已用其他颜色、主题色、复杂页面背景
+  明确不支持，不以XML中存在文字推断可见。白字白底、黑字黑底均有实际回归。
+- 动态pgNum明确拒绝，正文与已引用页眉页脚一致，不猜测Word重分页后的页码。
+- 按关系类型校验hdr/ftr/footnotes/endnotes根元素及命名空间。
+- 来源书签要求合法ID、start/end配对及顺序、ID/名称唯一；缺失或重复明确失败。
+  修正三个合成夹具缺少bookmarkEnd的问题；复制段落场景仍保留，但更早以
+  INVALID_BOOKMARK拒绝，不再等到DUPLICATE_SOURCE_BLOCK。
+
+新增24个回归，最初22项中17 failed / 5 passed，页面背景补充回归修复前1 failed。
+最终独立检出803 passed，Ruff、mypy（78文件）、两个既有校验器通过。
+系统临时工作树清理后已重建并重新完成验证，真实历史证据未修改。

@@ -30,6 +30,7 @@ NS = {
 UNSUPPORTED_WORD_CONTENT = [
     "sym",
     "ptab",
+    "pgNum",
     "altChunk",
     "pict",
     "object",
@@ -315,6 +316,30 @@ def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str]:
     return part_types
 
 
+def _check_bookmarks(document: Any) -> None:
+    """Require unique, paired source markers in document order."""
+    starts: dict[int, Any] = {}
+    ended: set[int] = set()
+    names: set[str] = set()
+    for node in document.xpath(".//w:bookmarkStart | .//w:bookmarkEnd", namespaces=NS):
+        value = node.get(f"{{{NS['w']}}}id", "")
+        if not re.fullmatch(r"[0-9]+", value):
+            raise ValueError("INVALID_BOOKMARK")
+        identifier = int(value)
+        if node.tag == f"{{{NS['w']}}}bookmarkStart":
+            name = node.get(f"{{{NS['w']}}}name", "")
+            if not name or name in names or identifier in starts:
+                raise ValueError("INVALID_BOOKMARK")
+            names.add(name)
+            starts[identifier] = node
+        elif identifier not in starts or identifier in ended:
+            raise ValueError("INVALID_BOOKMARK")
+        else:
+            ended.add(identifier)
+    if starts.keys() != ended:
+        raise ValueError("INVALID_BOOKMARK")
+
+
 def _hidden_content(document: Any, styles: Any) -> bool:
     """Resolve vanish through defaults and used paragraph/character style chains."""
     val = f"{{{NS['w']}}}val"
@@ -329,6 +354,11 @@ def _hidden_content(document: Any, styles: Any) -> bool:
     def check_background(properties: Any) -> None:
         if properties is None:
             return
+        for color in properties.findall(".//w:color", NS):
+            if color.get(val) not in {"auto", "000000"} or any(
+                "theme" in etree.QName(key).localname.lower() for key in color.attrib
+            ):
+                raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
         for node in properties.xpath(".//w:shd | .//w:highlight", namespaces=NS):
             if node.tag == f"{{{NS['w']}}}highlight":
                 if node.get(val) == "none":
@@ -342,6 +372,13 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             # Background/theme/pattern rendering needs a renderer to establish contrast.
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
 
+    background = document.find("w:background", NS)
+    if background is not None and (
+        background.get(f"{{{NS['w']}}}color") != "FFFFFF"
+        or any("theme" in etree.QName(key).localname.lower() for key in background.attrib)
+        or len(background)
+    ):
+        raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
     check_background(styles.find("w:docDefaults", NS))
     default_node = styles.find("w:docDefaults/w:rPrDefault/w:rPr/w:vanish", NS)
     default_hidden = enabled(default_node) if default_node is not None else False
@@ -725,6 +762,7 @@ def inspect(path: Path) -> Json:
             ):
                 result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
                 return result
+            _check_bookmarks(root)
             _check_picture_containers(root)
             if _numbered_content(root, styles, numbering):
                 result["errors"].append("UNSUPPORTED_NUMBERING")
@@ -741,6 +779,9 @@ def inspect(path: Path) -> Json:
                 if not referenced:
                     continue
                 story = xml(archive.read(target))
+                expected_root = {"header": "hdr", "footer": "ftr"}.get(kind, kind)
+                if story.tag != f"{{{NS['w']}}}" + expected_root:
+                    raise ValueError("OPC_STORY_ROOT_INVALID")
                 if _has_revisions(story):
                     result["errors"].append("UNSUPPORTED_REVISIONS")
                     continue
@@ -800,6 +841,8 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_NESTED_TABLE",
             "UNSUPPORTED_HORIZONTAL_MERGE",
             "INVALID_TABLE_GRID",
+            "INVALID_BOOKMARK",
+            "OPC_STORY_ROOT_INVALID",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",

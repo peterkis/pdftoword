@@ -37,6 +37,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 缺省表格样式中的自动编号同样拒绝；旧式水平合并 `w:hMerge` 报 `UNSUPPORTED_HORIZONTAL_MERGE`，需转换为受支持的 `gridSpan` 后再验收。
 垂直合并续格必须无可见载荷；混合confirmed/uncertain关系按边逐条认领，uncertain预测保留未评分计数并排除precision分母，重复或无关预测不豁免。
 当前读取器拒绝已使用的实色/图案底纹及高亮（含继承和条件样式），报 `UNSUPPORTED_VISIBILITY_STYLE`；尚不支持这些格式的主题/对比度渲染，不将提取到文字等同于可见。
+读取器目前只支持黑色/auto前景及缺省/显式白色页面；其他颜色、主题色和复杂背景明确报不支持。动态页码不解析；来源书签必须配对且ID/名称唯一，引用story的根类型须与关系一致。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。

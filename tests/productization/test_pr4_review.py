@@ -37,6 +37,9 @@ def test_partially_supported_formulas_distinguish_unscored_from_wrong(
     marker.set(qn("w:name"), "unsupported")
     marker.set(qn("w:id"), "99")
     paragraph._p.append(marker)
+    end = OxmlElement("w:bookmarkEnd")
+    end.set(qn("w:id"), "99")
+    paragraph._p.append(end)
     math = OxmlElement("m:oMath")
     parent = math
     for tag in ["m:m", "m:mr", "m:e", "m:r", "m:t"]:

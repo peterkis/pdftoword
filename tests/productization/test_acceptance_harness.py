@@ -49,6 +49,9 @@ def test_actual_table_cells_are_not_counted_as_body(tmp_path: Path) -> None:
     marker.set(qn("w:name"), "table_source")
     marker.set(qn("w:id"), "1")
     table.cell(0, 0).paragraphs[0]._p.insert(0, marker)
+    end = OxmlElement("w:bookmarkEnd")
+    end.set(qn("w:id"), "1")
+    table.cell(0, 0).paragraphs[0]._p.append(end)
     path = tmp_path / "table.docx"
     doc.save(str(path))
     truth = {
@@ -117,6 +120,9 @@ def specimen(root: Path, fault: str = "") -> tuple[Path, dict, dict]:
         start.set(qn("w:name"), name)
         start.set(qn("w:id"), str(len(blocks)))
         paragraph._p.insert(0, start)  # type: ignore[attr-defined]
+        end = OxmlElement("w:bookmarkEnd")
+        end.set(qn("w:id"), str(len(blocks)))
+        paragraph._p.append(end)  # type: ignore[attr-defined]
         anchors.append({"id": name, "page": page, "bbox": box})
         blocks.append(
             {
@@ -271,7 +277,7 @@ def test_clean_specimen_and_deterministic_scores(tmp_path: Path) -> None:
     [
         ("missing_char", "TEXT_MISMATCH"),
         ("wrong_number", "TABLE_MISMATCH"),
-        ("duplicate_paragraph", "DUPLICATE_SOURCE_BLOCK"),
+        ("duplicate_paragraph", "INVALID_BOOKMARK"),
         ("missing_page", "MISSING_TEXT"),
         ("wrong_edge", "FIGURE_EDGE_MISMATCH"),
         ("wrong_source_page", "MISSING_TEXT"),
