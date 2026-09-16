@@ -621,6 +621,9 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
                     or int(line) < (240 if rule == "auto" else 1)
                 ):
                     raise ValueError("UNSUPPORTED_LINE_HEIGHT")
+        for alignment in properties.findall(".//w:vertAlign", NS):
+            if alignment.get(val) != "baseline":
+                raise ValueError("UNSUPPORTED_VERTICAL_ALIGNMENT")
         for effect in properties.xpath(".//w:caps | .//w:smallCaps", namespaces=NS):
             if enabled(effect):
                 raise ValueError("UNSUPPORTED_TEXT_CASE")
@@ -1267,6 +1270,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_BIDI_OVERRIDE",
             "UNSUPPORTED_OMML_VISIBILITY",
             "UNSUPPORTED_CELL_MARGINS",
+            "UNSUPPORTED_VERTICAL_ALIGNMENT",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
