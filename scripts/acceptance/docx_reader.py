@@ -62,6 +62,62 @@ WORD_PART_TYPES = {
 }
 
 
+REVISION_ELEMENTS = {
+    "ins",
+    "del",
+    "moveFrom",
+    "moveTo",
+    "moveFromRangeStart",
+    "moveFromRangeEnd",
+    "moveToRangeStart",
+    "moveToRangeEnd",
+    "rPrChange",
+    "pPrChange",
+    "sectPrChange",
+    "tblPrChange",
+    "tblPrExChange",
+    "tblGridChange",
+    "trPrChange",
+    "tcPrChange",
+    "numberingChange",
+    "cellIns",
+    "cellDel",
+    "cellMerge",
+    "delText",
+    "delInstrText",
+    "customXmlInsRangeStart",
+    "customXmlInsRangeEnd",
+    "customXmlDelRangeStart",
+    "customXmlDelRangeEnd",
+    "customXmlMoveFromRangeStart",
+    "customXmlMoveFromRangeEnd",
+    "customXmlMoveToRangeStart",
+    "customXmlMoveToRangeEnd",
+}
+
+
+def _has_revisions(part: Any) -> bool:
+    """Do not infer a final/original/markup view for pending revision content."""
+    conflicts = {
+        "conflictIns",
+        "conflictDel",
+        "customXmlConflictInsRangeStart",
+        "customXmlConflictInsRangeEnd",
+        "customXmlConflictDelRangeStart",
+        "customXmlConflictDelRangeEnd",
+    }
+    for node in part.iter():
+        if not isinstance(node.tag, str):
+            continue
+        name = etree.QName(node)
+        if (name.namespace == NS["w"] and name.localname in REVISION_ELEMENTS) or (
+            name.namespace == "http://schemas.microsoft.com/office/word/2010/wordml"
+            and name.localname in conflicts
+        ):
+            return True
+    return False
+
+
 def xml(data: bytes) -> Any:
     """Reject DTDs and never resolve entities or fetch resources."""
     root = etree.fromstring(data, etree.XMLParser(resolve_entities=False, no_network=True))
@@ -616,6 +672,9 @@ def inspect(path: Path) -> Json:
                     if kind in {"header", "footer", "footnotes", "endnotes"}:
                         story_relationships.append((rel.get("Id", ""), kind, target))
             root = xml(archive.read("word/document.xml"))
+            if _has_revisions(root):
+                result["errors"].append("UNSUPPORTED_REVISIONS")
+                return result
             if root.xpath(".//mc:AlternateContent", namespaces=NS):
                 result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
                 return result
@@ -633,6 +692,9 @@ def inspect(path: Path) -> Json:
                 if numbering_target is not None
                 else etree.Element(f"{{{NS['w']}}}numbering")
             )
+            if any(_has_revisions(part) for part in [styles, numbering]):
+                result["errors"].append("UNSUPPORTED_REVISIONS")
+                return result
             if any(
                 part.xpath(".//mc:AlternateContent", namespaces=NS) for part in [styles, numbering]
             ):
@@ -654,6 +716,9 @@ def inspect(path: Path) -> Json:
                 if not referenced:
                     continue
                 story = xml(archive.read(target))
+                if _has_revisions(story):
+                    result["errors"].append("UNSUPPORTED_REVISIONS")
+                    continue
                 if story.xpath(".//mc:AlternateContent", namespaces=NS):
                     result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
                     continue
