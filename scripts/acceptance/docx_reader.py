@@ -23,6 +23,7 @@ NS = {
     "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
     "wp": "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
     "pic": "http://schemas.openxmlformats.org/drawingml/2006/picture",
+    "mc": "http://schemas.openxmlformats.org/markup-compatibility/2006",
 }
 
 
@@ -73,13 +74,21 @@ def math_tree(node: Any) -> Any:
     """Canonical OMML structure, excluding styling, never algebraically simplifying."""
     name = etree.QName(node).localname
     namespace = etree.QName(node).namespace
+    children_nodes = [child for child in node if isinstance(child.tag, str)]
     if name == "rPr" and namespace == NS["w"]:
+        parent = node.getparent()
+        if parent is None or parent.tag not in {f"{{{NS['m']}}}r", f"{{{NS['m']}}}ctrlPr"}:
+            raise ValueError("INVALID_OMML_NAMESPACE")
         return None
+    if namespace != NS["m"]:
+        raise ValueError("INVALID_OMML_NAMESPACE")
+    if name == "t" and children_nodes:
+        raise ValueError("INVALID_OMML_STRUCTURE")
     # Only explicit styling exceptions are ignored; fPr/type, delimiters and other
     # mathematical properties must remain visible to the bounded OMML parser.
-    if name == "rPr" and all(etree.QName(c).localname == "sty" for c in node):
+    if name == "rPr" and all(c.tag == f"{{{NS['m']}}}sty" for c in children_nodes):
         return None
-    if name == "ctrlPr" and all(etree.QName(c).namespace == NS["w"] for c in node):
+    if name == "ctrlPr" and all(c.tag == f"{{{NS['w']}}}rPr" for c in children_nodes):
         return None
     default_properties = {"fPr": {"type": "bar"}, "sSupPr": {}, "sSubPr": {}, "sSubSupPr": {}}
     if namespace == NS["m"] and name in default_properties and not node.attrib:
@@ -87,7 +96,7 @@ def math_tree(node: Any) -> Any:
         # Keep unknown/non-default properties visible (notably noBar and skw).
         allowed = default_properties[name]
         defaults_only = True
-        for child in node:
+        for child in children_nodes:
             child_name = etree.QName(child).localname
             if (
                 etree.QName(child).namespace == NS["m"]
@@ -99,14 +108,14 @@ def math_tree(node: Any) -> Any:
                 etree.QName(child).namespace != NS["m"]
                 or child_name not in allowed
                 or dict(child.attrib) != {f"{{{NS['m']}}}val": allowed[child_name]}
-                or len(child)
+                or any(isinstance(c.tag, str) for c in child)
             ):
                 defaults_only = False
                 break
         if defaults_only:
             return None
-    children = [value for child in node if (value := math_tree(child)) is not None]
-    return [name, node.text or "", children]
+    children = [value for child in children_nodes if (value := math_tree(child)) is not None]
+    return [name, "".join(node.itertext()) if name == "t" else node.text or "", children]
 
 
 def word_text(node: Any) -> str:
@@ -115,7 +124,9 @@ def word_text(node: Any) -> str:
     for item in node.xpath(".//w:r/w:t | .//w:r/w:tab | .//w:r/w:br | .//w:r/w:cr", namespaces=NS):
         name = etree.QName(item).localname
         if name == "t":
-            pieces.append(item.text or "")
+            if any(isinstance(child.tag, str) for child in item):
+                raise ValueError("INVALID_WORD_TEXT")
+            pieces.append("".join(item.itertext()))
         elif name == "tab":
             pieces.append("\t")
         elif name == "cr":
@@ -605,6 +616,9 @@ def inspect(path: Path) -> Json:
                     if kind in {"header", "footer", "footnotes", "endnotes"}:
                         story_relationships.append((rel.get("Id", ""), kind, target))
             root = xml(archive.read("word/document.xml"))
+            if root.xpath(".//mc:AlternateContent", namespaces=NS):
+                result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
+                return result
             if any(
                 rid not in relationships for rid in root.xpath("//a:blip/@r:embed", namespaces=NS)
             ):
@@ -619,6 +633,11 @@ def inspect(path: Path) -> Json:
                 if numbering_target is not None
                 else etree.Element(f"{{{NS['w']}}}numbering")
             )
+            if any(
+                part.xpath(".//mc:AlternateContent", namespaces=NS) for part in [styles, numbering]
+            ):
+                result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
+                return result
             _check_picture_containers(root)
             if _numbered_content(root, styles, numbering):
                 result["errors"].append("UNSUPPORTED_NUMBERING")
@@ -635,6 +654,9 @@ def inspect(path: Path) -> Json:
                 if not referenced:
                     continue
                 story = xml(archive.read(target))
+                if story.xpath(".//mc:AlternateContent", namespaces=NS):
+                    result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
+                    continue
                 text = word_text(story)
                 visible = story.xpath(
                     "//m:oMath | //w:drawing | //a:blip | "
@@ -713,6 +735,9 @@ def inspect(path: Path) -> Json:
             "OPC_RELATIONSHIP_MODE_INVALID",
             "INVALID_DRAWING_CONTAINER",
             "UNSUPPORTED_IMAGE_RENDERING",
+            "INVALID_OMML_NAMESPACE",
+            "INVALID_OMML_STRUCTURE",
+            "INVALID_WORD_TEXT",
             "HIDDEN_CONTENT",
         }
         code = str(exc) if str(exc) in known else type(exc).__name__.upper()
