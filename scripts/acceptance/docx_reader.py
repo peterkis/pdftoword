@@ -326,6 +326,23 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             raise ValueError("INVALID_VISIBILITY_PROPERTY")
         return value in {"1", "true", "on"}
 
+    def check_background(properties: Any) -> None:
+        if properties is None:
+            return
+        for node in properties.xpath(".//w:shd | .//w:highlight", namespaces=NS):
+            if node.tag == f"{{{NS['w']}}}highlight":
+                if node.get(val) == "none":
+                    continue
+            elif node.get(val) == "nil" or (
+                node.get(val, "clear") == "clear"
+                and node.get(f"{{{NS['w']}}}fill", "auto") == "auto"
+                and not any("theme" in etree.QName(key).localname.lower() for key in node.attrib)
+            ):
+                continue
+            # Background/theme/pattern rendering needs a renderer to establish contrast.
+            raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+
+    check_background(styles.find("w:docDefaults", NS))
     default_node = styles.find("w:docDefaults/w:rPrDefault/w:rPr/w:vanish", NS)
     default_hidden = enabled(default_node) if default_node is not None else False
     defaults = {
@@ -346,6 +363,7 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             parent = style.find("w:basedOn", NS)
             sid = parent.get(val) if parent is not None else None
         for style in reversed(chain):
+            check_background(style)
             if any(enabled(v) for v in style.findall(".//w:tblStylePr/w:rPr/w:vanish", NS)):
                 raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
             vanish = style.find("w:rPr/w:vanish", NS)
@@ -356,10 +374,14 @@ def _hidden_content(document: Any, styles: Any) -> bool:
         return hidden
 
     for paragraph in document.xpath("//w:body//w:p", namespaces=NS):
+        check_background(paragraph.find("w:pPr", NS))
+        for cell in paragraph.xpath("ancestor::w:tc", namespaces=NS):
+            check_background(cell.find("w:tcPr", NS))
         pstyle = paragraph.find("w:pPr/w:pStyle", NS)
         table_hidden = default_hidden
         tables = paragraph.xpath("ancestor::w:tbl", namespaces=NS)
         if tables:
+            check_background(tables[-1].find("w:tblPr", NS))
             table_style = tables[-1].find("w:tblPr/w:tblStyle", NS)
             table_hidden = apply_style(
                 default_hidden,
@@ -369,6 +391,7 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             table_hidden, pstyle.get(val) if pstyle is not None else defaults.get("paragraph")
         )
         for run in paragraph.xpath(".//w:r | .//m:r", namespaces=NS):
+            check_background(run.find("w:rPr", NS))
             rstyle = run.find("w:rPr/w:rStyle", NS)
             hidden = apply_style(
                 inherited, rstyle.get(val) if rstyle is not None else defaults.get("character")
