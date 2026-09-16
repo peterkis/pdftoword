@@ -349,6 +349,18 @@ def _check_bookmarks(document: Any) -> None:
         raise ValueError("INVALID_BOOKMARK")
 
 
+def _check_extension_wrappers(document: Any) -> None:
+    """Reject unimplemented extension ancestry before extracting Word payloads."""
+    supported = {NS[key] for key in ("w", "m", "a", "wp", "pic")}
+    for payload in document.xpath(
+        "//w:body//w:p | //w:body//w:r | //w:body//w:t | //w:body//m:oMath | //w:body//a:blip",
+        namespaces=NS,
+    ):
+        for ancestor in payload.iterancestors():
+            if etree.QName(ancestor).namespace not in supported:
+                raise ValueError("UNSUPPORTED_MARKUP_COMPATIBILITY")
+
+
 def _hidden_content(document: Any, styles: Any) -> bool:
     """Resolve vanish through defaults and used paragraph/character style chains."""
     val = f"{{{NS['w']}}}val"
@@ -823,6 +835,7 @@ def inspect(path: Path) -> Json:
             for lock in root.xpath("//w:body//w:sdtPr/w:lock", namespaces=NS):
                 if lock.get(f"{{{NS['w']}}}val") not in {"unlocked", "sdtLocked"}:
                     raise ValueError("UNSUPPORTED_CONTENT_LOCK")
+            _check_extension_wrappers(root)
             _check_bookmarks(root)
             _check_picture_containers(root, image_sizes)
             if _numbered_content(root, styles, numbering):
@@ -932,6 +945,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_COMMENTS",
             "UNSUPPORTED_DOCUMENT_PROTECTION",
             "UNSUPPORTED_CONTENT_LOCK",
+            "UNSUPPORTED_MARKUP_COMPATIBILITY",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",

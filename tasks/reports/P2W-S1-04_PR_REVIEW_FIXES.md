@@ -360,3 +360,12 @@ Ruff、mypy（83文件）、两个既有校验器通过；既有封存报告不�
 统一转换为IMAGE_PIXEL_LIMIT，输出失败结果而非向用户抛回溯。
 新增8项回归，修复前5 failed / 3 passed；通过降低测试像素阈值触发真实异常，
 不创建巨型图片。独立检出892 passed，Ruff、mypy（85文件）、两个既有校验器通过。
+
+## 第二十九轮：可忽略扩展包装器
+
+审查版本5569ee9，修复未实现MCE处理却从扩展包装器提取必要内容的问题。
+提取前检查Word/公式/图片载荷的祖先命名空间，未知扩展包装器明确报
+UNSUPPORTED_MARKUP_COMPATIBILITY；ProcessContent不在当前支持范围，亦不猜测处理。
+仅声明Ignorable而未使用扩展元素的普通文档继续接受，既有Office图片DPI注记不受影响。
+新增5项回归，修复前4 failed / 1 passed；独立检出897 passed，
+Ruff、mypy（86文件）、两个既有校验器通过，原始证据不改写。
