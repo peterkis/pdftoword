@@ -512,6 +512,7 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             raise ValueError("UNSUPPORTED_TABLE_WIDTH")
         return width
 
+    cell_width_bound = body_width
     for table in document.xpath("//w:body//w:tbl", namespaces=NS):
         indent = table.find("w:tblPr/w:tblInd", NS)
         try:
@@ -521,9 +522,11 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
         if offset > indent_bound:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
         available = body_width - offset
-        if sum(
+        grid_widths = [
             table_width(col, available) for col in table.findall("w:tblGrid/w:gridCol", NS)
-        ) > available:
+        ]
+        cell_width_bound = min(cell_width_bound, min(grid_widths, default=body_width))
+        if sum(grid_widths) > available:
             raise ValueError("UNSUPPORTED_TABLE_WIDTH")
         for declared in table.findall("w:tblPr/w:tblW", NS):
             table_width(declared, available)
@@ -541,6 +544,19 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        for margins in properties.xpath(".//w:tcMar | .//w:tblCellMar", namespaces=NS):
+            for side in margins:
+                if not isinstance(side.tag, str):
+                    continue
+                raw = side.get(f"{{{NS['w']}}}w", "")
+                kind = side.get(f"{{{NS['w']}}}type", "dxa")
+                bound = min(180, cell_width_bound // 4)
+                if (
+                    kind not in {"dxa", "nil"}
+                    or not re.fullmatch(r"[0-9]+", raw)
+                    or int(raw) > (bound if kind == "dxa" else 0)
+                ):
+                    raise ValueError("UNSUPPORTED_CELL_MARGINS")
         if any(enabled(node) for node in properties.findall(".//w:tcFitText", NS)):
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
         if properties.find(".//w:tblpPr", NS) is not None:
@@ -1072,6 +1088,12 @@ def inspect(path: Path) -> Json:
                     raise ValueError("OPC_WORD_ROOT_INVALID")
                 if settings.xpath(".//mc:AlternateContent", namespaces=NS):
                     raise ValueError("UNSUPPORTED_ALTERNATE_CONTENT")
+                if root.xpath("//w:body//w:r/w:tab", namespaces=NS):
+                    for stop in settings.findall("w:defaultTabStop", NS):
+                        raw = stop.get(f"{{{NS['w']}}}val", "")
+                        bound = min(region[0] for region in _body_regions(root)) // 2
+                        if not re.fullmatch(r"[0-9]+", raw) or not 1 <= int(raw) <= bound:
+                            raise ValueError("UNSUPPORTED_TEXT_POSITION")
                 if settings.find("w:writeProtection", NS) is not None:
                     raise ValueError("UNSUPPORTED_DOCUMENT_PROTECTION")
                 for protection in settings.findall("w:documentProtection", NS):
@@ -1232,6 +1254,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_TABLE_WIDTH",
             "UNSUPPORTED_BIDI_OVERRIDE",
             "UNSUPPORTED_OMML_VISIBILITY",
+            "UNSUPPORTED_CELL_MARGINS",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
