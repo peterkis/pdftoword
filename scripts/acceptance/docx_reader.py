@@ -31,6 +31,12 @@ UNSUPPORTED_WORD_CONTENT = [
     "sym",
     "ptab",
     "pgNum",
+    "dayLong",
+    "dayShort",
+    "monthLong",
+    "monthShort",
+    "yearLong",
+    "yearShort",
     "commentReference",
     "commentRangeStart",
     "commentRangeEnd",
@@ -790,6 +796,8 @@ def inspect(path: Path) -> Json:
                 settings = xml(archive.read(settings_target))
                 if settings.tag != f"{{{NS['w']}}}settings":
                     raise ValueError("OPC_WORD_ROOT_INVALID")
+                if settings.find("w:writeProtection", NS) is not None:
+                    raise ValueError("UNSUPPORTED_DOCUMENT_PROTECTION")
                 for protection in settings.findall("w:documentProtection", NS):
                     if protection.get(f"{{{NS['w']}}}enforcement", "false") not in {
                         "0", "false", "off"

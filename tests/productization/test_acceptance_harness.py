@@ -259,7 +259,7 @@ def specimen(root: Path, fault: str = "") -> tuple[Path, dict, dict]:
         with zipfile.ZipFile(path, "w") as archive:
             for name, data in members.items():
                 archive.writestr(name, data)
-    return path, {"anchors": anchors, "units": units}, sources
+    return path, {"anchors": anchors, "units": units, "coverage_complete": True}, sources
 
 
 def test_clean_specimen_and_deterministic_scores(tmp_path: Path) -> None:

@@ -177,7 +177,15 @@ def score_structure(
     )
     matched_edges = set()
     excluded_edges = 0
+    unknown_edges = 0
     for edge in predicted:
+        if (
+            not complete_relations
+            and edge not in expected_edges
+            and edge not in uncertain_remaining
+        ):
+            unknown_edges += 1
+            continue
         if not bound.get(edge[0] or "") or not bound.get(edge[1] or ""):
             continue
         if edge in expected_edges:
@@ -217,7 +225,7 @@ def score_structure(
         "formulas": metric(len(formulas), supported - len(fallback_formula_ids), formula_correct),
         "relation_precision": metric(
             len(predicted),
-            len(predicted) - excluded_edges if edges or complete_relations else 0,
+            len(predicted) - excluded_edges - unknown_edges,
             correct_edges,
             excluded_edges,
         ),
@@ -226,6 +234,7 @@ def score_structure(
     }
     # Keep eligible/unscored diagnostics, but precision only divides scored predictions.
     precision = metrics["relation_precision"]
+    precision["unknown_count"] = unknown_edges
     precision["value"] = (
         correct_edges / precision["scored_count"] if precision["scored_count"] else None
     )

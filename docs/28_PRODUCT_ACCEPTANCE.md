@@ -41,6 +41,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 导入前需移除批注；非空批注部件和批注标记明确不支持。页眉页脚引用必须指向正确类型部件，样式/编号根元素必须符合契约。
 隐藏行（含样式继承）不可参与验收；启用强制documentProtection时明确拒绝，不认定为可编辑。
 内容锁定SDT及已用格式中的非标准命名空间文字效果明确不支持；不将受锁保护内容计为可编辑。
+写保护和动态日期节点明确不支持。关系标注不完整时，未登记预测保留unknown/not_scored，不作为假阳性；完整覆盖的额外预测和已知边重复仍失败。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。
