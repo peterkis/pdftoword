@@ -361,6 +361,43 @@ def _check_extension_wrappers(document: Any) -> None:
                 raise ValueError("UNSUPPORTED_MARKUP_COMPATIBILITY")
 
 
+def _check_payload_structure(document: Any) -> None:
+    """Validate supported parent chains rather than accepting all WordML descendants."""
+    def w(name: str) -> str:
+        return f"{{{NS['w']}}}" + name
+
+    allowed = {
+        w("p"): {w("body"), w("tc"), w("sdtContent")},
+        w("r"): {w("p"), w("hyperlink"), w("sdtContent")},
+        w("t"): {w("r")},
+        w("drawing"): {w("r")},
+        w("hyperlink"): {w("p"), w("sdtContent")},
+        w("sdtContent"): {w("sdt")},
+        w("sdt"): {w("body"), w("tc"), w("p"), w("hyperlink"), w("sdtContent"), w("tr"), w("tbl")},
+        w("tbl"): {w("body"), w("tc"), w("sdtContent")},
+        w("tr"): {w("tbl"), w("sdtContent")},
+        w("tc"): {w("tr"), w("sdtContent")},
+        f"{{{NS['m']}}}oMath": {w("p"), f"{{{NS['m']}}}oMathPara"},
+        f"{{{NS['m']}}}oMathPara": {w("p")},
+    }
+    for payload in document.xpath(
+        "//w:body//w:p | //w:body//w:r | //w:body//w:t | //w:body//w:drawing | //w:body//m:oMath",
+        namespaces=NS,
+    ):
+        if payload.xpath("ancestor::m:oMath", namespaces=NS):
+            continue  # Math internals retain the independent OMML validator.
+        if payload.tag == f"{{{NS['m']}}}oMath" and not payload.xpath(
+            "ancestor::w:p", namespaces=NS
+        ):
+            continue  # The separate block-math check returns its established error.
+        node = payload
+        while node.tag != w("body"):
+            parent = node.getparent()
+            if parent is None or parent.tag not in allowed.get(node.tag, set()):
+                raise ValueError("INVALID_WORD_STRUCTURE")
+            node = parent
+
+
 def _hidden_content(document: Any, styles: Any) -> bool:
     """Resolve vanish through defaults and used paragraph/character style chains."""
     val = f"{{{NS['w']}}}val"
@@ -380,6 +417,14 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        for width in properties.findall(".//w:w", NS):
+            if width.get(val) != "100":
+                raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        if properties.find(".//w:fitText", NS) is not None:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        for height in properties.findall(".//w:trHeight", NS):
+            if height.get(f"{{{NS['w']}}}hRule", "auto") not in {"auto", "atLeast"}:
+                raise ValueError("UNSUPPORTED_ROW_HEIGHT")
         for position in properties.findall(".//w:position", NS):
             if position.get(val) != "0":
                 raise ValueError("UNSUPPORTED_TEXT_POSITION")
@@ -451,6 +496,7 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             check_background(cell.find("w:tcPr", NS))
         for row in paragraph.xpath("ancestor::w:tr", namespaces=NS):
             check_background(row.find("w:tblPrEx", NS))
+            check_background(row.find("w:trPr", NS))
             row_hidden = row.find("w:trPr/w:hidden", NS)
             if row_hidden is not None and enabled(row_hidden):
                 return True
@@ -845,6 +891,7 @@ def inspect(path: Path) -> Json:
                 if lock.get(f"{{{NS['w']}}}val") not in {"unlocked", "sdtLocked"}:
                     raise ValueError("UNSUPPORTED_CONTENT_LOCK")
             _check_extension_wrappers(root)
+            _check_payload_structure(root)
             _check_bookmarks(root)
             _check_picture_containers(root, image_sizes)
             if _numbered_content(root, styles, numbering):
@@ -958,6 +1005,8 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_FONT_SCALE",
             "UNSUPPORTED_TEXT_POSITION",
             "UNSUPPORTED_DATA_BINDING",
+            "INVALID_WORD_STRUCTURE",
+            "UNSUPPORTED_ROW_HEIGHT",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
