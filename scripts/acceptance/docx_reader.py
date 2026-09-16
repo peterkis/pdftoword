@@ -5,10 +5,12 @@ from __future__ import annotations
 import hashlib
 import io
 import posixpath
+import re
 import zipfile
 from pathlib import Path
 from typing import Any
 
+from docx.opc.constants import CONTENT_TYPE as CT
 from lxml import etree
 from PIL import Image
 
@@ -36,6 +38,24 @@ UNSUPPORTED_WORD_CONTENT = [
     "footnoteReference",
     "endnoteReference",
 ]
+
+
+WORD_PART_TYPES = {
+    NS["r"] + "/" + name: content_type
+    for name, content_type in {
+        "styles": CT.WML_STYLES,
+        "header": CT.WML_HEADER,
+        "footer": CT.WML_FOOTER,
+        "footnotes": CT.WML_FOOTNOTES,
+        "endnotes": CT.WML_ENDNOTES,
+        "numbering": CT.WML_NUMBERING,
+        "settings": CT.WML_SETTINGS,
+        "fontTable": CT.WML_FONT_TABLE,
+        "webSettings": CT.WML_WEB_SETTINGS,
+        "comments": CT.WML_COMMENTS,
+        "theme": CT.OFC_THEME,
+    }.items()
+}
 
 
 def xml(data: bytes) -> Any:
@@ -161,7 +181,7 @@ def table_grid(table: Any) -> Json:
     return {"rows": len(rows), "cols": columns, "cells": cells, "borderless": borderless}
 
 
-def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str | None]:
+def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str]:
     """Require the OPC declarations and supported Word main-document relationship."""
     if not {"[Content_Types].xml", "_rels/.rels", "word/document.xml"}.issubset(names):
         raise ValueError("OPC_REQUIRED_PART_MISSING")
@@ -186,7 +206,9 @@ def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str | No
         n.get("PartName"): n.get("ContentType") for n in types if n.tag == f"{{{ct_ns}}}Override"
     }
     defaults = {
-        n.get("Extension"): n.get("ContentType") for n in types if n.tag == f"{{{ct_ns}}}Default"
+        (n.get("Extension") or "").lower(): n.get("ContentType")
+        for n in types
+        if n.tag == f"{{{ct_ns}}}Default"
     }
     main_type = overrides.get("/word/document.xml", defaults.get("xml"))
     if (
@@ -197,10 +219,22 @@ def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str | No
     document = xml(archive.read("word/document.xml"))
     if document.tag != f"{{{NS['w']}}}document" or len(document.findall("w:body", NS)) != 1:
         raise ValueError("OPC_MAIN_DOCUMENT_INVALID")
-    return {
-        name: overrides.get("/" + name, defaults.get(posixpath.splitext(name)[1][1:]))
-        for name in names
-    }
+    part_types: dict[str, str] = {}
+    for name in names:
+        if name == "[Content_Types].xml" or name.endswith("/"):
+            continue
+        extension = name.rsplit("/", 1)[-1].rsplit(".", 1)[-1].lower()
+        content_type = overrides.get("/" + name, defaults.get(extension))
+        if not content_type:
+            raise ValueError("OPC_PART_CONTENT_TYPE_MISSING")
+        media_type = content_type.split(";", 1)[0]
+        mime_token = r"[!#$%&'*+.^_`|~0-9A-Za-z-]+"
+        if not re.fullmatch(mime_token + '/' + mime_token, media_type):
+            raise ValueError("OPC_PART_CONTENT_TYPE_INVALID")
+        if name.endswith(".rels") and content_type != CT.OPC_RELATIONSHIPS:
+            raise ValueError("OPC_RELATIONSHIPS_CONTENT_TYPE_INVALID")
+        part_types[name] = content_type
+    return part_types
 
 
 def _hidden_content(document: Any, styles: Any) -> bool:
@@ -234,6 +268,8 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             parent = style.find("w:basedOn", NS)
             sid = parent.get(val) if parent is not None else None
         for style in reversed(chain):
+            if any(enabled(v) for v in style.findall(".//w:tblStylePr/w:rPr/w:vanish", NS)):
+                raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
             vanish = style.find("w:rPr/w:vanish", NS)
             # In styles, enabled toggle properties invert the inherited setting;
             # explicit run formatting below sets an absolute on/off value.
@@ -243,8 +279,16 @@ def _hidden_content(document: Any, styles: Any) -> bool:
 
     for paragraph in document.xpath("//w:body//w:p", namespaces=NS):
         pstyle = paragraph.find("w:pPr/w:pStyle", NS)
+        table_hidden = default_hidden
+        tables = paragraph.xpath("ancestor::w:tbl", namespaces=NS)
+        if tables:
+            table_style = tables[-1].find("w:tblPr/w:tblStyle", NS)
+            table_hidden = apply_style(
+                default_hidden,
+                table_style.get(val) if table_style is not None else defaults.get("table"),
+            )
         inherited = apply_style(
-            default_hidden, pstyle.get(val) if pstyle is not None else defaults.get("paragraph")
+            table_hidden, pstyle.get(val) if pstyle is not None else defaults.get("paragraph")
         )
         for run in paragraph.xpath(".//w:r | .//m:r", namespaces=NS):
             rstyle = run.find("w:rPr/w:rStyle", NS)
@@ -276,6 +320,8 @@ def inspect(path: Path) -> Json:
                 raise ValueError("PACKAGE_TOO_LARGE")
             content_types = _check_opc(archive, names)
             for name in names:
+                if name.endswith("/"):
+                    continue
                 if name.endswith((".xml", ".rels")):
                     root = xml(archive.read(name))
                     if name.endswith(".rels"):
@@ -286,6 +332,9 @@ def inspect(path: Path) -> Json:
                             target = posixpath.normpath(posixpath.join(base, rel.get("Target", "")))
                             if target not in names or target.startswith("../"):
                                 raise ValueError("MISSING_RELATIONSHIP_TARGET")
+                            expected_type = WORD_PART_TYPES.get(rel.get("Type", ""))
+                            if expected_type and content_types.get(target) != expected_type:
+                                raise ValueError("OPC_WORD_CONTENT_TYPE_INVALID")
                 if name.startswith("word/media/"):
                     try:
                         with Image.open(io.BytesIO(archive.read(name))) as image:
@@ -403,6 +452,10 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_VISIBILITY_STYLE",
             "INVALID_IMAGE_RELATIONSHIP",
             "IMAGE_CONTENT_TYPE_INVALID",
+            "OPC_PART_CONTENT_TYPE_MISSING",
+            "OPC_PART_CONTENT_TYPE_INVALID",
+            "OPC_RELATIONSHIPS_CONTENT_TYPE_INVALID",
+            "OPC_WORD_CONTENT_TYPE_INVALID",
         }
         code = str(exc) if str(exc) in known else type(exc).__name__.upper()
         result["errors"].append(code)

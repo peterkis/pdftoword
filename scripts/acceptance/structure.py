@@ -126,17 +126,12 @@ def score_structure(
     expected_edges = {
         (u["reference"]["from"], u["reference"]["to"], u["reference"]["relation"]) for u in edges
     }
-    correct_edges = sum(
-        e in expected_edges and bool(bound.get(e[0] or "")) and bool(bound.get(e[1] or ""))
-        for e in predicted
-    )
-    covered = len(
-        {
-            e
-            for e in predicted
-            if e in expected_edges and bound.get(e[0] or "") and bound.get(e[1] or "")
-        }
-    )
+    matched_edges = set()
+    for edge in predicted:
+        if edge in expected_edges and bound.get(edge[0] or "") and bound.get(edge[1] or ""):
+            matched_edges.add(edge)
+    # A reference edge is consumed once; repeated predictions remain in the denominator.
+    correct_edges = covered = len(matched_edges)
     for u in edges:
         ref = u["reference"]
         key = (ref["from"], ref["to"], ref["relation"])

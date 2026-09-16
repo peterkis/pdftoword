@@ -81,6 +81,10 @@ def test_blip_requires_image_relationship_and_correct_content_type(
     result = evaluate(path, truth, sources)
     assert any(
         code in result["errors"]
-        for code in ["INVALID_IMAGE_RELATIONSHIP", "IMAGE_CONTENT_TYPE_INVALID"]
+        for code in [
+            "INVALID_IMAGE_RELATIONSHIP",
+            "IMAGE_CONTENT_TYPE_INVALID",
+            "OPC_PART_CONTENT_TYPE_MISSING",
+        ]
     )
     assert result["structure_status"] == "FAIL"
