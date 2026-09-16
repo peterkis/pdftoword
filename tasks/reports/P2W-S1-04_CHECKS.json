@@ -1,0 +1,224 @@
+{
+  "task_id": "P2W-S1-04",
+  "status": "READY_FOR_REVIEW",
+  "base_commit": "3241f10804a899f8ec2b0bdb6512e1f6cd5e456a",
+  "branch": "codex/p2w-s1-03",
+  "environment": {
+    "python": "3.12.13",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "pytest": "9.1.1",
+    "ruff": "0.16.5",
+    "mypy": "2.3.1",
+    "jsonschema": "4.26.0",
+    "node": "v24.18.0",
+    "git": "git version 2.55.0"
+  },
+  "quality": {
+    "status": "FAIL",
+    "exit_code": 1,
+    "steps": [
+      {
+        "name": "pytest",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 10.405
+      },
+      {
+        "name": "ruff",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.037
+      },
+      {
+        "name": "mypy",
+        "status": "FAIL",
+        "returncode": 1,
+        "duration_seconds": 0.238
+      },
+      {
+        "name": "task_catalog",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.019
+      },
+      {
+        "name": "model_baseline",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.02
+      },
+      {
+        "name": "schema_samples",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.075
+      }
+    ],
+    "pytest_passed": 590,
+    "pytest_failed": 0,
+    "pytest_skipped": 0,
+    "target_tests": 32,
+    "known_mypy_errors": 19,
+    "known_mypy_files": 2,
+    "focused_mypy": "PASS"
+  },
+  "acceptance": {
+    "AC01": "PASS_SYNTHETIC_FAULT_DETECTION",
+    "AC02": "PASS_REAL_LIBREOFFICE_AND_MISSING_RENDERER_REGRESSION",
+    "AC03": "PASS_15_PARAMETERIZED_FAULTS_PLUS_TARGETED_REGRESSIONS",
+    "AC04": "PASS_REPEATED_SEALED_SCORING"
+  },
+  "reviews": {
+    "standards_remaining": 0,
+    "spec_remaining": 0,
+    "all_findings_fixed": true
+  },
+  "runs": {
+    "cli": {
+      "bundle": "tmp/product-acceptance/s1-04-cli-final",
+      "input_sha256": "00660ce85cecc47817ab84fa4cae241e73d94f77ace38376e0fd459acb335f4e",
+      "annotation_sha256": "a8ed631ce2c9f331d4c9b02ab6f480d586727ba9ed8abf205572a42490c98c03",
+      "source_tree_sha256": "fdf76bcd3df59f47e4ff2d5cc4386069e70aba46414bf758455f8c4cf97de3a1",
+      "selected_pages": [
+        25
+      ],
+      "pipeline_calls": 1,
+      "model_requests": 0,
+      "run_exit_code": 1,
+      "execution_status": "COMPLETE",
+      "content_status": "FAIL",
+      "structure_status": "FAIL",
+      "rendering": {
+        "status": "RENDERED",
+        "renderer": "LibreOffice",
+        "version": "LibreOfficeDev 26.8.0.0.alpha0 2c87e51eeaa2b413ff4ae097b2705eea1995d8e5",
+        "fonts": {
+          "east_asia": "Songti SC",
+          "latin": "Arial",
+          "missing": false,
+          "raster_style": "inferred_demo_11pt"
+        },
+        "human_acceptance": "PENDING",
+        "artifacts": {
+          "rendered/auto.pdf": "6f65c347ca4997438cc8a59d8261a2db6ab13fc4422fe0b81d4aeccefe0c5518",
+          "rendered/page-1.png": "68b80a1b8a31de4834641bab8a5572d82527985b490193b38a373b7cad46e86b"
+        }
+      },
+      "raw_cer": {
+        "reference_chars": 788,
+        "substitutions": 2,
+        "deletions": 27,
+        "insertions": 0,
+        "distance": 29,
+        "value": 0.03680203045685279
+      },
+      "light_cer": {
+        "reference_chars": 747,
+        "substitutions": 0,
+        "deletions": 0,
+        "insertions": 0,
+        "distance": 0,
+        "value": 0.0
+      },
+      "necessary_content": {
+        "eligible_count": 22,
+        "scored_count": 22,
+        "correct_count": 15,
+        "uncertain_count": 0,
+        "not_scored_count": 0,
+        "value": 0.6818181818181818,
+        "status": "REVIEW_REQUIRED",
+        "source_image_retained_count": 15,
+        "visual_crop_acceptance": "PENDING"
+      },
+      "docx_sha256": "98ad295f874f8db4698617636c6f8de8acf259e3ebf8e472f8166b7abef55c33",
+      "semantic_sha256": "ae81a4255115acaabf884a1a1d5fcb9b1afbb46d59183b6717b7be2b006cc4ee"
+    },
+    "api": {
+      "bundle": "tmp/product-acceptance/s1-04-api-final",
+      "input_sha256": "00660ce85cecc47817ab84fa4cae241e73d94f77ace38376e0fd459acb335f4e",
+      "annotation_sha256": "a8ed631ce2c9f331d4c9b02ab6f480d586727ba9ed8abf205572a42490c98c03",
+      "source_tree_sha256": "fdf76bcd3df59f47e4ff2d5cc4386069e70aba46414bf758455f8c4cf97de3a1",
+      "selected_pages": [
+        25
+      ],
+      "pipeline_calls": 1,
+      "model_requests": 0,
+      "run_exit_code": 1,
+      "execution_status": "COMPLETE",
+      "content_status": "FAIL",
+      "structure_status": "FAIL",
+      "rendering": {
+        "status": "RENDERED",
+        "renderer": "LibreOffice",
+        "version": "LibreOfficeDev 26.8.0.0.alpha0 2c87e51eeaa2b413ff4ae097b2705eea1995d8e5",
+        "fonts": {
+          "east_asia": "Songti SC",
+          "latin": "Arial",
+          "missing": false,
+          "raster_style": "inferred_demo_11pt"
+        },
+        "human_acceptance": "PENDING",
+        "artifacts": {
+          "rendered/auto.pdf": "c99f30e00ca9f744c428b697dd49417d79bf48ed1b0ab8172914c0a04c2a386b",
+          "rendered/page-1.png": "68b80a1b8a31de4834641bab8a5572d82527985b490193b38a373b7cad46e86b"
+        }
+      },
+      "raw_cer": {
+        "reference_chars": 788,
+        "substitutions": 2,
+        "deletions": 27,
+        "insertions": 0,
+        "distance": 29,
+        "value": 0.03680203045685279
+      },
+      "light_cer": {
+        "reference_chars": 747,
+        "substitutions": 0,
+        "deletions": 0,
+        "insertions": 0,
+        "distance": 0,
+        "value": 0.0
+      },
+      "necessary_content": {
+        "eligible_count": 22,
+        "scored_count": 22,
+        "correct_count": 15,
+        "uncertain_count": 0,
+        "not_scored_count": 0,
+        "value": 0.6818181818181818,
+        "status": "REVIEW_REQUIRED",
+        "source_image_retained_count": 15,
+        "visual_crop_acceptance": "PENDING"
+      },
+      "docx_sha256": "084d28840cfb7dbe607d2e35ece138c4a4f17756e8dd2df853e2c7a99d5ca0fd",
+      "semantic_sha256": "7c32b2548b88986eff9fdf5a9290dfce1ec8295a0034cc4a5bdad93db5b3e6b1"
+    }
+  },
+  "checks": {
+    "preexisting_changed": [
+      "prototypes/docx_output/writer.py"
+    ],
+    "preexisting_missing": [],
+    "allowed_change": [
+      "prototypes/docx_output/writer.py"
+    ],
+    "rescore_semantic_sha256": "ae81a4255115acaabf884a1a1d5fcb9b1afbb46d59183b6717b7be2b006cc4ee",
+    "cli_api_metrics_equal": true,
+    "result_schema": "PASS"
+  },
+  "visual": {
+    "agent_preview": "REVIEW_REQUIRED_BODY_TEXT_TOO_SMALL",
+    "reviewed_preview_matches_final_png": true,
+    "human_office_edit": "PENDING",
+    "word": "NOT_RUN"
+  },
+  "not_scored": [
+    "cross_page_table_continuation_semantics",
+    "unsupported_formula_grammar",
+    "source_crop_visual_acceptance"
+  ],
+  "model_calls": 0,
+  "remote_changes": "NOT_RUN"
+}

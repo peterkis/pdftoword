@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import posixpath
 import unicodedata
@@ -17,7 +18,7 @@ from docx.shared import Pt, RGBColor
 from lxml import etree
 from PIL import Image
 
-from .common import DemoError, Json, safe_path, validate
+from .common import DemoError, Json, safe_path, save, validate
 from .formula import unrendered_math
 
 
@@ -118,13 +119,45 @@ def build(job: Path, ir: Json, revision: str) -> Json:
         "omml_formula_count": 0,
     }
 
-    def picture(paragraph: Any, aid: str, width: float, formula: bool = False) -> None:
+    source_blocks: list[Json] = []
+
+    def asset_source(aid: str) -> Path:
         if aid not in assets:
-            raise DemoError("ASSET_MISSING")
-        a = assets[aid]
-        source = safe_path(job, a["path"])
+            raise DemoError('ASSET_MISSING')
+        source = safe_path(job, assets[aid]['path'])
         if not source.is_file():
-            raise DemoError("ASSET_MISSING")
+            raise DemoError('ASSET_MISSING')
+        return source
+
+    def source_marker(paragraph: Any, b: Json) -> None:
+        # Provenance only: no reference annotations or expected text enter the writer.
+        marker = 'p2w_' + hashlib.sha256(b['id'].encode()).hexdigest()[:32]
+        number = str(len(source_blocks))
+        start, end = OxmlElement('w:bookmarkStart'), OxmlElement('w:bookmarkEnd')
+        start.set(qn('w:id'), number)
+        start.set(qn('w:name'), marker)
+        end.set(qn('w:id'), number)
+        paragraph._p.append(start)
+        paragraph._p.append(end)
+        image_ids = ([b['content']['asset_id']] if b['content']['kind'] == 'image' else [])
+        image_ids.extend(item['asset_id'] for item in parts.get(b['id'], []) if 'asset_id' in item)
+        images = []
+        for aid in image_ids:
+            source = asset_source(aid)
+            try:
+                image_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+            except OSError as exc:
+                raise DemoError('ASSET_UNREADABLE') from exc
+            images.append({'sha256': image_hash, 'bbox': assets[aid]['source_bbox'],
+                           'fallback': b['type'] != 'figure'})
+        source_blocks.append({'marker': marker, 'block_id': b['id'], 'images': images,
+                              'page': b['page_index'] + 1, 'bbox': b['bbox'], 'kind': b['type'],
+                              'fallback': (b['content']['kind'] == 'image'
+                                           and b['type'] != 'figure')})
+
+    def picture(paragraph: Any, aid: str, width: float, formula: bool = False) -> None:
+        source = asset_source(aid)
+        a = assets[aid]
         with Image.open(source) as im:
             w, h = im.size
         natural = max(1.0, a["source_bbox"][2] - a["source_bbox"][0])
@@ -145,6 +178,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
         )
         para = existing if existing is not None else parent.add_paragraph(style=style)
         para.style = style
+        source_marker(para, b)
         if spatial and b["type"] in {"heading", "footer"}:
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         if (
@@ -281,6 +315,8 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                 if g.get("inline_labels"):
                     label = by_id[pair["label"]]
                     para = cell.paragraphs[0]
+                    source_marker(para, label)
+                    source_marker(para, by_id[pair["figure"]])
                     text = label["content"]["plain_text"]
                     para.add_run(text + " ")
                     counts["editable_text_char_count"] += len(text.strip())
@@ -305,6 +341,15 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                 done.update(pair.values())
     doc.save(str(path))
     path.chmod(0o600)
+    save(job / f'source-map.{revision}.json', {
+        'schema_version': 'docx-source-map/1.0',
+        'docx_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+        'pages': [{'page': p['page_index'] + 1, 'width': p['width_pt'], 'height': p['height_pt']}
+                  for p in ir['pages']],
+        'blocks': source_blocks,
+        'relations': [{'from': r['from'], 'to': r['to'], 'type': r['type']}
+                      for r in ir['relations']],
+    })
     return {**counts, "fonts": font_info, **inspect_package(path)}
 
 
