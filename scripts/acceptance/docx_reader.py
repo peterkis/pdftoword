@@ -854,7 +854,120 @@ def _numbered_content(document: Any, styles: Any, numbering: Any) -> bool:
     return any(numbered(p) for p in document.xpath(".//w:p", namespaces=NS))
 
 
-def _check_picture_containers(root: Any, image_sizes: dict[str, tuple[int, int]]) -> None:
+def _image_container_width(blip: Any, styles: Any, body_width: int) -> int:
+    """Conservatively bound inline width using its cell and effective paragraph indents."""
+    val = f"{{{NS['w']}}}val"
+    style_map = {n.get(f"{{{NS['w']}}}styleId"): n for n in styles.findall("w:style", NS)}
+    defaults = {
+        n.get(f"{{{NS['w']}}}type"): sid
+        for sid, n in style_map.items()
+        if n.get(f"{{{NS['w']}}}default") in {"1", "true", "on"}
+    }
+
+    def chain(sid: str | None) -> list[Any]:
+        result, seen = [], set()
+        while sid in style_map:
+            if sid in seen:
+                raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+            seen.add(sid)
+            node = style_map[sid]
+            result.append(node)
+            parent = node.find("w:basedOn", NS)
+            sid = parent.get(val) if parent is not None else None
+        return list(reversed(result))
+
+    def number(node: Any, name: str, default: int = 0) -> int:
+        try:
+            return (
+                int(node.get(f"{{{NS['w']}}}" + name, str(default)))
+                if node is not None
+                else default
+            )
+        except ValueError as exc:
+            raise ValueError("IMAGE_DISPLAY_SCALE_INVALID") from exc
+
+    def preferred(node: Any, fallback: int) -> int:
+        if node is None or node.get(f"{{{NS['w']}}}type", "dxa") in {"nil", "auto"}:
+            return fallback
+        width = number(node, "w")
+        if node.get(f"{{{NS['w']}}}type") == "pct":
+            width = width * body_width // 5000
+        return width if width > 0 else fallback
+
+    paragraph = blip.xpath("ancestor::w:p", namespaces=NS)[-1]
+    paragraph_props = [styles.find("w:docDefaults/w:pPrDefault/w:pPr", NS)]
+    available = body_width
+    cells = blip.xpath("ancestor::w:tc", namespaces=NS)
+    if cells:
+        cell = cells[-1]
+        table = cell.xpath("ancestor::w:tbl", namespaces=NS)[-1]
+        row = cell.xpath("ancestor::w:tr", namespaces=NS)[-1]
+        ts = table.find("w:tblPr/w:tblStyle", NS)
+        table_styles = chain(ts.get(val) if ts is not None else defaults.get("table"))
+        paragraph_props.extend(style.find("w:pPr", NS) for style in table_styles)
+        table_props = [style.find("w:tblPr", NS) for style in table_styles] + [
+            table.find("w:tblPr", NS)
+        ]
+        offset = 0
+        for props in table_props:
+            node = props.find("w:tblInd", NS) if props is not None else None
+            if node is not None:
+                offset = number(node, "w")
+        grid = [number(n, "w") for n in table.findall("w:tblGrid/w:gridCol", NS)]
+        start = number(row.find("w:trPr/w:gridBefore", NS), "val")
+        prior_width = max(sum(grid[:start]), number(row.find("w:trPr/w:wBefore", NS), "w"))
+        row_cells = row.findall("w:tc", NS)
+        if cell not in row_cells:
+            raise ValueError("IMAGE_DISPLAY_SCALE_INVALID")
+        for previous in row_cells[: row_cells.index(cell)]:
+            span = number(previous.find("w:tcPr/w:gridSpan", NS), "val", 1)
+            physical = sum(grid[start : start + span])
+            prior_width += max(physical, preferred(previous.find("w:tcPr/w:tcW", NS), physical))
+            start += span
+        span = number(cell.find("w:tcPr/w:gridSpan", NS), "val", 1)
+        physical = sum(grid[start : start + span])
+        available = min(
+            physical,
+            preferred(cell.find("w:tcPr/w:tcW", NS), physical),
+            body_width - offset - prior_width,
+        )
+        margins = {"left": 108, "right": 108}
+        margin_nodes = []
+        for style in table_styles:
+            margin_nodes.extend(
+                [style.find("w:tblPr/w:tblCellMar", NS), style.find("w:tcPr/w:tcMar", NS)]
+            )
+        margin_nodes.extend(
+            [table.find("w:tblPr/w:tblCellMar", NS), cell.find("w:tcPr/w:tcMar", NS)]
+        )
+        for container in margin_nodes:
+            if container is not None:
+                for side in container:
+                    if isinstance(side.tag, str):
+                        margins[etree.QName(side).localname] = number(side, "w")
+        available -= max(margins.get("left", 0), margins.get("start", 0))
+        available -= max(margins.get("right", 0), margins.get("end", 0))
+    ps = paragraph.find("w:pPr/w:pStyle", NS)
+    paragraph_props.extend(
+        style.find("w:pPr", NS)
+        for style in chain(ps.get(val) if ps is not None else defaults.get("paragraph"))
+    )
+    paragraph_props.append(paragraph.find("w:pPr", NS))
+    indents: dict[str, int] = {}
+    for props in paragraph_props:
+        node = props.find("w:ind", NS) if props is not None else None
+        if node is not None:
+            for key in node.attrib:
+                name = etree.QName(key).localname
+                indents[name] = number(node, name)
+    available -= max(indents.get("left", 0), indents.get("start", 0))
+    available -= max(indents.get("right", 0), indents.get("end", 0))
+    available -= max(indents.get("firstLine", 0), 0)
+    return max(0, available)
+
+def _check_picture_containers(
+    root: Any, image_sizes: dict[str, tuple[int, int]], styles: Any
+) -> None:
     """Accept complete inline rectangular pictures, not hashes in orphan blips."""
 
     def one(node: Any, path: str) -> Any:
@@ -915,7 +1028,8 @@ def _check_picture_containers(root: Any, image_sizes: dict[str, tuple[int, int]]
         if blip.get(f"{{{NS['r']}}}link") is not None:
             raise ValueError("UNSUPPORTED_LINKED_IMAGE")
         pixels = image_sizes.get(blip.get(f"{{{NS['r']}}}embed", ""))
-        if size[0] > max_width or size[1] > max_height:
+        available = _image_container_width(blip, styles, max_width // 635) * 635
+        if size[0] > available or size[1] > max_height:
             raise ValueError("IMAGE_DISPLAY_SCALE_INVALID")
         if pixels is None or min(size) < 12700 or abs(
             size[0] * pixels[1] - size[1] * pixels[0]
@@ -1165,7 +1279,6 @@ def inspect(path: Path) -> Json:
             _check_extension_wrappers(root)
             _check_payload_structure(root)
             _check_bookmarks(root)
-            _check_picture_containers(root, image_sizes)
             if _numbered_content(root, styles, numbering):
                 result["errors"].append("UNSUPPORTED_NUMBERING")
             font_table = (
@@ -1184,6 +1297,7 @@ def inspect(path: Path) -> Json:
                 raise ValueError("UNSUPPORTED_ALTERNATE_CONTENT")
             if _hidden_content(root, styles, font_table, theme):
                 result["errors"].append("HIDDEN_CONTENT")
+            _check_picture_containers(root, image_sizes, styles)
             story_types = {rid: kind for rid, kind, _ in story_relationships}
             for reference in root.xpath("//w:headerReference | //w:footerReference", namespaces=NS):
                 kind = etree.QName(reference).localname.removesuffix("Reference")
