@@ -263,6 +263,24 @@ def table_grid(table: Any) -> Json:
     return {"rows": len(rows), "cols": columns, "cells": cells, "borderless": borderless}
 
 
+def _part_target(base: str, target: str) -> str:
+    """Resolve an internal package path, rejecting traversal above package root."""
+    uri = urlsplit(target)
+    if uri.scheme or uri.netloc or uri.query or uri.fragment or "\\" in target:
+        raise ValueError("MISSING_RELATIONSHIP_TARGET")
+    parts = [] if target.startswith("/") else [p for p in base.split("/") if p]
+    for part in target.split("/"):
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if not parts:
+                raise ValueError("MISSING_RELATIONSHIP_TARGET")
+            parts.pop()
+        else:
+            parts.append(part)
+    return "/".join(parts)
+
+
 def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str]:
     """Require the OPC declarations and supported Word main-document relationship."""
     if not {"[Content_Types].xml", "_rels/.rels", "word/document.xml"}.issubset(names):
@@ -281,7 +299,7 @@ def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str]:
     if (
         len(main) != 1
         or main[0].get("TargetMode") == "External"
-        or posixpath.normpath(main[0].get("Target", "")).lstrip("/") != "word/document.xml"
+        or _part_target("", main[0].get("Target", "")) != "word/document.xml"
     ):
         raise ValueError("OPC_MAIN_RELATIONSHIP_INVALID")
     override_keys = [n.get("PartName") for n in types if n.tag == f"{{{ct_ns}}}Override"]
@@ -417,6 +435,8 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        if properties.find(".//w:framePr", NS) is not None:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION")
         for spacing in properties.findall(".//w:spacing", NS):
             if spacing.getparent().tag == f"{{{NS['w']}}}rPr" and spacing.get(val) != "0":
                 raise ValueError("UNSUPPORTED_TEXT_POSITION")
@@ -798,7 +818,7 @@ def inspect(path: Path) -> Json:
                                 continue
                             if rel.get("TargetMode") == "External":
                                 raise ValueError("EXTERNAL_RELATIONSHIP")
-                            target = posixpath.normpath(posixpath.join(base, rel.get("Target", "")))
+                            target = _part_target(base, rel.get("Target", ""))
                             if target not in names or target.startswith("../"):
                                 raise ValueError("MISSING_RELATIONSHIP_TARGET")
                             expected_type = WORD_PART_TYPES.get(rel.get("Type", ""))
@@ -822,7 +842,7 @@ def inspect(path: Path) -> Json:
                 for rel in xml(archive.read(rel_path)):
                     if not isinstance(rel.tag, str):
                         continue
-                    target = posixpath.normpath(posixpath.join("word", rel.get("Target", "")))
+                    target = _part_target("word", rel.get("Target", ""))
                     if rel.get("Type") == NS["r"] + "/image":
                         data = archive.read(target)
                         with Image.open(io.BytesIO(data)) as picture:

@@ -122,8 +122,13 @@ def evaluate_only(bundle: Path, output: Path) -> Json:
             "request_attempted": 0,
         }
     )
+    evaluator_files = [
+        *sorted((ROOT / "scripts/acceptance").glob("*.py")),
+        ROOT / "scripts/product_acceptance.py",
+        ROOT / "specs/product-quality/result.schema.json",
+    ]
     result["evaluator_sha256"] = semantic_hash(
-        {p.name: digest(p) for p in sorted((ROOT / "scripts/acceptance").glob("*.py"))}
+        {p.relative_to(ROOT).as_posix(): digest(p) for p in evaluator_files}
     )
     result.pop("semantic_sha256")
     result["semantic_sha256"] = semantic_hash(result)
