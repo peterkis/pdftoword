@@ -440,6 +440,15 @@ def _hidden_content(document: Any, styles: Any) -> bool:
         for spacing in properties.findall(".//w:spacing", NS):
             if spacing.getparent().tag == f"{{{NS['w']}}}rPr" and spacing.get(val) != "0":
                 raise ValueError("UNSUPPORTED_TEXT_POSITION")
+            if spacing.getparent().tag == f"{{{NS['w']}}}pPr":
+                rule = spacing.get(f"{{{NS['w']}}}lineRule", "auto")
+                line = spacing.get(f"{{{NS['w']}}}line", "240")
+                if (
+                    rule not in {"auto", "atLeast"}
+                    or not re.fullmatch(r"[0-9]+", line)
+                    or int(line) < (240 if rule == "auto" else 1)
+                ):
+                    raise ValueError("UNSUPPORTED_LINE_HEIGHT")
         for effect in properties.xpath(".//w:caps | .//w:smallCaps", namespaces=NS):
             if enabled(effect):
                 raise ValueError("UNSUPPORTED_TEXT_CASE")
@@ -1034,6 +1043,7 @@ def inspect(path: Path) -> Json:
             "INVALID_WORD_STRUCTURE",
             "UNSUPPORTED_ROW_HEIGHT",
             "UNSUPPORTED_TEXT_CASE",
+            "UNSUPPORTED_LINE_HEIGHT",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
