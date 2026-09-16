@@ -463,6 +463,7 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
     indent_bound = 1800
     hanging_bound = 1440
     tab_bound = 4680
+    body_width = 9360
     for section in document.findall(".//w:sectPr", NS):
         size, margins = section.find("w:pgSz", NS), section.find("w:pgMar", NS)
         try:
@@ -486,6 +487,41 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
         indent_bound = min(indent_bound, (width - left - right - gutter) // 4)
         hanging_bound = min(hanging_bound, left, right, indent_bound)
         tab_bound = min(tab_bound, (width - left - right - gutter) // 2)
+        body_width = min(body_width, width - left - right - gutter)
+
+    def table_width(node: Any, available: int) -> int:
+        raw = node.get(f"{{{NS['w']}}}w", "")
+        kind = node.get(f"{{{NS['w']}}}type", "dxa")
+        if not re.fullmatch(r"[0-9]+", raw) or kind not in {"dxa", "pct", "auto", "nil"}:
+            raise ValueError("UNSUPPORTED_TABLE_WIDTH")
+        value = int(raw)
+        if kind in {"auto", "nil"}:
+            return 0
+        width = value * available // 5000 if kind == "pct" else value
+        if width > available:
+            raise ValueError("UNSUPPORTED_TABLE_WIDTH")
+        return width
+
+    for table in document.xpath("//w:body//w:tbl", namespaces=NS):
+        indent = table.find("w:tblPr/w:tblInd", NS)
+        try:
+            offset = table_width(indent, body_width) if indent is not None else 0
+        except ValueError as exc:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION") from exc
+        if offset > indent_bound:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        available = body_width - offset
+        if sum(
+            table_width(col, available) for col in table.findall("w:tblGrid/w:gridCol", NS)
+        ) > available:
+            raise ValueError("UNSUPPORTED_TABLE_WIDTH")
+        for declared in table.findall("w:tblPr/w:tblW", NS):
+            table_width(declared, available)
+        for row in table.findall("w:tr", NS):
+            if sum(
+                table_width(cell, available) for cell in row.findall("w:tc/w:tcPr/w:tcW", NS)
+            ) > available:
+                raise ValueError("UNSUPPORTED_TABLE_WIDTH")
 
     def check_background(properties: Any) -> None:
         if properties is None:
@@ -505,6 +541,8 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             position = tab.get(f"{{{NS['w']}}}pos", "")
             if not re.fullmatch(r"[0-9]+", position) or int(position) > tab_bound:
                 raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        for declared in properties.xpath(".//w:tblW | .//w:tcW", namespaces=NS):
+            table_width(declared, body_width)
         for indent in properties.findall(".//w:tblInd", NS):
             raw = indent.get(f"{{{NS['w']}}}w", "0")
             kind = indent.get(f"{{{NS['w']}}}type", "dxa")
@@ -1172,6 +1210,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_LINE_HEIGHT",
             "UNSUPPORTED_FONT_MAPPING",
             "UNSUPPORTED_ALTERNATE_CONTENT",
+            "UNSUPPORTED_TABLE_WIDTH",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
