@@ -462,19 +462,30 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
 
     indent_bound = 1800
     hanging_bound = 1440
+    tab_bound = 4680
     for section in document.findall(".//w:sectPr", NS):
         size, margins = section.find("w:pgSz", NS), section.find("w:pgMar", NS)
         try:
             width = int(size.get(f"{{{NS['w']}}}w", "12240")) if size is not None else 12240
+            height = int(size.get(f"{{{NS['w']}}}h", "15840")) if size is not None else 15840
+            top = int(margins.get(f"{{{NS['w']}}}top", "1440")) if margins is not None else 1440
+            bottom = (
+                int(margins.get(f"{{{NS['w']}}}bottom", "1440")) if margins is not None else 1440
+            )
             left = int(margins.get(f"{{{NS['w']}}}left", "1440")) if margins is not None else 1440
             right = int(margins.get(f"{{{NS['w']}}}right", "1440")) if margins is not None else 1440
             gutter = int(margins.get(f"{{{NS['w']}}}gutter", "0")) if margins is not None else 0
         except ValueError as exc:
             raise ValueError("UNSUPPORTED_TEXT_POSITION") from exc
-        if min(left, right, gutter) < 0 or width <= left + right + gutter:
+        if (
+            min(left, right, top, bottom, gutter) < 0
+            or width - left - right - gutter < 240
+            or height - top - bottom - gutter < 240
+        ):
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
         indent_bound = min(indent_bound, (width - left - right - gutter) // 4)
         hanging_bound = min(hanging_bound, left, right, indent_bound)
+        tab_bound = min(tab_bound, (width - left - right - gutter) // 2)
 
     def check_background(properties: Any) -> None:
         if properties is None:
@@ -486,6 +497,12 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
         if properties.find(".//w:tblpPr", NS) is not None:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        for tab in properties.findall(".//w:tabs/w:tab", NS):
+            if tab.get(val) == "clear":
+                continue
+            position = tab.get(f"{{{NS['w']}}}pos", "")
+            if not re.fullmatch(r"[0-9]+", position) or int(position) > tab_bound:
+                raise ValueError("UNSUPPORTED_TEXT_POSITION")
         for indent in properties.findall(".//w:tblInd", NS):
             raw = indent.get(f"{{{NS['w']}}}w", "0")
             kind = indent.get(f"{{{NS['w']}}}type", "dxa")
