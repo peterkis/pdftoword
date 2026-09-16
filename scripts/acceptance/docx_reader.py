@@ -401,7 +401,7 @@ def _hidden_content(document: Any, styles: Any) -> bool:
                 hidden = enabled(direct)
             payload = "".join(
                 run.xpath("./w:t/text() | ./m:t/text()", namespaces=NS)
-            ).strip() or run.xpath(
+            ) or run.xpath(
                 "./w:tab | ./w:br | ./w:cr | ./w:drawing | ./w:sym | ./w:pict", namespaces=NS
             )
             if hidden and payload:

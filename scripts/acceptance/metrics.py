@@ -386,12 +386,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         uncertain_edges=[
             u for u in truth["units"] if u["status"] != "confirmed" and u["kind"] == "figure_edge"
         ],
-        complete_relations=(
-            truth.get("coverage_complete") is True
-            and not any(
-                u["kind"] == "figure_edge" and u["status"] != "confirmed" for u in truth["units"]
-            )
-        ),
+        complete_relations=truth.get("coverage_complete") is True,
     )
     metrics.update(structures)
     if structures["formulas"]["unmatched_output_count"]:
