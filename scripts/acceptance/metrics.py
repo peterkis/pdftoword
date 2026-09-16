@@ -94,6 +94,66 @@ def _has_math_content(tree: Any) -> bool:
     return bool(tree[1].strip()) or any(_has_math_content(child) for child in tree[2])
 
 
+def _unexpected_layout_grid(
+    observed: Json,
+    truth: Json,
+    bound: dict[str, list[int]],
+    owned: set[int],
+    fallback_ids: list[str],
+) -> bool:
+    """Validate explicit layout grids or the writer's borderless flow wrapper shape."""
+    covered: set[int] = set()
+    paragraphs = observed["paragraphs"]
+
+    def shape(value: Json) -> Any:
+        return (
+            value["rows"],
+            value["cols"],
+            sorted((c["row"], c["col"], c["rowspan"], c["colspan"]) for c in value["cells"]),
+        )
+
+    for unit in truth["units"]:
+        if unit["kind"] != "table" or not isinstance(unit.get("reference"), dict):
+            continue
+        reference = unit["reference"]
+        tables = {
+            paragraphs[i]["table"] for i in bound.get(reference.get("source_anchor_id", ""), [])
+        } - {None}
+        if unit["status"] != "confirmed":
+            covered.update(tables)  # Unknown topology stays review-required, never PASS.
+        elif reference.get("is_data_table", True):
+            if unit["unit_id"] not in fallback_ids:
+                covered.update(tables)  # Already checked as actual data-table topology.
+        elif tables:
+            if len(tables) != 1 or shape(observed["tables"][next(iter(tables))]) != shape(
+                reference
+            ):
+                return True
+            covered.update(tables)
+    for table_id in owned - covered:
+        table = observed["tables"][table_id]
+        cells = sorted(table["cells"], key=lambda c: (c["row"], c["col"]))
+        coordinates = [(row, col) for row in range(table["rows"]) for col in range(table["cols"])]
+        if (
+            not table["borderless"]
+            or [(c["row"], c["col"]) for c in cells] != coordinates
+            or any(c["rowspan"] != 1 or c["colspan"] != 1 for c in cells)
+        ):
+            return True
+        filled = [bool(c["has_content"]) for c in cells]
+        if not any(filled):
+            return True
+        last_filled = max(i for i, filled_cell in enumerate(filled) if filled_cell)
+        trailing = len(filled) - last_filled - 1
+        if (
+            not all(filled[: last_filled + 1])
+            or trailing >= table["cols"]
+            or (table["rows"] == 1 and trailing)
+        ):
+            return True
+    return False
+
+
 def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     """Evaluate actual editable output against frozen units using geometric provenance."""
     observed = inspect(docx)
@@ -272,42 +332,6 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         for u in units
     )
     metrics: Json = {"text": text_metric}
-    from .structure import score_structure
-
-    structures, structure_failures, table_claimed = score_structure(
-        observed,
-        units,
-        bound,
-        block_anchor,
-        sources,
-        unscored_math_nodes=unscored_math_nodes,
-        complete_relations=(
-            truth.get("coverage_complete") is True
-            and not any(
-                u["kind"] == "figure_edge" and u["status"] != "confirmed" for u in truth["units"]
-            )
-        ),
-    )
-    metrics.update(structures)
-    if structures["formulas"]["unmatched_output_count"]:
-        errors.append("UNALIGNED_FORMULA")
-    failures.extend(structure_failures)
-    claimed.update(table_claimed)
-    extra_text = "".join(p["text"] for i, p in enumerate(paragraphs) if i not in claimed)
-    if extra_text:
-        errors.append("UNALIGNED_EDITABLE_TEXT")
-        for name, extra in [("raw", extra_text), ("light", "".join(extra_text.split()))]:
-            totals[name]["insertions"] += len(extra)
-            totals[name]["distance"] += len(extra)
-            denominator = totals[name]["reference_chars"]
-            totals[name]["value"] = totals[name]["distance"] / denominator if denominator else None
-        text_metric["status"] = "FAIL"
-    page_metrics = []
-    for page in sources["pages"]:
-        expected = [u for u in text_units if u["page"] == page["page"]]
-        matched = sum(bool(bound.get(u["reference"]["source_anchor_id"])) for u in expected)
-        page_metrics.append({"page": page["page"], **metric(len(expected), len(expected), matched)})
-    metrics["pages"] = page_metrics
     boxes_by_page: dict[int, list[list[float]]] = {}
     preserved_anchors: set[str] = set()
     claimed_image_paragraphs: set[int] = set()
@@ -345,7 +369,51 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
             boxes_by_page.setdefault(block["page"], []).append(block["bbox"])
     if unclaimed_images:
         errors.append("UNALIGNED_IMAGE")
+    image_preserved_unit_ids = {
+        u["unit_id"] for u in units if u["reference"].get("source_anchor_id") in preserved_anchors
+    }
+    from .structure import score_structure
+
+    structures, structure_failures, table_claimed = score_structure(
+        observed,
+        units,
+        bound,
+        block_anchor,
+        sources,
+        unscored_math_nodes=unscored_math_nodes,
+        image_preserved_unit_ids=image_preserved_unit_ids,
+        complete_relations=(
+            truth.get("coverage_complete") is True
+            and not any(
+                u["kind"] == "figure_edge" and u["status"] != "confirmed" for u in truth["units"]
+            )
+        ),
+    )
+    metrics.update(structures)
+    if structures["formulas"]["unmatched_output_count"]:
+        errors.append("UNALIGNED_FORMULA")
+    failures.extend(structure_failures)
+    claimed.update(table_claimed)
+    extra_text = "".join(p["text"] for i, p in enumerate(paragraphs) if i not in claimed)
+    if extra_text:
+        errors.append("UNALIGNED_EDITABLE_TEXT")
+        for name, extra in [("raw", extra_text), ("light", "".join(extra_text.split()))]:
+            totals[name]["insertions"] += len(extra)
+            totals[name]["distance"] += len(extra)
+            denominator = totals[name]["reference_chars"]
+            totals[name]["value"] = totals[name]["distance"] / denominator if denominator else None
+        text_metric["status"] = "FAIL"
+    page_metrics = []
+    for page in sources["pages"]:
+        expected = [u for u in text_units if u["page"] == page["page"]]
+        matched = sum(bool(bound.get(u["reference"]["source_anchor_id"])) for u in expected)
+        page_metrics.append({"page": page["page"], **metric(len(expected), len(expected), matched)})
+    metrics["pages"] = page_metrics
     owned_tables = {paragraphs[i]["table"] for i in claimed | claimed_image_paragraphs} - {None}
+    if _unexpected_layout_grid(
+        observed, truth, bound, owned_tables, structures["tables"]["fallback_unit_ids"]
+    ):
+        errors.append("UNEXPECTED_LAYOUT_GRID")
     unclaimed_tables = set(range(len(observed["tables"]))) - owned_tables
     metrics["tables"]["unclaimed_output_count"] = len(unclaimed_tables)
     if unclaimed_tables:
@@ -457,9 +525,30 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         "failures": failures,
         "errors": sorted(set(errors)),
     }
-    scored_structures = [m for m in structures.values() if m["scored_count"]]
-    if errors or structure_failures or any(m["status"] == "FAIL" for m in structures.values()):
+    structural_metrics = [m for name, m in structures.items() if name != "table_editable"]
+    scored_structures = [m for m in structural_metrics if m["scored_count"]]
+    has_structural_fallback = (
+        structures["tables"]["fallback_count"] or structures["formulas"]["fallback_count"]
+    )
+    editable_metrics = [
+        text_metric["editable_coverage"],
+        structures["table_editable"],
+        structures["formulas"]["supported_coverage"],
+    ]
+    if any(m["status"] == "FAIL" for m in editable_metrics):
+        result["editability_status"] = "FAIL"
+    elif any(m["scored_count"] for m in editable_metrics):
+        result["editability_status"] = (
+            "REVIEW_REQUIRED"
+            if uncertain_units or structures["formulas"]["unsupported_count"]
+            else "PASS"
+        )
+    else:
+        result["editability_status"] = "NOT_SCORED"
+    if errors or structure_failures or any(m["status"] == "FAIL" for m in structural_metrics):
         result["structure_status"] = "FAIL"
+    elif has_structural_fallback:
+        result["structure_status"] = "REVIEW_REQUIRED"
     elif scored_structures:
         result["structure_status"] = (
             "REVIEW_REQUIRED"

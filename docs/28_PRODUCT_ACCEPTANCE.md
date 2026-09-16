@@ -23,7 +23,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 并使用同一个 `pipeline.convert`。API 是进程内 HTTP 路径，不能称为真实浏览器或网络服务验收。
 记录实际共享函数调用次数（必须 1），禁止 Internet socket 连接，模型预算为 0；这不是系统级网络沙箱。
 
-返回码：0 表示没有已检出 FAIL；1 表示质量 FAIL；2 表示输入、执行或证据错误。
+返回码：0 表示未检出内容/结构硬失败，仍可能待审或可编辑性不足；1 表示内容/结构 FAIL；2 表示输入、执行或证据错误。
 0 不代表人工接受：必须同时看 NOT_SCORED、REVIEW_REQUIRED、渲染和人工状态。
 所有结果目录必须新建。失败诊断、PDF、DOCX、页图、标注只存私有目录，不上传。
 公共摘要只含哈希、计数、单位 ID、错误分类、版本和状态，不含正文。
@@ -55,7 +55,8 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
   这种几何保留仍是 REVIEW_REQUIRED，视觉裁剪验收单列 PENDING。
   每个实际绘图按出现位置逐一认领；额外绘图或同一绘图被多次认领均报错，不能只凭哈希存在就通过。
 - data_table 按 gridSpan/vMerge 重建逻辑 cell，空 cell 也计分；无边框布局表不因是 w:tbl 就被当作数据表。
-  非数据布局表仅按确认文字评分，不加入数据表拓扑分母；同锚点文字参考不重复计数。
+  非数据布局表文字不加入数据表分母，同锚点文字参考不重复计数；其显式网格仍检查额外结构。
+  隐式流式包装须明确无边框且顺序填充，仅允许多行最后一行必要的尾部补位。
   当前比较各标注的表格片段；跨页 continuation 与重复表头的全局语义仍需人工核对，不宣称已验收。
 - 公式支持字面 token、分组、分数、上下标和明确列举的符号命令；独立解析参考结构与 OMML。
   支持的命令见 `scripts/acceptance/formula.py`。矩阵、分段、未知命令显式 unsupported，
@@ -78,3 +79,5 @@ LibreOffice PDF/PNG 是真实渲染；HTML 从不作为 Word 渲染证据。
 人工仍须在实际 Word/LibreOffice 打开 auto 副本，插入/删除两行并修改公式、表格（若存在），
 记录应用版本、版式变化和实际耗时，然后导入 reviewed。仅运行脚本与查看页图不完成这一步。
 本项不关闭 T0012/T0602/T0603/T0604/T0605/T0610，不执行 S1-05，不推送、不合并。
+
+已验证的源图替代公式/数据表时，结构降级单列待审，完整分母和可编辑性不足仍保留；错误的可编辑结构不能被附带源图掩盖。

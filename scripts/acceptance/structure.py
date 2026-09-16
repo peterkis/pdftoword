@@ -19,9 +19,10 @@ def score_structure(
     *,
     complete_relations: bool = False,
     unscored_math_nodes: set[tuple[int, int]] | None = None,
+    image_preserved_unit_ids: set[str] | None = None,
 ) -> tuple[Json, list[Json], set[int]]:
     """Score actual table grids, OMML and source-bound predicted edges."""
-    from .metrics import metric
+    from .metrics import _has_math_content, metric
 
     paragraphs = observed["paragraphs"]
     failures: list[Json] = []
@@ -30,12 +31,33 @@ def score_structure(
     ]
     tables_correct = cells_correct = cells_total = cells_editable = 0
     repeated_header_cells = 0
+    fallback_table_ids: list[str] = []
+    fallback_formula_ids: list[str] = []
+    fallback_cells = 0
+    preserved = image_preserved_unit_ids or set()
     claimed: set[int] = set()
     seen_tables: set[int] = set()
     for u in table_units:
         ref = u["reference"]
         indexes = bound.get(ref["source_anchor_id"], [])
         tables = {paragraphs[i]["table"] for i in indexes} - {None}
+        counted_cells = [
+            c
+            for c in ref["cells"]
+            if not (ref.get("header_is_repeated") and c["row"] < ref.get("header_rows", 0))
+        ]
+        repeated_header_cells += len(ref["cells"]) - len(counted_cells)
+        cells_total += len(counted_cells)
+        table_paragraphs = [
+            p for i, p in enumerate(paragraphs) if i in indexes or p["table"] in tables
+        ]
+        if u["unit_id"] in preserved and not any(
+            p["text"].strip() or any(_has_math_content(m) for m in p["math"])
+            for p in table_paragraphs
+        ):
+            fallback_table_ids.append(u["unit_id"])
+            fallback_cells += len(counted_cells)
+            continue
         actual: Json = {"rows": 0, "cols": 0, "cells": []}
         if len(tables) == 1:
             table_id = next(iter(tables))
@@ -54,11 +76,7 @@ def score_structure(
         )
         tables_correct += correct
         by_position = {(c["row"], c["col"]): c for c in actual["cells"]}
-        for cell in ref["cells"]:
-            if ref.get("header_is_repeated") and cell["row"] < ref.get("header_rows", 0):
-                repeated_header_cells += 1
-                continue
-            cells_total += 1
+        for cell in counted_cells:
             found = by_position.get((cell["row"], cell["col"]))
             cells_editable += found is not None
             cells_correct += found is not None and found["text"] == cell["text"]
@@ -85,6 +103,9 @@ def score_structure(
         supported += 1
         indexes = bound.get(ref["source_anchor_id"], [])
         maths = [m for i in indexes for m in paragraphs[i]["math"]]
+        if u["unit_id"] in preserved and not any(_has_math_content(m) for m in maths):
+            fallback_formula_ids.append(u["unit_id"])
+            continue
         nodes = {(i, j) for i in indexes for j in range(len(paragraphs[i]["math"]))}
         correct = (
             len(maths) == 1
@@ -138,10 +159,12 @@ def score_structure(
                     {"unit_id": u["unit_id"], "page": u["page"], "code": "READING_ORDER_MISMATCH"}
                 )
     metrics = {
-        "tables": metric(len(table_units), len(table_units), tables_correct),
-        "table_cells": metric(cells_total, cells_total, cells_correct),
+        "tables": metric(
+            len(table_units), len(table_units) - len(fallback_table_ids), tables_correct
+        ),
+        "table_cells": metric(cells_total, cells_total - fallback_cells, cells_correct),
         "table_editable": metric(cells_total, cells_total, cells_editable),
-        "formulas": metric(len(formulas), supported, formula_correct),
+        "formulas": metric(len(formulas), supported - len(fallback_formula_ids), formula_correct),
         "relation_precision": metric(
             len(predicted), len(predicted) if edges or complete_relations else 0, correct_edges
         ),
@@ -153,6 +176,9 @@ def score_structure(
         for u in table_units
         if u["reference"].get("segment_count", 1) > 1
     }
+    metrics["tables"]["fallback_count"] = len(fallback_table_ids)
+    metrics["tables"]["fallback_unit_ids"] = fallback_table_ids
+    metrics["formulas"]["fallback_count"] = len(fallback_formula_ids)
     metrics["tables"]["continuation"] = metric(len(continuation_ids), 0, 0)
     metrics["table_cells"]["repeated_header_cells_excluded"] = repeated_header_cells
     metrics["formulas"]["unmatched_output_count"] = len(all_maths - bound_maths)

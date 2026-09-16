@@ -137,13 +137,28 @@ def table_grid(table: Any) -> Json:
                     "rowspan": 1,
                     "colspan": width,
                     "text": "\n".join(word_text(p) for p in cell.xpath(".//w:p", namespaces=NS)),
+                    "has_content": bool(
+                        word_text(cell).strip()
+                        or cell.xpath(".//m:oMath | .//a:blip", namespaces=NS)
+                    ),
                 }
                 cells.append(item)
                 if merge is not None:
                     current[ci] = item
             ci += width
         active = current
-    return {"rows": len(rows), "cols": columns, "cells": cells}
+    borders = table.find("w:tblPr/w:tblBorders", NS)
+    edge_names = {"top", "left", "bottom", "right", "insideH", "insideV"}
+    borderless = borders is not None and all(
+        (edge := borders.find("w:" + name, NS)) is not None
+        and edge.get(f"{{{NS['w']}}}val") in {"nil", "none"}
+        for name in edge_names
+    )
+    cell_borders = table.xpath(".//w:tcPr/w:tcBorders/*", namespaces=NS)
+    borderless = borderless and all(
+        b.get(f"{{{NS['w']}}}val") in {"nil", "none"} for b in cell_borders
+    )
+    return {"rows": len(rows), "cols": columns, "cells": cells, "borderless": borderless}
 
 
 def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str | None]:
@@ -231,9 +246,7 @@ def _hidden_content(document: Any, styles: Any) -> bool:
         inherited = apply_style(
             default_hidden, pstyle.get(val) if pstyle is not None else defaults.get("paragraph")
         )
-        if inherited and paragraph.xpath("./m:oMath | ./m:oMathPara", namespaces=NS):
-            return True
-        for run in paragraph.findall(".//w:r", NS):
+        for run in paragraph.xpath(".//w:r | .//m:r", namespaces=NS):
             rstyle = run.find("w:rPr/w:rStyle", NS)
             hidden = apply_style(
                 inherited, rstyle.get(val) if rstyle is not None else defaults.get("character")
@@ -241,7 +254,9 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             direct = run.find("w:rPr/w:vanish", NS)
             if direct is not None:
                 hidden = enabled(direct)
-            payload = "".join(run.xpath("./w:t/text()", namespaces=NS)).strip() or run.xpath(
+            payload = "".join(
+                run.xpath("./w:t/text() | ./m:t/text()", namespaces=NS)
+            ).strip() or run.xpath(
                 "./w:tab | ./w:br | ./w:cr | ./w:drawing | ./w:sym | ./w:pict", namespaces=NS
             )
             if hidden and payload:
