@@ -203,6 +203,12 @@ def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str]:
         or posixpath.normpath(main[0].get("Target", "")).lstrip("/") != "word/document.xml"
     ):
         raise ValueError("OPC_MAIN_RELATIONSHIP_INVALID")
+    override_keys = [n.get("PartName") for n in types if n.tag == f"{{{ct_ns}}}Override"]
+    default_keys = [
+        (n.get("Extension") or "").lower() for n in types if n.tag == f"{{{ct_ns}}}Default"
+    ]
+    if len(set(override_keys)) != len(override_keys) or len(set(default_keys)) != len(default_keys):
+        raise ValueError("OPC_DUPLICATE_CONTENT_TYPE")
     overrides = {
         n.get("PartName"): n.get("ContentType") for n in types if n.tag == f"{{{ct_ns}}}Override"
     }
@@ -309,6 +315,78 @@ def _hidden_content(document: Any, styles: Any) -> bool:
     return False
 
 
+def _numbered_content(document: Any, styles: Any, numbering: Any) -> bool:
+    """Reject generated numbering from direct properties and applicable style chains."""
+    val = f"{{{NS['w']}}}val"
+    style_map = {s.get(f"{{{NS['w']}}}styleId"): s for s in styles.findall("w:style", NS)}
+    default_style = next(
+        (
+            sid
+            for sid, s in style_map.items()
+            if s.get(f"{{{NS['w']}}}type") == "paragraph"
+            and s.get(f"{{{NS['w']}}}default") in {"1", "true", "on"}
+        ),
+        None,
+    )
+    used_abstracts = {n.get(val) for n in numbering.findall("w:num/w:abstractNumId", NS)}
+    associated_styles = set()
+    for abstract in numbering.findall("w:abstractNum", NS):
+        if abstract.get(f"{{{NS['w']}}}abstractNumId") in used_abstracts:
+            associated_styles.update(
+                abstract.xpath(".//w:pStyle/@w:val | w:styleLink/@w:val", namespaces=NS)
+            )
+
+    def chain(sid: str | None) -> list[Any]:
+        result = []
+        seen = set()
+        while sid in style_map:
+            if sid in seen:
+                raise ValueError("UNSUPPORTED_NUMBERING")
+            seen.add(sid)
+            style = style_map[sid]
+            result.append(style)
+            parent = style.find("w:basedOn", NS)
+            sid = parent.get(val) if parent is not None else None
+        return result
+
+    def numbered(paragraph: Any) -> bool:
+        pstyle = paragraph.find("w:pPr/w:pStyle", NS)
+        styles_used = chain(pstyle.get(val) if pstyle is not None else default_style)
+        properties = [paragraph.find("w:pPr/w:numPr", NS)]
+        properties.extend(s.find("w:pPr/w:numPr", NS) for s in styles_used)
+        table_properties = []
+        conditional = False
+        tables = paragraph.xpath("ancestor::w:tbl", namespaces=NS)
+        if tables:
+            table_style = tables[-1].find("w:tblPr/w:tblStyle", NS)
+            for style in chain(table_style.get(val) if table_style is not None else None):
+                conditional |= bool(style.findall(".//w:tblStylePr/w:pPr/w:numPr", NS))
+                table_properties.append(style.find("w:pPr/w:numPr", NS))
+        unresolved = False
+        for group in [
+            properties,
+            table_properties,
+            [styles.find("w:docDefaults/w:pPrDefault/w:pPr/w:numPr", NS)],
+        ]:
+            if group is table_properties and conditional:
+                return True
+            for prop in group:
+                if prop is None:
+                    continue
+                unresolved = True
+                number = prop.find("w:numId", NS)
+                if number is not None:
+                    try:
+                        return int(number.get(val, "")) != 0
+                    except ValueError:
+                        return True
+        return unresolved or any(
+            s.get(f"{{{NS['w']}}}styleId") in associated_styles for s in styles_used
+        )
+
+    return any(numbered(p) for p in document.xpath(".//w:p", namespaces=NS))
+
+
 def inspect(path: Path) -> Json:
     """Return body, table, math, image and bookmark evidence with safe error codes."""
     result: Json = {"errors": [], "paragraphs": [], "tables": [], "media_count": 0}
@@ -368,6 +446,7 @@ def inspect(path: Path) -> Json:
                     result["media_count"] += 1
             relationships = {}
             styles_target: str | None = None
+            numbering_target: str | None = None
             story_relationships: list[tuple[str, str, str]] = []
             rel_path = "word/_rels/document.xml.rels"
             if rel_path in names:
@@ -384,6 +463,10 @@ def inspect(path: Path) -> Json:
                             raise ValueError("IMAGE_CONTENT_TYPE_INVALID")
                         relationships[rel.get("Id")] = hashlib.sha256(data).hexdigest()
                     kind = rel.get("Type", "").rsplit("/", 1)[-1]
+                    if rel.get("Type") == NS["r"] + "/numbering":
+                        if numbering_target is not None:
+                            raise ValueError("OPC_INVALID_DECLARATION")
+                        numbering_target = target
                     if kind == "styles":
                         if styles_target is not None:
                             raise ValueError("OPC_STYLE_RELATIONSHIP_INVALID")
@@ -400,6 +483,13 @@ def inspect(path: Path) -> Json:
                 if styles_target is not None
                 else etree.Element(f"{{{NS['w']}}}styles")
             )
+            numbering = (
+                xml(archive.read(numbering_target))
+                if numbering_target is not None
+                else etree.Element(f"{{{NS['w']}}}numbering")
+            )
+            if _numbered_content(root, styles, numbering):
+                result["errors"].append("UNSUPPORTED_NUMBERING")
             if _hidden_content(root, styles):
                 result["errors"].append("HIDDEN_CONTENT")
             referenced_stories = set(
@@ -419,7 +509,7 @@ def inspect(path: Path) -> Json:
                     + " | ".join("//w:" + tag for tag in UNSUPPORTED_WORD_CONTENT),
                     namespaces=NS,
                 )
-                if text or visible:
+                if text or visible or _numbered_content(story, styles, numbering):
                     result["errors"].append("UNSUPPORTED_VISIBLE_STORY")
             if root.xpath("//w:body//a:blip[@r:link]", namespaces=NS):
                 result["errors"].append("UNSUPPORTED_LINKED_IMAGE")
@@ -484,6 +574,8 @@ def inspect(path: Path) -> Json:
             "OPC_WORD_CONTENT_TYPE_INVALID",
             "OPC_RELATIONSHIP_ID_INVALID",
             "OPC_DUPLICATE_RELATIONSHIP_ID",
+            "OPC_DUPLICATE_CONTENT_TYPE",
+            "UNSUPPORTED_NUMBERING",
         }
         code = str(exc) if str(exc) in known else type(exc).__name__.upper()
         result["errors"].append(code)
