@@ -416,7 +416,7 @@ def _check_payload_structure(document: Any) -> None:
             node = parent
 
 
-def _hidden_content(document: Any, styles: Any) -> bool:
+def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> bool:
     """Resolve vanish through defaults and used paragraph/character style chains."""
     val = f"{{{NS['w']}}}val"
     style_map = {s.get(f"{{{NS['w']}}}styleId"): s for s in styles.findall("w:style", NS)}
@@ -426,6 +426,39 @@ def _hidden_content(document: Any, styles: Any) -> bool:
         if value not in {"0", "false", "off", "1", "true", "on"}:
             raise ValueError("INVALID_VISIBILITY_PROPERTY")
         return value in {"1", "true", "on"}
+
+    def font_key(name: str) -> str:
+        return "".join(name.casefold().split())
+
+    symbol_fonts = {
+        "symbol", "wingdings", "wingdings2", "wingdings3", "webdings", "zapfdingbats", "mtextra"
+    }
+    for font in font_table.findall("w:font", NS):
+        charset = font.find("w:charset", NS)
+        alternate = font.find("w:altName", NS)
+        if (charset is not None and charset.get(val, "").lower() in {"2", "02"}) or (
+            alternate is not None and font_key(alternate.get(val, "")) in symbol_fonts
+        ):
+            symbol_fonts.add(font_key(font.get(f"{{{NS['w']}}}name", "")))
+
+    def check_font(name: str) -> None:
+        if font_key(name) in symbol_fonts:
+            raise ValueError("UNSUPPORTED_FONT_MAPPING")
+
+    def check_theme_font(name: str) -> None:
+        match = re.fullmatch(r"(major|minor)(Ascii|HAnsi|EastAsia|Bidi)", name)
+        if match is None or theme is None:
+            raise ValueError("UNSUPPORTED_FONT_MAPPING")
+        group = theme.find("a:themeElements/a:fontScheme/a:" + match[1] + "Font", NS)
+        kind = {"Ascii": "latin", "HAnsi": "latin", "EastAsia": "ea", "Bidi": "cs"}[match[2]]
+        face = group.find("a:" + kind, NS) if group is not None else None
+        if face is None:
+            raise ValueError("UNSUPPORTED_FONT_MAPPING")
+        if face.get("typeface"):
+            check_font(face.get("typeface"))
+        else:
+            for fallback in group.findall("a:font", NS):
+                check_font(fallback.get("typeface", ""))
 
     indent_bound = 1800
     hanging_bound = 1440
@@ -472,6 +505,13 @@ def _hidden_content(document: Any, styles: Any) -> bool:
                     raise ValueError("UNSUPPORTED_TEXT_POSITION")
         if properties.find(".//w:framePr", NS) is not None:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        for fonts in properties.findall(".//w:rFonts", NS):
+            for key, name in fonts.attrib.items():
+                attribute = etree.QName(key).localname
+                if attribute.lower().endswith("theme"):
+                    check_theme_font(name)
+                elif attribute in {"ascii", "hAnsi", "eastAsia", "cs"}:
+                    check_font(name)
         for spacing in properties.findall(".//w:spacing", NS):
             if spacing.getparent().tag == f"{{{NS['w']}}}rPr" and spacing.get(val) != "0":
                 raise ValueError("UNSUPPORTED_TEXT_POSITION")
@@ -891,6 +931,7 @@ def inspect(path: Path) -> Json:
             styles_target: str | None = None
             numbering_target: str | None = None
             settings_target: str | None = None
+            font_targets: dict[str, str] = {}
             story_relationships: list[tuple[str, str, str]] = []
             rel_path = "word/_rels/document.xml.rels"
             if rel_path in names:
@@ -908,6 +949,10 @@ def inspect(path: Path) -> Json:
                             raise ValueError("IMAGE_CONTENT_TYPE_INVALID")
                         relationships[rel.get("Id")] = hashlib.sha256(data).hexdigest()
                     kind = rel.get("Type", "").rsplit("/", 1)[-1]
+                    if kind in {"theme", "fontTable"} and rel.get("Type") == NS["r"] + "/" + kind:
+                        if kind in font_targets:
+                            raise ValueError("OPC_INVALID_DECLARATION")
+                        font_targets[kind] = target
                     if rel.get("Type") == NS["r"] + "/settings":
                         if settings_target is not None:
                             raise ValueError("OPC_INVALID_DECLARATION")
@@ -977,7 +1022,16 @@ def inspect(path: Path) -> Json:
             _check_picture_containers(root, image_sizes)
             if _numbered_content(root, styles, numbering):
                 result["errors"].append("UNSUPPORTED_NUMBERING")
-            if _hidden_content(root, styles):
+            font_table = (
+                xml(archive.read(font_targets["fontTable"]))
+                if "fontTable" in font_targets else etree.Element(f"{{{NS['w']}}}fonts")
+            )
+            theme = xml(archive.read(font_targets["theme"])) if "theme" in font_targets else None
+            if font_table.tag != f"{{{NS['w']}}}fonts" or (
+                theme is not None and theme.tag != f"{{{NS['a']}}}theme"
+            ):
+                raise ValueError("OPC_WORD_ROOT_INVALID")
+            if _hidden_content(root, styles, font_table, theme):
                 result["errors"].append("HIDDEN_CONTENT")
             story_types = {rid: kind for rid, kind, _ in story_relationships}
             for reference in root.xpath("//w:headerReference | //w:footerReference", namespaces=NS):
@@ -1090,6 +1144,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_ROW_HEIGHT",
             "UNSUPPORTED_TEXT_CASE",
             "UNSUPPORTED_LINE_HEIGHT",
+            "UNSUPPORTED_FONT_MAPPING",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
