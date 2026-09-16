@@ -583,6 +583,17 @@ def _hidden_content(document: Any, styles: Any) -> bool:
         inherited = apply_style(
             table_hidden, pstyle.get(val) if pstyle is not None else defaults.get("paragraph")
         )
+        for props in paragraph.xpath(".//m:ctrlPr/w:rPr", namespaces=NS):
+            check_background(props)
+            rstyle = props.find("w:rStyle", NS)
+            control_hidden = apply_style(
+                inherited, rstyle.get(val) if rstyle is not None else defaults.get("character")
+            )
+            direct = props.find("w:vanish", NS)
+            if direct is not None:
+                control_hidden = enabled(direct)
+            if control_hidden:
+                return True
         for run in paragraph.xpath(".//w:r | .//m:r", namespaces=NS):
             check_background(run.find("w:rPr", NS))
             rstyle = run.find("w:rPr/w:rStyle", NS)
