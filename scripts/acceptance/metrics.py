@@ -369,7 +369,8 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     content_status = metrics["necessary_content"]["status"]
     if (
         any(
-            f["code"]
+            f["unit_id"] not in preserved_units
+            and f["code"]
             in {
                 "TEXT_MISMATCH",
                 "MISSING_TEXT",

@@ -168,6 +168,28 @@ def inspect(path: Path) -> Json:
                 )
                 if text or visible:
                     result["errors"].append("UNSUPPORTED_VISIBLE_STORY")
+            unsupported_body_tags = [
+                "sym",
+                "altChunk",
+                "pict",
+                "object",
+                "contentPart",
+                "fldSimple",
+                "instrText",
+                "noBreakHyphen",
+                "softHyphen",
+                "txbxContent",
+                "footnoteReference",
+                "endnoteReference",
+            ]
+            unsupported_body = root.xpath(
+                " | ".join("//w:body//w:" + tag for tag in unsupported_body_tags), namespaces=NS
+            )
+            unknown_drawings = root.xpath(
+                "//w:body//w:drawing[not(.//a:blip)] | //w:body//a:t", namespaces=NS
+            )
+            if unsupported_body or unknown_drawings:
+                result["errors"].append("UNSUPPORTED_BODY_CONTENT")
             tables = root.xpath("//w:tbl", namespaces=NS)
             for table in tables:
                 if table.xpath("ancestor::w:tbl", namespaces=NS):

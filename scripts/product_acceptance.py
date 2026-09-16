@@ -126,7 +126,10 @@ def evaluate_only(bundle: Path, output: Path) -> Json:
 
 def run_sample(dataset: Path, sample_id: str, entry: str, output: Path) -> Json:
     """Run one explicitly selected frozen native sample and seal its real output."""
-    verify(dataset, read(dataset / "seal.json"))
+    dataset_seal = read(dataset / "seal.json")
+    if "manifest.json" not in dataset_seal:
+        raise ValueError("INCOMPLETE_DATASET_SEAL")
+    verify(dataset, dataset_seal)
     manifest = read(dataset / "manifest.json")
     if manifest["status"] != "FROZEN":
         raise ValueError("DATASET_NOT_FROZEN")
@@ -138,6 +141,12 @@ def run_sample(dataset: Path, sample_id: str, entry: str, output: Path) -> Json:
         raise ValueError("DEVELOPMENT_SAMPLE_REQUIRED")
     if sample["category"] != "N":
         raise ValueError("OFFLINE_NATIVE_SAMPLE_REQUIRED")
+    selected_members = {
+        (Path("corpus") / sample["private_path"]).as_posix(),
+        (Path("annotations") / sample["annotation_path"]).as_posix(),
+    }
+    if not selected_members.issubset(dataset_seal):
+        raise ValueError("INCOMPLETE_DATASET_SEAL")
     source = member(dataset / "corpus", sample["private_path"])
     annotation = member(dataset / "annotations", sample["annotation_path"])
     if digest(source) != sample["source_sha256"]:
