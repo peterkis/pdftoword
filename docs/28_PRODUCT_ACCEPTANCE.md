@@ -54,6 +54,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 浮动表格定位不支持；段落/表格缩进使用各节可用宽度四分之一且最多90pt的保守上限，悬挂缩进另受页边距限制，不自动调整原文。
 OMML ctrlPr控制字符格式应用相同可见性和样式检查，分数线等控制字形不能因格式被忽略而冒充完整公式。
 已知符号字体、字体表符号字符集及主题映射到符号字体均明确不支持；缺失主题映射拒绝，实际字体替代/视觉效果仍需人工验收。
+设置、字体表和主题中的AlternateContent同样拒绝；必要内容分母去重同锚点结构重叠文字，并报告排除数。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。

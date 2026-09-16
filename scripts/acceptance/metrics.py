@@ -441,7 +441,14 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         "value": fallback_area / total_area if total_area else None,
         "basis": "source_provenance_not_visual_crop_acceptance",
     }
-    content_units = [u for u in units if u["kind"] in {"text", "formula", "table"}]
+    overlapping_text_ids = {
+        u["unit_id"] for u in units
+        if u["kind"] == "text" and u["reference"].get("source_anchor_id") in structural_anchors
+    }
+    content_units = [
+        u for u in units
+        if u["kind"] in {"text", "formula", "table"} and u["unit_id"] not in overlapping_text_ids
+    ]
     content_failures = {f["unit_id"] for f in failures}
     supported_formula_ids = {
         u["unit_id"]
@@ -491,6 +498,9 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         len(correct_units | preserved_units),
     )
     metrics["necessary_content"]["uncertain_count"] = len(uncertain_units)
+    metrics["necessary_content"]["excluded_structural_overlap_text_count"] = len(
+        overlapping_text_ids
+    )
     metrics["necessary_content"]["source_image_retained_count"] = len(preserved_units)
     metrics["necessary_content"]["visual_crop_acceptance"] = "PENDING"
     if preserved_units and metrics["necessary_content"]["status"] == "PASS":

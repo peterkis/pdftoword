@@ -996,6 +996,8 @@ def inspect(path: Path) -> Json:
                 settings = xml(archive.read(settings_target))
                 if settings.tag != f"{{{NS['w']}}}settings":
                     raise ValueError("OPC_WORD_ROOT_INVALID")
+                if settings.xpath(".//mc:AlternateContent", namespaces=NS):
+                    raise ValueError("UNSUPPORTED_ALTERNATE_CONTENT")
                 if settings.find("w:writeProtection", NS) is not None:
                     raise ValueError("UNSUPPORTED_DOCUMENT_PROTECTION")
                 for protection in settings.findall("w:documentProtection", NS):
@@ -1031,6 +1033,11 @@ def inspect(path: Path) -> Json:
                 theme is not None and theme.tag != f"{{{NS['a']}}}theme"
             ):
                 raise ValueError("OPC_WORD_ROOT_INVALID")
+            if any(
+                part is not None and part.xpath(".//mc:AlternateContent", namespaces=NS)
+                for part in (font_table, theme)
+            ):
+                raise ValueError("UNSUPPORTED_ALTERNATE_CONTENT")
             if _hidden_content(root, styles, font_table, theme):
                 result["errors"].append("HIDDEN_CONTENT")
             story_types = {rid: kind for rid, kind, _ in story_relationships}
@@ -1145,6 +1152,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_TEXT_CASE",
             "UNSUPPORTED_LINE_HEIGHT",
             "UNSUPPORTED_FONT_MAPPING",
+            "UNSUPPORTED_ALTERNATE_CONTENT",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
