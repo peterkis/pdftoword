@@ -380,6 +380,10 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        for size in properties.xpath(".//w:sz | .//w:szCs", namespaces=NS):
+            value = size.get(val, "")
+            if not re.fullmatch(r"[0-9]+", value) or int(value) < 12:
+                raise ValueError("UNSUPPORTED_FONT_SCALE")
         for color in properties.findall(".//w:color", NS):
             if color.get(val) not in {"auto", "000000"} or any(
                 "theme" in etree.QName(key).localname.lower() for key in color.attrib
@@ -946,6 +950,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_DOCUMENT_PROTECTION",
             "UNSUPPORTED_CONTENT_LOCK",
             "UNSUPPORTED_MARKUP_COMPATIBILITY",
+            "UNSUPPORTED_FONT_SCALE",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",

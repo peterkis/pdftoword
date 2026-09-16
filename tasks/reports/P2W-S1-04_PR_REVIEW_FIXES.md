@@ -369,3 +369,12 @@ UNSUPPORTED_MARKUP_COMPATIBILITY；ProcessContent不在当前支持范围，亦�
 仅声明Ignorable而未使用扩展元素的普通文档继续接受，既有Office图片DPI注记不受影响。
 新增5项回归，修复前4 failed / 1 passed；独立检出897 passed，
 Ruff、mypy（86文件）、两个既有校验器通过，原始证据不改写。
+
+## 第三十轮：极小字号验收边界
+
+审查版本1813f40，修复0.5pt格式仍可凭完整文字通过的问题。
+已用直接/样式/默认格式中的sz和szCs低于6pt（12半磅）或非法值明确报
+UNSUPPORTED_FONT_SCALE。该工程验收门槛不修改原始字号，不冒充人工可读性通过；
+如真实原稿本就小于门槛，也保留原文并报告不支持，而非静默放大。
+新增12项回归，修复前10 failed / 2 passed；独立检出909 passed，
+Ruff、mypy（87文件）、两个既有校验器通过，历史证据保持不变。

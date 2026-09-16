@@ -45,6 +45,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 图片显示宽高至少1 PDF point、与像素比例偏差不超过2%，且分别至少为来源框宽高的25%；工程缩放门槛不替代人工视觉验收。保护/内容锁定错误直接令可编辑性FAIL。
 普通配图不替代缺失正文/公式/表格，必要内容的图像降级认领要求显式fallback；图片像素安全异常返回IMAGE_PIXEL_LIMIT。
 验收载荷位于未支持的扩展包装器内时明确拒绝，不猜测MCE Ignorable/ProcessContent行为；仅扩展声明不误报。
+已用sz/szCs字号格式低于6pt或非法时返回UNSUPPORTED_FONT_SCALE；不修改原文字号，不将门槛通过等同于人工可读性确认。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。
