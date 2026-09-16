@@ -57,7 +57,15 @@ def metric(eligible: int, scored: int, correct: int, uncertain: int = 0) -> Json
         "uncertain_count": uncertain,
         "not_scored_count": eligible - scored,
         "value": correct / eligible if eligible else None,
-        "status": "NOT_SCORED" if not scored else "FAIL" if correct < eligible else "PASS",
+        "status": (
+            "NOT_SCORED"
+            if not scored
+            else "FAIL"
+            if correct < scored
+            else "REVIEW_REQUIRED"
+            if scored < eligible
+            else "PASS"
+        ),
     }
 
 

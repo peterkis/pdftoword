@@ -42,6 +42,30 @@ def math_tree(node: Any) -> Any:
         return None
     if name == "ctrlPr" and all(etree.QName(c).namespace == NS["w"] for c in node):
         return None
+    default_properties = {"fPr": {"type": "bar"}, "sSupPr": {}, "sSubPr": {}, "sSubSupPr": {}}
+    if namespace == NS["m"] and name in default_properties and not node.attrib:
+        # Office writes explicit defaults and control styling on ordinary math.
+        # Keep unknown/non-default properties visible (notably noBar and skw).
+        allowed = default_properties[name]
+        defaults_only = True
+        for child in node:
+            child_name = etree.QName(child).localname
+            if (
+                etree.QName(child).namespace == NS["m"]
+                and child_name == "ctrlPr"
+                and math_tree(child) is None
+            ):
+                continue
+            if (
+                etree.QName(child).namespace != NS["m"]
+                or child_name not in allowed
+                or dict(child.attrib) != {f"{{{NS['m']}}}val": allowed[child_name]}
+                or len(child)
+            ):
+                defaults_only = False
+                break
+        if defaults_only:
+            return None
     children = [value for child in node if (value := math_tree(child)) is not None]
     return [name, node.text or "", children]
 
