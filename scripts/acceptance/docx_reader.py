@@ -467,6 +467,7 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
     symbol_fonts = {
         "symbol", "wingdings", "wingdings2", "wingdings3", "webdings", "zapfdingbats", "mtextra"
     }
+    aliases: dict[str, set[str]] = {}
     for font in font_table.findall("w:font", NS):
         charset = font.find("w:charset", NS)
         alternate = font.find("w:altName", NS)
@@ -474,10 +475,17 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             font.find("w:" + tag, NS) is not None
             for tag in ("embedRegular", "embedBold", "embedItalic", "embedBoldItalic")
         )
-        if embedded or (charset is not None and charset.get(val, "").lower() in {"2", "02"}) or (
-            alternate is not None and font_key(alternate.get(val, "")) in symbol_fonts
-        ):
-            symbol_fonts.add(font_key(font.get(f"{{{NS['w']}}}name", "")))
+        name = font_key(font.get(f"{{{NS['w']}}}name", ""))
+        if alternate is not None:
+            aliases.setdefault(font_key(alternate.get(val, "")), set()).add(name)
+        if embedded or (charset is not None and charset.get(val, "").lower() in {"2", "02"}):
+            symbol_fonts.add(name)
+    pending = list(symbol_fonts)
+    while pending:
+        for alias in aliases.get(pending.pop(), set()):
+            if alias not in symbol_fonts:
+                symbol_fonts.add(alias)
+                pending.append(alias)
 
     def check_font(name: str) -> None:
         if font_key(name) in symbol_fonts:

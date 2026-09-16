@@ -313,6 +313,7 @@ def import_reviewed(bundle: Path, docx: Path, output: Path) -> Json:
     run.update(
         {
             "revision": "reviewed",
+            "reviewed": {"status": "IMPORTED", "artifact": "reviewed.docx"},
             "parent_seal_sha256": digest(bundle / "seal.json"),
             "rendering": {
                 "status": "PENDING",

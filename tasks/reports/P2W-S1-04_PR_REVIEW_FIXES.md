@@ -565,3 +565,12 @@ Ruff、mypy（107文件）、两个既有校验器通过，原始证据不变。
 原ID/名称/配对/顺序检查继续执行，合法位置对照保留。
 新增12项回归，修复前7 failed / 5 passed；独立检出1152 passed，
 Ruff、mypy（108文件）、两个既有校验器通过，原始证据不变。
+
+## 第五十二轮：字体备用链与reviewed运行状态
+
+审查版本e0551b4，两项反馈修复。
+先收集全部符号/嵌入不可信字体，再沿备用名称反向图传播标记，处理前向、多级与循环，
+不依赖字体表声明顺序。import-reviewed同步记录reviewed.status=IMPORTED及reviewed.docx，
+与revision一致；原自动运行记录不变，human_acceptance仍为PENDING。
+新增6项回归，修复前4 failed / 2 passed；独立检出1158 passed，
+Ruff、mypy（109文件）、两个既有校验器通过，原始证据不变。
