@@ -380,6 +380,9 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        for position in properties.findall(".//w:position", NS):
+            if position.get(val) != "0":
+                raise ValueError("UNSUPPORTED_TEXT_POSITION")
         for size in properties.xpath(".//w:sz | .//w:szCs", namespaces=NS):
             value = size.get(val, "")
             if not re.fullmatch(r"[0-9]+", value) or int(value) < 12:
@@ -836,6 +839,8 @@ def inspect(path: Path) -> Json:
             ):
                 result["errors"].append("UNSUPPORTED_ALTERNATE_CONTENT")
                 return result
+            if root.xpath("//w:body//w:sdtPr/w:dataBinding", namespaces=NS):
+                raise ValueError("UNSUPPORTED_DATA_BINDING")
             for lock in root.xpath("//w:body//w:sdtPr/w:lock", namespaces=NS):
                 if lock.get(f"{{{NS['w']}}}val") not in {"unlocked", "sdtLocked"}:
                     raise ValueError("UNSUPPORTED_CONTENT_LOCK")
@@ -951,6 +956,8 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_CONTENT_LOCK",
             "UNSUPPORTED_MARKUP_COMPATIBILITY",
             "UNSUPPORTED_FONT_SCALE",
+            "UNSUPPORTED_TEXT_POSITION",
+            "UNSUPPORTED_DATA_BINDING",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
