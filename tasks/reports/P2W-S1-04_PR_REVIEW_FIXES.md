@@ -592,3 +592,11 @@ https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/e7017520
 先验证页面尺寸上限，再计算正文及图片范围；保留边距和有效区域检查。
 新增5项回归，修复前3 failed / 2 passed；独立检出1173 passed，
 Ruff、mypy（111文件）、两个既有校验器通过，原始证据不变。
+
+## 第五十五轮：跨页表待审状态汇总
+
+审查版本6a159f4，修复嵌套continuation未评分状态未提升到总结构状态的问题。
+存在未评分的跨页表全局语义时，structure_status至少为REVIEW_REQUIRED；
+已有结构错误仍优先FAIL，单段正确表保持PASS，不把片段匹配等同于全局接受。
+新增4项回归，修复前1 failed / 3 passed；独立检出1177 passed，
+Ruff、mypy（112文件）、两个既有校验器通过，旧封存评分不重算。

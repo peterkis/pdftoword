@@ -570,7 +570,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         result["editability_status"] = "NOT_SCORED"
     if errors or structure_failures or any(m["status"] == "FAIL" for m in structural_metrics):
         result["structure_status"] = "FAIL"
-    elif has_structural_fallback:
+    elif has_structural_fallback or structures["tables"]["continuation"]["not_scored_count"]:
         result["structure_status"] = "REVIEW_REQUIRED"
     elif scored_structures:
         result["structure_status"] = (
