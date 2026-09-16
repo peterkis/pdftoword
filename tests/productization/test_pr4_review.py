@@ -30,6 +30,31 @@ def test_partially_supported_formulas_distinguish_unscored_from_wrong(
             },
         }
     )
+    # Unsupported semantics remain reviewable only when the expression is retained.
+    doc: Any = Document(str(path))
+    paragraph = doc.add_paragraph()
+    marker = OxmlElement("w:bookmarkStart")
+    marker.set(qn("w:name"), "unsupported")
+    marker.set(qn("w:id"), "99")
+    paragraph._p.append(marker)
+    math = OxmlElement("m:oMath")
+    parent = math
+    for tag in ["m:m", "m:mr", "m:e", "m:r", "m:t"]:
+        child = OxmlElement(tag)
+        parent.append(child)
+        parent = child
+    parent.text = "x"
+    paragraph._p.append(math)
+    doc.save(str(path))
+    sources["blocks"].append(
+        {
+            "block_id": "unsupported",
+            "marker": "unsupported",
+            "page": 2,
+            "bbox": [0, 30, 100, 50],
+            "kind": "formula",
+        }
+    )
     if wrong:
         next(u for u in truth["units"] if u["unit_id"] == "f")["reference"]["text"] = "x=2"
     result = evaluate(path, truth, sources)

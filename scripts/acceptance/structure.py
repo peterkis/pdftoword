@@ -16,6 +16,8 @@ def score_structure(
     bound: dict[str, list[int]],
     block_anchor: dict[str, str],
     sources: Json,
+    *,
+    complete_relations: bool = False,
 ) -> tuple[Json, list[Json], set[int]]:
     """Score actual table grids, OMML and source-bound predicted edges."""
     from .metrics import metric
@@ -138,7 +140,9 @@ def score_structure(
         "table_cells": metric(cells_total, cells_total, cells_correct),
         "table_editable": metric(cells_total, cells_total, cells_editable),
         "formulas": metric(len(formulas), supported, formula_correct),
-        "relation_precision": metric(len(predicted), len(predicted) if edges else 0, correct_edges),
+        "relation_precision": metric(
+            len(predicted), len(predicted) if edges or complete_relations else 0, correct_edges
+        ),
         "relation_coverage": metric(len(edges), len(edges), covered),
         "reading_order": metric(order_total, order_total - order_missing, order_correct),
     }

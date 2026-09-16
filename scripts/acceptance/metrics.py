@@ -89,6 +89,11 @@ def union_area(boxes: list[list[float]]) -> float:
     return total
 
 
+def _has_math_content(tree: Any) -> bool:
+    """Empty OMML containers do not establish preserved formula content."""
+    return bool(tree[1].strip()) or any(_has_math_content(child) for child in tree[2])
+
+
 def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     """Evaluate actual editable output against frozen units using geometric provenance."""
     observed = inspect(docx)
@@ -219,7 +224,17 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     from .structure import score_structure
 
     structures, structure_failures, table_claimed = score_structure(
-        observed, units, bound, block_anchor, sources
+        observed,
+        units,
+        bound,
+        block_anchor,
+        sources,
+        complete_relations=(
+            truth.get("coverage_complete") is True
+            and not any(
+                u["kind"] == "figure_edge" and u["status"] != "confirmed" for u in truth["units"]
+            )
+        ),
     )
     metrics.update(structures)
     if structures["formulas"]["unmatched_output_count"]:
@@ -319,12 +334,27 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         for u in content_units
         if u["reference"].get("source_anchor_id") in preserved_anchors
     }
+    unsupported_present: set[str] = set()
+    for unit in content_units:
+        if unit["kind"] != "formula" or unit["unit_id"] in supported_formula_ids:
+            continue
+        if unit["unit_id"] in preserved_units:
+            continue
+        formula_indexes = bound.get(unit["reference"]["source_anchor_id"], [])
+        if any(_has_math_content(m) for i in formula_indexes for m in paragraphs[i]["math"]):
+            unsupported_present.add(unit["unit_id"])
+        else:
+            failures.append(
+                {"unit_id": unit["unit_id"], "page": unit["page"], "code": "MISSING_FORMULA"}
+            )
     metrics["necessary_content"] = metric(
-        len(content_units), len(content_units), len(correct_units | preserved_units)
+        len(content_units),
+        len(content_units) - len(unsupported_present),
+        len(correct_units | preserved_units),
     )
     metrics["necessary_content"]["source_image_retained_count"] = len(preserved_units)
     metrics["necessary_content"]["visual_crop_acceptance"] = "PENDING"
-    if preserved_units:
+    if preserved_units and metrics["necessary_content"]["status"] == "PASS":
         metrics["necessary_content"]["status"] = "REVIEW_REQUIRED"
     # Structural claims are independent of ordinary paragraph character counts.
     for name, kind in {
@@ -339,13 +369,20 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     content_status = metrics["necessary_content"]["status"]
     if (
         any(
-            f["code"] in {"TEXT_MISMATCH", "MISSING_TEXT", "TABLE_MISMATCH", "FORMULA_MISMATCH"}
+            f["code"]
+            in {
+                "TEXT_MISMATCH",
+                "MISSING_TEXT",
+                "TABLE_MISMATCH",
+                "FORMULA_MISMATCH",
+                "MISSING_FORMULA",
+            }
             for f in failures
         )
         or extra_text
     ):
         content_status = "FAIL"
-    elif metrics["formulas"]["unsupported_count"]:
+    elif content_status != "FAIL" and unsupported_present:
         content_status = "REVIEW_REQUIRED"
     result: Json = {
         "schema_version": "product-result/1.0",

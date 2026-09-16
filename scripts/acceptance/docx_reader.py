@@ -140,12 +140,34 @@ def inspect(path: Path) -> Json:
                         raise ValueError("CORRUPT_MEDIA") from exc
                     result["media_count"] += 1
             relationships = {}
+            story_relationships: list[tuple[str, str, str]] = []
             rel_path = "word/_rels/document.xml.rels"
             if rel_path in names:
                 for rel in xml(archive.read(rel_path)):
                     target = posixpath.normpath(posixpath.join("word", rel.get("Target", "")))
                     relationships[rel.get("Id")] = hashlib.sha256(archive.read(target)).hexdigest()
+                    kind = rel.get("Type", "").rsplit("/", 1)[-1]
+                    if kind in {"header", "footer", "footnotes", "endnotes"}:
+                        story_relationships.append((rel.get("Id", ""), kind, target))
             root = xml(archive.read("word/document.xml"))
+            referenced_stories = set(
+                root.xpath("//w:headerReference/@r:id | //w:footerReference/@r:id", namespaces=NS)
+            )
+            for rid, kind, target in story_relationships:
+                referenced = rid in referenced_stories or (
+                    kind in {"footnotes", "endnotes"}
+                    and bool(root.xpath("//w:" + kind[:-1] + "Reference", namespaces=NS))
+                )
+                if not referenced:
+                    continue
+                story = xml(archive.read(target))
+                text = "".join(story.xpath("//w:t/text()", namespaces=NS)).strip()
+                visible = story.xpath(
+                    "//m:oMath | //w:drawing | //w:pict | //w:fldSimple | //w:instrText | //a:blip",
+                    namespaces=NS,
+                )
+                if text or visible:
+                    result["errors"].append("UNSUPPORTED_VISIBLE_STORY")
             tables = root.xpath("//w:tbl", namespaces=NS)
             for table in tables:
                 if table.xpath("ancestor::w:tbl", namespaces=NS):
