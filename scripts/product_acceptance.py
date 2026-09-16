@@ -63,8 +63,8 @@ def verify(root: Path, hashes: Json) -> None:
             raise ValueError("EVIDENCE_HASH_MISMATCH")
 
 
-def evaluate_only(bundle: Path, output: Path) -> Json:
-    """Recompute a new score from sealed artifacts, with no conversion or model calls."""
+def _verified_bundle(bundle: Path) -> tuple[Json, Json, Json, Json, str]:
+    """Check required members and cross-file identities before trusting a bundle."""
     seal = read(bundle / "seal.json")
     required = {"run.json", "auto.docx", "truth.json", "source-map.json", "input.pdf"}
     if not required.issubset(seal):
@@ -90,6 +90,13 @@ def evaluate_only(bundle: Path, output: Path) -> Json:
     truth = read(bundle / "truth.json")
     if truth["source_sha256"] != run["source_sha256"]:
         raise ValueError("REFERENCE_SOURCE_MISMATCH")
+    return seal, run, sources, truth, artifact
+
+
+def evaluate_only(bundle: Path, output: Path) -> Json:
+    """Recompute a new score from sealed artifacts, with no conversion or model calls."""
+    seal, run, sources, truth, artifact = _verified_bundle(bundle)
+    revision = run.get("revision", "auto")
     result = evaluate(bundle / artifact, truth, sources)
     result.update(
         {
@@ -279,9 +286,7 @@ def run_sample(dataset: Path, sample_id: str, entry: str, output: Path) -> Json:
 
 def import_reviewed(bundle: Path, docx: Path, output: Path) -> Json:
     """Create a new reviewed bundle while preserving the original automatic bytes and seal."""
-    seal = read(bundle / "seal.json")
-    verify(bundle, seal)
-    run = read(bundle / "run.json")
+    _seal, run, sources, _truth, _artifact = _verified_bundle(bundle)
     if run.get("revision", "auto") != "auto":
         raise ValueError("AUTO_BASE_REQUIRED")
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
@@ -290,7 +295,6 @@ def import_reviewed(bundle: Path, docx: Path, output: Path) -> Json:
         (output / name).chmod(0o600)
     shutil.copyfile(docx, output / "reviewed.docx")
     (output / "reviewed.docx").chmod(0o600)
-    sources = read(bundle / "source-map.json")
     sources["docx_sha256"] = digest(output / "reviewed.docx")
     sources["binding_origin"] = "auto_source_bookmarks_no_new_geometry_inferred"
     write(output / "source-map.json", sources)

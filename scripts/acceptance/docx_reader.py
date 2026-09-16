@@ -70,6 +70,25 @@ def math_tree(node: Any) -> Any:
     return [name, node.text or "", children]
 
 
+def word_text(node: Any) -> str:
+    """Read Word run text and inline controls in order, excluding tab-stop formatting."""
+    pieces = []
+    for item in node.xpath(".//w:r/w:t | .//w:r/w:tab | .//w:r/w:br | .//w:r/w:cr", namespaces=NS):
+        name = etree.QName(item).localname
+        if name == "t":
+            pieces.append(item.text or "")
+        elif name == "tab":
+            pieces.append("\t")
+        elif name == "cr":
+            pieces.append("\n")
+        else:
+            kind = item.get(f"{{{NS['w']}}}type", "textWrapping")
+            if kind not in {"textWrapping", "page", "column"}:
+                raise ValueError("UNSUPPORTED_TEXT_BREAK")
+            pieces.append({"textWrapping": "\n", "page": "\f", "column": "\v"}[kind])
+    return "".join(pieces)
+
+
 def table_grid(table: Any) -> Json:
     """Count each physical logical cell once, including gridSpan and vMerge."""
     cells: list[Json] = []
@@ -101,7 +120,7 @@ def table_grid(table: Any) -> Json:
                     "col": ci,
                     "rowspan": 1,
                     "colspan": width,
-                    "text": "".join(cell.xpath(".//w:t/text()", namespaces=NS)),
+                    "text": "\n".join(word_text(p) for p in cell.xpath(".//w:p", namespaces=NS)),
                 }
                 cells.append(item)
                 if merge is not None:
@@ -168,6 +187,8 @@ def inspect(path: Path) -> Json:
                 )
                 if text or visible:
                     result["errors"].append("UNSUPPORTED_VISIBLE_STORY")
+            if root.xpath("//w:body//a:blip[@r:link]", namespaces=NS):
+                result["errors"].append("UNSUPPORTED_LINKED_IMAGE")
             unsupported_body_tags = [
                 "sym",
                 "altChunk",
@@ -199,7 +220,7 @@ def inspect(path: Path) -> Json:
                 parents = paragraph.xpath("ancestor::w:tbl", namespaces=NS)
                 result["paragraphs"].append(
                     {
-                        "text": "".join(paragraph.xpath(".//w:t/text()", namespaces=NS)),
+                        "text": word_text(paragraph),
                         "math": [
                             math_tree(m) for m in paragraph.xpath(".//m:oMath", namespaces=NS)
                         ],
@@ -226,6 +247,7 @@ def inspect(path: Path) -> Json:
             "INVALID_TABLE_GRID",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
+            "UNSUPPORTED_TEXT_BREAK",
         }
         code = str(exc) if str(exc) in known else type(exc).__name__.upper()
         result["errors"].append(code)
