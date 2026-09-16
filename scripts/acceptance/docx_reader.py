@@ -465,7 +465,11 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
     for font in font_table.findall("w:font", NS):
         charset = font.find("w:charset", NS)
         alternate = font.find("w:altName", NS)
-        if (charset is not None and charset.get(val, "").lower() in {"2", "02"}) or (
+        embedded = any(
+            font.find("w:" + tag, NS) is not None
+            for tag in ("embedRegular", "embedBold", "embedItalic", "embedBoldItalic")
+        )
+        if embedded or (charset is not None and charset.get(val, "").lower() in {"2", "02"}) or (
             alternate is not None and font_key(alternate.get(val, "")) in symbol_fonts
         ):
             symbol_fonts.add(font_key(font.get(f"{{{NS['w']}}}name", "")))
@@ -557,7 +561,10 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
                     or int(raw) > (bound if kind == "dxa" else 0)
                 ):
                     raise ValueError("UNSUPPORTED_CELL_MARGINS")
-        if any(enabled(node) for node in properties.findall(".//w:tcFitText", NS)):
+        if any(
+            enabled(node)
+            for node in properties.xpath(".//w:tcFitText | .//w:noWrap", namespaces=NS)
+        ):
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
         if properties.find(".//w:tblpPr", NS) is not None:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
