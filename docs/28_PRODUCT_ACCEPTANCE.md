@@ -51,6 +51,7 @@ uv run --locked python scripts/product_acceptance.py import-reviewed \
 非零运行字符间距及启用caps/smallCaps明确不支持，避免显示字形与严格文字比较不一致。
 段落framePr定位明确不支持；内部关系接受合法包根绝对目标并拒绝越界。评分器指纹覆盖读取/评分模块、当前入口与结果Schema。
 精确段落行高、低于单倍的自动行距及非法值明确不支持；正常自动行距和最小行高可接受。
+浮动表格定位不支持；段落/表格缩进使用各节可用宽度四分之一且最多90pt的保守上限，悬挂缩进另受页边距限制，不自动调整原文。
 导入前需在 Word 中接受或拒绝修订；带待处理修订内容会报 UNSUPPORTED_REVISIONS，不猜测显示视图。
 不猜测新段落的来源，不把原 auto 的渲染证据移植给 reviewed。人工修改次数、耗时未知时留 null；
 人工验收一直 PENDING，不能用脚本修改替代真实 Office 操作。

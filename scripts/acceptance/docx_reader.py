@@ -427,6 +427,22 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             raise ValueError("INVALID_VISIBILITY_PROPERTY")
         return value in {"1", "true", "on"}
 
+    indent_bound = 1800
+    hanging_bound = 1440
+    for section in document.findall(".//w:sectPr", NS):
+        size, margins = section.find("w:pgSz", NS), section.find("w:pgMar", NS)
+        try:
+            width = int(size.get(f"{{{NS['w']}}}w", "12240")) if size is not None else 12240
+            left = int(margins.get(f"{{{NS['w']}}}left", "1440")) if margins is not None else 1440
+            right = int(margins.get(f"{{{NS['w']}}}right", "1440")) if margins is not None else 1440
+            gutter = int(margins.get(f"{{{NS['w']}}}gutter", "0")) if margins is not None else 0
+        except ValueError as exc:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION") from exc
+        if min(left, right, gutter) < 0 or width <= left + right + gutter:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        indent_bound = min(indent_bound, (width - left - right - gutter) // 4)
+        hanging_bound = min(hanging_bound, left, right, indent_bound)
+
     def check_background(properties: Any) -> None:
         if properties is None:
             return
@@ -435,6 +451,25 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             for node in properties.iterdescendants()
         ):
             raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
+        if properties.find(".//w:tblpPr", NS) is not None:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        for indent in properties.findall(".//w:tblInd", NS):
+            raw = indent.get(f"{{{NS['w']}}}w", "0")
+            kind = indent.get(f"{{{NS['w']}}}type", "dxa")
+            if (
+                not re.fullmatch(r"[0-9]+", raw)
+                or kind not in {"dxa", "nil", "auto"}
+                or int(raw) > (indent_bound if kind == "dxa" else 0)
+            ):
+                raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        for indent in properties.findall(".//w:ind", NS):
+            for key, raw in indent.attrib.items():
+                name = etree.QName(key).localname
+                limit = hanging_bound if name == "hanging" else indent_bound
+                if name not in {"left", "right", "start", "end", "firstLine", "hanging"}:
+                    limit = 0
+                if not re.fullmatch(r"[0-9]+", raw) or int(raw) > limit:
+                    raise ValueError("UNSUPPORTED_TEXT_POSITION")
         if properties.find(".//w:framePr", NS) is not None:
             raise ValueError("UNSUPPORTED_TEXT_POSITION")
         for spacing in properties.findall(".//w:spacing", NS):
