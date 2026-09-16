@@ -129,7 +129,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
             raise DemoError('ASSET_MISSING')
         return source
 
-    def source_marker(paragraph: Any, b: Json) -> None:
+    def source_marker(paragraph: Any, b: Json) -> Json:
         # Provenance only: no reference annotations or expected text enter the writer.
         marker = 'p2w_' + hashlib.sha256(b['id'].encode()).hexdigest()[:32]
         number = str(len(source_blocks))
@@ -139,32 +139,30 @@ def build(job: Path, ir: Json, revision: str) -> Json:
         end.set(qn('w:id'), number)
         paragraph._p.append(start)
         paragraph._p.append(end)
-        image_ids = ([b['content']['asset_id']] if b['content']['kind'] == 'image' else [])
-        image_ids.extend(item['asset_id'] for item in parts.get(b['id'], []) if 'asset_id' in item)
-        images = []
-        for aid in image_ids:
-            source = asset_source(aid)
-            try:
-                image_hash = hashlib.sha256(source.read_bytes()).hexdigest()
-            except OSError as exc:
-                raise DemoError('ASSET_UNREADABLE') from exc
-            images.append({'sha256': image_hash, 'bbox': assets[aid]['source_bbox'],
-                           'fallback': b['type'] != 'figure'})
-        source_blocks.append({'marker': marker, 'block_id': b['id'], 'images': images,
-                              'page': b['page_index'] + 1, 'bbox': b['bbox'], 'kind': b['type'],
-                              'fallback': (b['content']['kind'] == 'image'
-                                           and b['type'] != 'figure')})
+        record = {'marker': marker, 'block_id': b['id'], 'images': [],
+                  'page': b['page_index'] + 1, 'bbox': b['bbox'], 'kind': b['type'],
+                  'fallback': b['content']['kind'] == 'image' and b['type'] != 'figure'}
+        source_blocks.append(record)
+        return record
 
-    def picture(paragraph: Any, aid: str, width: float, formula: bool = False) -> None:
+    def picture(paragraph: Any, aid: str, width: float, formula: bool = False,
+                *, owner: Json) -> None:
         source = asset_source(aid)
         a = assets[aid]
-        with Image.open(source) as im:
-            w, h = im.size
+        try:
+            image_bytes = source.read_bytes()
+            with Image.open(io.BytesIO(image_bytes)) as im:
+                w, h = im.size
+        except OSError as exc:
+            raise DemoError('ASSET_UNREADABLE') from exc
         natural = max(1.0, a["source_bbox"][2] - a["source_bbox"][0])
         actual = min(width, natural)
         # Preserve source aspect ratio; bound tall images to printable page height.
         actual = min(actual, 650 * w / h)
-        paragraph.add_run().add_picture(str(source), width=Pt(actual))
+        image_hash = hashlib.sha256(image_bytes).hexdigest()
+        paragraph.add_run().add_picture(io.BytesIO(image_bytes), width=Pt(actual))
+        owner['images'].append({'sha256': image_hash, 'bbox': a['source_bbox'],
+                                'fallback': owner['kind'] != 'figure'})
         if formula:
             counts["formula_image_count"] += 1
 
@@ -178,7 +176,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
         )
         para = existing if existing is not None else parent.add_paragraph(style=style)
         para.style = style
-        source_marker(para, b)
+        source_record = source_marker(para, b)
         if spatial and b["type"] in {"heading", "footer"}:
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         if (
@@ -192,7 +190,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
         para.paragraph_format.widow_control = True
         content = b["content"]
         if content["kind"] == "image":
-            picture(para, content["asset_id"], width)
+            picture(para, content["asset_id"], width, owner=source_record)
             if b["type"] == "figure":
                 counts["placed_figure_count"] += 1
             else:
@@ -213,7 +211,7 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                     para._p.append(math)
                     counts["omml_formula_count"] += 1
                 elif "asset_id" in item:
-                    picture(para, item["asset_id"], width, True)
+                    picture(para, item["asset_id"], width, True, owner=source_record)
                 else:
                     if unrendered_math(item["text"]):
                         raise DemoError("UNRENDERED_MATH_REQUIRES_REVIEW")
@@ -316,12 +314,13 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                     label = by_id[pair["label"]]
                     para = cell.paragraphs[0]
                     source_marker(para, label)
-                    source_marker(para, by_id[pair["figure"]])
+                    figure_source = source_marker(para, by_id[pair["figure"]])
                     text = label["content"]["plain_text"]
                     para.add_run(text + " ")
                     counts["editable_text_char_count"] += len(text.strip())
                     picture(
-                        para, by_id[pair["figure"]]["content"]["asset_id"], available / cols - 30
+                        para, by_id[pair["figure"]]["content"]["asset_id"], available / cols - 30,
+                        owner=figure_source
                     )
                     counts["placed_figure_count"] += 1
                     para.paragraph_format.space_after = Pt(6)

@@ -338,7 +338,7 @@ def inspect(path: Path) -> Json:
                 if not referenced:
                     continue
                 story = xml(archive.read(target))
-                text = "".join(story.xpath("//w:t/text()", namespaces=NS)).strip()
+                text = word_text(story)
                 visible = story.xpath(
                     "//m:oMath | //w:drawing | //a:blip | "
                     + " | ".join("//w:" + tag for tag in UNSUPPORTED_WORD_CONTENT),
