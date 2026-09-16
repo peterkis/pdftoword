@@ -404,6 +404,8 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             sid = parent.get(val) if parent is not None else None
         for style in reversed(chain):
             check_background(style)
+            if any(enabled(node) for node in style.findall(".//w:trPr/w:hidden", NS)):
+                raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
             if any(enabled(v) for v in style.findall(".//w:tblStylePr/w:rPr/w:vanish", NS)):
                 raise ValueError("UNSUPPORTED_VISIBILITY_STYLE")
             vanish = style.find("w:rPr/w:vanish", NS)
@@ -419,6 +421,9 @@ def _hidden_content(document: Any, styles: Any) -> bool:
             check_background(cell.find("w:tcPr", NS))
         for row in paragraph.xpath("ancestor::w:tr", namespaces=NS):
             check_background(row.find("w:tblPrEx", NS))
+            row_hidden = row.find("w:trPr/w:hidden", NS)
+            if row_hidden is not None and enabled(row_hidden):
+                return True
         pstyle = paragraph.find("w:pPr/w:pStyle", NS)
         table_hidden = default_hidden
         tables = paragraph.xpath("ancestor::w:tbl", namespaces=NS)
@@ -720,6 +725,7 @@ def inspect(path: Path) -> Json:
             relationships = {}
             styles_target: str | None = None
             numbering_target: str | None = None
+            settings_target: str | None = None
             story_relationships: list[tuple[str, str, str]] = []
             rel_path = "word/_rels/document.xml.rels"
             if rel_path in names:
@@ -736,6 +742,10 @@ def inspect(path: Path) -> Json:
                             raise ValueError("IMAGE_CONTENT_TYPE_INVALID")
                         relationships[rel.get("Id")] = hashlib.sha256(data).hexdigest()
                     kind = rel.get("Type", "").rsplit("/", 1)[-1]
+                    if rel.get("Type") == NS["r"] + "/settings":
+                        if settings_target is not None:
+                            raise ValueError("OPC_INVALID_DECLARATION")
+                        settings_target = target
                     if rel.get("Type") == NS["r"] + "/numbering":
                         if numbering_target is not None:
                             raise ValueError("OPC_INVALID_DECLARATION")
@@ -771,6 +781,15 @@ def inspect(path: Path) -> Json:
             )
             if styles.tag != f"{{{NS['w']}}}styles" or numbering.tag != f"{{{NS['w']}}}numbering":
                 raise ValueError("OPC_WORD_ROOT_INVALID")
+            if settings_target is not None:
+                settings = xml(archive.read(settings_target))
+                if settings.tag != f"{{{NS['w']}}}settings":
+                    raise ValueError("OPC_WORD_ROOT_INVALID")
+                for protection in settings.findall("w:documentProtection", NS):
+                    if protection.get(f"{{{NS['w']}}}enforcement", "false") not in {
+                        "0", "false", "off"
+                    }:
+                        raise ValueError("UNSUPPORTED_DOCUMENT_PROTECTION")
             if any(_has_revisions(part) for part in [styles, numbering]):
                 result["errors"].append("UNSUPPORTED_REVISIONS")
                 return result
@@ -871,6 +890,7 @@ def inspect(path: Path) -> Json:
             "OPC_STORY_REFERENCE_INVALID",
             "OPC_WORD_ROOT_INVALID",
             "UNSUPPORTED_COMMENTS",
+            "UNSUPPORTED_DOCUMENT_PROTECTION",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",
