@@ -147,3 +147,19 @@ def test_relationship_required_attributes_are_validated(tmp_path: Path, case: st
         )
         assert code in result["errors"]
         assert result["structure_status"] == "FAIL"
+
+
+@pytest.mark.parametrize("hidden", [None, "0", "false", "1", "true"])
+def test_picture_nonvisual_properties_control_visibility(
+    tmp_path: Path, hidden: str | None
+) -> None:
+    path, truth, sources = specimen(tmp_path)
+    doc: Any = Document(str(path))
+    properties = doc.paragraphs[-1]._p.xpath(".//pic:cNvPr")[0]
+    if hidden is not None:
+        properties.set("hidden", hidden)
+    doc.save(str(path))
+    result = evaluate(path, truth, sources)
+    invisible = hidden in {"1", "true"}
+    assert ("HIDDEN_CONTENT" in result["errors"]) is invisible
+    assert result["structure_status"] == ("FAIL" if invisible else "PASS")

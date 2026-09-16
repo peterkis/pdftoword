@@ -503,7 +503,9 @@ def _check_picture_containers(root: Any) -> None:
         if data.get("uri") != NS["pic"] or len(elements(data)) != 1:
             raise ValueError("INVALID_DRAWING_CONTAINER")
         picture = one(data, "pic:pic")
-        one(picture, "pic:nvPicPr/pic:cNvPr")
+        properties = one(picture, "pic:nvPicPr/pic:cNvPr")
+        if properties.get("hidden", "0") not in {"0", "false"}:
+            raise ValueError("HIDDEN_CONTENT")
         one(picture, "pic:nvPicPr/pic:cNvPicPr")
         fill = one(picture, "pic:blipFill")
         blip = one(fill, "a:blip")
