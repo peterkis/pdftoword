@@ -493,6 +493,7 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
             for fallback in group.findall("a:font", NS):
                 check_font(fallback.get("typeface", ""))
 
+    font_size_bound = min(144, min(min(r[0], r[1]) for r in _body_regions(document)) // 20)
     indent_bound = 1800
     hanging_bound = 1440
     tab_bound = 4680
@@ -535,7 +536,21 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
         for declared in table.findall("w:tblPr/w:tblW", NS):
             table_width(declared, available)
         for row in table.findall("w:tr", NS):
-            if sum(
+            reserved = 0
+            for side in ("Before", "After"):
+                count_node = row.find("w:trPr/w:grid" + side, NS)
+                raw = count_node.get(f"{{{NS['w']}}}val", "0") if count_node is not None else "0"
+                if not re.fullmatch(r"[0-9]+", raw) or int(raw) > len(grid_widths):
+                    raise ValueError("INVALID_TABLE_GRID")
+                count = int(raw)
+                implicit = (
+                    sum(grid_widths[:count] if side == "Before" else grid_widths[-count:])
+                    if count else 0
+                )
+                declared = row.find("w:trPr/w:w" + side, NS)
+                explicit = table_width(declared, available) if declared is not None else 0
+                reserved += max(implicit, explicit)
+            if reserved + sum(
                 table_width(cell, available) for cell in row.findall("w:tc/w:tcPr/w:tcW", NS)
             ) > available:
                 raise ValueError("UNSUPPORTED_TABLE_WIDTH")
@@ -640,7 +655,7 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
                 raise ValueError("UNSUPPORTED_TEXT_POSITION")
         for size in properties.xpath(".//w:sz | .//w:szCs", namespaces=NS):
             value = size.get(val, "")
-            if not re.fullmatch(r"[0-9]+", value) or int(value) < 12:
+            if not re.fullmatch(r"[0-9]+", value) or not 12 <= int(value) <= font_size_bound:
                 raise ValueError("UNSUPPORTED_FONT_SCALE")
         for color in properties.findall(".//w:color", NS):
             if color.get(val) not in {"auto", "000000"} or any(
