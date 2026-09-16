@@ -126,6 +126,28 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
                 block_anchor[block["block_id"]] = candidates[0][1]
             for _, aid in candidates:
                 bound[aid].extend(found)
+    uncertain_units = [
+        u
+        for u in truth["units"]
+        if u["status"] != "confirmed" and u["kind"] in {"text", "formula", "table"}
+    ]
+    unscored_math_nodes: set[tuple[int, int]] = set()
+    for uncertain in uncertain_units:
+        reference = uncertain.get("reference")
+        if not isinstance(reference, dict):
+            continue
+        uncertain_indexes = set(bound.get(reference.get("source_anchor_id", ""), []))
+        if uncertain["kind"] == "table":
+            uncertain_tables = {paragraphs[i]["table"] for i in uncertain_indexes} - {None}
+            uncertain_indexes.update(
+                i for i, p in enumerate(paragraphs) if p["table"] in uncertain_tables
+            )
+        if uncertain["kind"] in {"text", "table"}:
+            claimed.update(uncertain_indexes)
+        if uncertain["kind"] in {"formula", "table"}:
+            unscored_math_nodes.update(
+                (i, j) for i in uncertain_indexes for j in range(len(paragraphs[i]["math"]))
+            )
     confirmed = [u for u in truth["units"] if u["status"] == "confirmed"]
     text_anchors = {u["reference"]["source_anchor_id"] for u in confirmed if u["kind"] == "text"}
     units = []
@@ -258,6 +280,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         bound,
         block_anchor,
         sources,
+        unscored_math_nodes=unscored_math_nodes,
         complete_relations=(
             truth.get("coverage_complete") is True
             and not any(
@@ -287,6 +310,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
     metrics["pages"] = page_metrics
     boxes_by_page: dict[int, list[list[float]]] = {}
     preserved_anchors: set[str] = set()
+    claimed_image_paragraphs: set[int] = set()
     unclaimed_images = {
         (i, j) for i, paragraph in enumerate(paragraphs) for j in range(len(paragraph["images"]))
     }
@@ -306,6 +330,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
                 errors.append("MISSING_OR_REPLACED_IMAGE")
                 continue
             unclaimed_images.remove(drawing)
+            claimed_image_paragraphs.add(drawing[0])
             if image["fallback"]:
                 boxes_by_page.setdefault(block["page"], []).append(image["bbox"])
             box = image["bbox"]
@@ -320,6 +345,11 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
             boxes_by_page.setdefault(block["page"], []).append(block["bbox"])
     if unclaimed_images:
         errors.append("UNALIGNED_IMAGE")
+    owned_tables = {paragraphs[i]["table"] for i in claimed | claimed_image_paragraphs} - {None}
+    unclaimed_tables = set(range(len(observed["tables"]))) - owned_tables
+    metrics["tables"]["unclaimed_output_count"] = len(unclaimed_tables)
+    if unclaimed_tables:
+        errors.append("UNALIGNED_TABLE")
     total_area = sum(p["width"] * p["height"] for p in sources["pages"])
     fallback_area = 0.0
     for page in sources["pages"]:
@@ -381,6 +411,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         len(content_units) - len(unsupported_present),
         len(correct_units | preserved_units),
     )
+    metrics["necessary_content"]["uncertain_count"] = len(uncertain_units)
     metrics["necessary_content"]["source_image_retained_count"] = len(preserved_units)
     metrics["necessary_content"]["visual_crop_acceptance"] = "PENDING"
     if preserved_units and metrics["necessary_content"]["status"] == "PASS":
@@ -412,7 +443,7 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         or extra_text
     ):
         content_status = "FAIL"
-    elif content_status != "FAIL" and unsupported_present:
+    elif content_status != "FAIL" and (unsupported_present or uncertain_units):
         content_status = "REVIEW_REQUIRED"
     result: Json = {
         "schema_version": "product-result/1.0",
@@ -431,7 +462,9 @@ def evaluate(docx: Path, truth: Json, sources: Json) -> Json:
         result["structure_status"] = "FAIL"
     elif scored_structures:
         result["structure_status"] = (
-            "REVIEW_REQUIRED" if any(m["not_scored_count"] for m in structures.values()) else "PASS"
+            "REVIEW_REQUIRED"
+            if any(m["not_scored_count"] or m["uncertain_count"] for m in structures.values())
+            else "PASS"
         )
     result["semantic_sha256"] = semantic_hash(result)
     return result

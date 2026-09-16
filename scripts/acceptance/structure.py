@@ -18,6 +18,7 @@ def score_structure(
     sources: Json,
     *,
     complete_relations: bool = False,
+    unscored_math_nodes: set[tuple[int, int]] | None = None,
 ) -> tuple[Json, list[Json], set[int]]:
     """Score actual table grids, OMML and source-bound predicted edges."""
     from .metrics import metric
@@ -73,6 +74,7 @@ def score_structure(
         for i in bound.get(u["reference"]["source_anchor_id"], [])
         for j in range(len(paragraphs[i]["math"]))
     }
+    bound_maths.update(unscored_math_nodes or set())
     all_maths = {(i, j) for i, p in enumerate(paragraphs) for j in range(len(p["math"]))}
     consumed_maths: set[tuple[int, int]] = set()
     for u in formulas:

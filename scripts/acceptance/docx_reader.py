@@ -146,7 +146,7 @@ def table_grid(table: Any) -> Json:
     return {"rows": len(rows), "cols": columns, "cells": cells}
 
 
-def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> None:
+def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> dict[str, str | None]:
     """Require the OPC declarations and supported Word main-document relationship."""
     if not {"[Content_Types].xml", "_rels/.rels", "word/document.xml"}.issubset(names):
         raise ValueError("OPC_REQUIRED_PART_MISSING")
@@ -182,6 +182,10 @@ def _check_opc(archive: zipfile.ZipFile, names: list[str]) -> None:
     document = xml(archive.read("word/document.xml"))
     if document.tag != f"{{{NS['w']}}}document" or len(document.findall("w:body", NS)) != 1:
         raise ValueError("OPC_MAIN_DOCUMENT_INVALID")
+    return {
+        name: overrides.get("/" + name, defaults.get(posixpath.splitext(name)[1][1:]))
+        for name in names
+    }
 
 
 def _hidden_content(document: Any, styles: Any) -> bool:
@@ -255,7 +259,7 @@ def inspect(path: Path) -> Json:
                 raise ValueError("DUPLICATE_ZIP_MEMBER")
             if sum(i.file_size for i in archive.infolist()) > 128 * 1024 * 1024:
                 raise ValueError("PACKAGE_TOO_LARGE")
-            _check_opc(archive, names)
+            content_types = _check_opc(archive, names)
             for name in names:
                 if name.endswith((".xml", ".rels")):
                     root = xml(archive.read(name))
@@ -281,7 +285,14 @@ def inspect(path: Path) -> Json:
             if rel_path in names:
                 for rel in xml(archive.read(rel_path)):
                     target = posixpath.normpath(posixpath.join("word", rel.get("Target", "")))
-                    relationships[rel.get("Id")] = hashlib.sha256(archive.read(target)).hexdigest()
+                    if rel.get("Type") == NS["r"] + "/image":
+                        data = archive.read(target)
+                        with Image.open(io.BytesIO(data)) as picture:
+                            actual_type = Image.MIME.get(picture.format or "")
+                            picture.verify()
+                        if actual_type is None or content_types.get(target) != actual_type:
+                            raise ValueError("IMAGE_CONTENT_TYPE_INVALID")
+                        relationships[rel.get("Id")] = hashlib.sha256(data).hexdigest()
                     kind = rel.get("Type", "").rsplit("/", 1)[-1]
                     if kind == "styles":
                         if styles_target is not None:
@@ -290,6 +301,10 @@ def inspect(path: Path) -> Json:
                     if kind in {"header", "footer", "footnotes", "endnotes"}:
                         story_relationships.append((rel.get("Id", ""), kind, target))
             root = xml(archive.read("word/document.xml"))
+            if any(
+                rid not in relationships for rid in root.xpath("//a:blip/@r:embed", namespaces=NS)
+            ):
+                raise ValueError("INVALID_IMAGE_RELATIONSHIP")
             styles = (
                 xml(archive.read(styles_target))
                 if styles_target is not None
@@ -371,6 +386,8 @@ def inspect(path: Path) -> Json:
             "OPC_STYLE_RELATIONSHIP_INVALID",
             "INVALID_VISIBILITY_PROPERTY",
             "UNSUPPORTED_VISIBILITY_STYLE",
+            "INVALID_IMAGE_RELATIONSHIP",
+            "IMAGE_CONTENT_TYPE_INVALID",
         }
         code = str(exc) if str(exc) in known else type(exc).__name__.upper()
         result["errors"].append(code)
