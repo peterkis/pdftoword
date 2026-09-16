@@ -440,6 +440,8 @@ def _body_regions(document: Any) -> list[tuple[int, int, int, int]]:
                 raise ValueError("UNSUPPORTED_TEXT_POSITION") from exc
 
         width, height = number(size, "w", 12240), number(size, "h", 15840)
+        if max(width, height) > 31680:
+            raise ValueError("UNSUPPORTED_PAGE_SIZE")
         left, right = number(margins, "left", 1440), number(margins, "right", 1440)
         top, bottom = number(margins, "top", 1440), number(margins, "bottom", 1440)
         gutter = number(margins, "gutter", 0)
@@ -1416,6 +1418,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_OMML_VISIBILITY",
             "UNSUPPORTED_CELL_MARGINS",
             "UNSUPPORTED_VERTICAL_ALIGNMENT",
+            "UNSUPPORTED_PAGE_SIZE",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",

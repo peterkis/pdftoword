@@ -583,3 +583,12 @@ Ruff、mypy（109文件）、两个既有校验器通过，原始证据不变。
 先验证格式再校验图片放置，保留原缩进诊断码。小图与无缩进整页宽图片对照保留。
 新增10项真实DOCX读取回归，修复前4 failed / 6 passed；独立检出1168 passed，
 Ruff、mypy（110文件）、两个既有校验器通过，原始证据不变。
+
+## 第五十四轮：Word页面尺寸上限
+
+审查版本1cbfdb1，修复超大声明页面可为超大图片提供虚假边界的问题。
+依据Microsoft的MS-OI29500 §17.6.13实现说明，宽高不超过31680 twip（22英寸）：
+https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/e7017520-06b4-438f-97d2-3e49f247ca9f
+先验证页面尺寸上限，再计算正文及图片范围；保留边距和有效区域检查。
+新增5项回归，修复前3 failed / 2 passed；独立检出1173 passed，
+Ruff、mypy（111文件）、两个既有校验器通过，原始证据不变。
