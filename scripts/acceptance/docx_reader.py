@@ -148,6 +148,8 @@ def math_tree(node: Any) -> Any:
         return None
     if namespace != NS["m"]:
         raise ValueError("INVALID_OMML_NAMESPACE")
+    if name == "phant":
+        raise ValueError("UNSUPPORTED_OMML_VISIBILITY")
     if name == "t" and children_nodes:
         raise ValueError("INVALID_OMML_STRUCTURE")
     # Only explicit styling exceptions are ignored; fPr/type, delimiters and other
@@ -416,6 +418,33 @@ def _check_payload_structure(document: Any) -> None:
             node = parent
 
 
+def _body_regions(document: Any) -> list[tuple[int, int, int, int]]:
+    """Return validated usable section width/height and lateral margins in twips."""
+    regions = []
+    for section in document.findall(".//w:sectPr", NS) or [None]:
+        size = section.find("w:pgSz", NS) if section is not None else None
+        margins = section.find("w:pgMar", NS) if section is not None else None
+
+        def number(node: Any, name: str, default: int) -> int:
+            try:
+                return (
+                    int(node.get(f"{{{NS['w']}}}" + name, str(default)))
+                    if node is not None else default
+                )
+            except ValueError as exc:
+                raise ValueError("UNSUPPORTED_TEXT_POSITION") from exc
+
+        width, height = number(size, "w", 12240), number(size, "h", 15840)
+        left, right = number(margins, "left", 1440), number(margins, "right", 1440)
+        top, bottom = number(margins, "top", 1440), number(margins, "bottom", 1440)
+        gutter = number(margins, "gutter", 0)
+        usable_width, usable_height = width - left - right - gutter, height - top - bottom - gutter
+        if min(left, right, top, bottom, gutter) < 0 or min(usable_width, usable_height) < 240:
+            raise ValueError("UNSUPPORTED_TEXT_POSITION")
+        regions.append((usable_width, usable_height, left, right))
+    return regions
+
+
 def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> bool:
     """Resolve vanish through defaults and used paragraph/character style chains."""
     val = f"{{{NS['w']}}}val"
@@ -464,30 +493,11 @@ def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> 
     hanging_bound = 1440
     tab_bound = 4680
     body_width = 9360
-    for section in document.findall(".//w:sectPr", NS):
-        size, margins = section.find("w:pgSz", NS), section.find("w:pgMar", NS)
-        try:
-            width = int(size.get(f"{{{NS['w']}}}w", "12240")) if size is not None else 12240
-            height = int(size.get(f"{{{NS['w']}}}h", "15840")) if size is not None else 15840
-            top = int(margins.get(f"{{{NS['w']}}}top", "1440")) if margins is not None else 1440
-            bottom = (
-                int(margins.get(f"{{{NS['w']}}}bottom", "1440")) if margins is not None else 1440
-            )
-            left = int(margins.get(f"{{{NS['w']}}}left", "1440")) if margins is not None else 1440
-            right = int(margins.get(f"{{{NS['w']}}}right", "1440")) if margins is not None else 1440
-            gutter = int(margins.get(f"{{{NS['w']}}}gutter", "0")) if margins is not None else 0
-        except ValueError as exc:
-            raise ValueError("UNSUPPORTED_TEXT_POSITION") from exc
-        if (
-            min(left, right, top, bottom, gutter) < 0
-            or width - left - right - gutter < 240
-            or height - top - bottom - gutter < 240
-        ):
-            raise ValueError("UNSUPPORTED_TEXT_POSITION")
-        indent_bound = min(indent_bound, (width - left - right - gutter) // 4)
+    for width, _, left, right in _body_regions(document):
+        indent_bound = min(indent_bound, width // 4)
         hanging_bound = min(hanging_bound, left, right, indent_bound)
-        tab_bound = min(tab_bound, (width - left - right - gutter) // 2)
-        body_width = min(body_width, width - left - right - gutter)
+        tab_bound = min(tab_bound, width // 2)
+        body_width = min(body_width, width)
 
     def table_width(node: Any, available: int) -> int:
         raw = node.get(f"{{{NS['w']}}}w", "")
@@ -803,6 +813,9 @@ def _check_picture_containers(root: Any, image_sizes: dict[str, tuple[int, int]]
     def elements(node: Any) -> list[Any]:
         return [child for child in node if isinstance(child.tag, str)]
 
+    regions = _body_regions(root)
+    max_width = min(region[0] for region in regions) * 635
+    max_height = min(region[1] for region in regions) * 635
     seen = set()
     drawing_ids: set[int] = set()
     for drawing in root.xpath("//w:body//w:drawing", namespaces=NS):
@@ -840,6 +853,8 @@ def _check_picture_containers(root: Any, image_sizes: dict[str, tuple[int, int]]
         if blip.get(f"{{{NS['r']}}}link") is not None:
             raise ValueError("UNSUPPORTED_LINKED_IMAGE")
         pixels = image_sizes.get(blip.get(f"{{{NS['r']}}}embed", ""))
+        if size[0] > max_width or size[1] > max_height:
+            raise ValueError("IMAGE_DISPLAY_SCALE_INVALID")
         if pixels is None or min(size) < 12700 or abs(
             size[0] * pixels[1] - size[1] * pixels[0]
         ) > 0.02 * max(size[0] * pixels[1], size[1] * pixels[0]):
@@ -1216,6 +1231,7 @@ def inspect(path: Path) -> Json:
             "UNSUPPORTED_ALTERNATE_CONTENT",
             "UNSUPPORTED_TABLE_WIDTH",
             "UNSUPPORTED_BIDI_OVERRIDE",
+            "UNSUPPORTED_OMML_VISIBILITY",
             "INVALID_TABLE_MERGE",
             "DTD_FORBIDDEN",
             "UNSUPPORTED_TEXT_BREAK",

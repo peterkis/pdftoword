@@ -498,3 +498,12 @@ https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessi
 标准Word运行格式，也未实现双向显示算法。
 新增6项回归（含既有失败容器的诊断细化），独立检出1058 passed，
 Ruff、mypy（100文件）、两个既有校验器通过，原始证据不变。
+
+## 第四十四轮：图片放大上限与幻影公式
+
+审查版本69f4ee2，两项反馈修复。
+图片显示宽高不得超过文档各节最小可用正文宽高；抽出共用的节正文区域计算，
+与现有缩进/表格检查使用一致的边距规则，已有缩小/比例检查保留。
+OMML phantom显示控制明确不支持，包括show开关及缺省设置，不把内部m:t当作可见证据。
+新增8项回归，修复前5 failed / 3 passed；独立检出1066 passed，
+Ruff、mypy（101文件）、两个既有校验器通过，原始证据不变。
