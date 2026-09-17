@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pdf2word:product-result:1.0",
+  "title": "Offline DOCX acceptance result; rendering is not human acceptance",
+  "type": "object",
+  "required": ["schema_version", "execution_status", "content_status", "structure_status", "editability_status", "rendering_status", "human_acceptance", "metrics", "failures", "errors", "semantic_sha256"],
+  "properties": {
+    "schema_version": {"const": "product-result/1.0"},
+    "execution_status": {"enum": ["COMPLETE", "PARTIAL", "BLOCKED", "FAILED", "CANCELLED"]},
+    "content_status": {"$ref": "#/$defs/status"},
+    "structure_status": {"$ref": "#/$defs/status"},
+    "editability_status": {"$ref": "#/$defs/status"},
+    "rendering_status": {"enum": ["RENDERED", "PENDING", "FAILED"]},
+    "human_acceptance": {"enum": ["PENDING", "ACCEPTED", "CHANGES_REQUESTED"]},
+    "revision": {"enum": ["auto", "reviewed"]},
+    "semantic_sha256": {"$ref": "#/$defs/hash"},
+    "artifact_sha256": {"$ref": "#/$defs/hash"},
+    "evaluator_sha256": {"$ref": "#/$defs/hash"},
+    "auto_sha256": {"$ref": "#/$defs/hash"},
+    "identity": {"type": "object"},
+    "rendering": {"type": "object"},
+    "request_budget": {"const": 0},
+    "request_attempted": {"const": 0},
+    "errors": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z_]+$"}},
+    "failures": {"type": "array", "items": {"type": "object", "required": ["unit_id", "page", "code"], "additionalProperties": false, "properties": {"unit_id": {"type": "string"}, "page": {"type": "integer", "minimum": 1}, "code": {"type": "string", "pattern": "^[A-Z_]+$"}}}},
+    "metrics": {
+      "type": "object",
+      "required": ["text", "tables", "table_cells", "table_editable", "formulas", "relation_precision", "relation_coverage", "reading_order", "pages", "fallback_area", "necessary_content"],
+      "properties": {
+        "text": {"$ref": "#/$defs/metric"},
+        "tables": {"$ref": "#/$defs/metric"},
+        "table_cells": {"$ref": "#/$defs/metric"},
+        "table_editable": {"$ref": "#/$defs/metric"},
+        "formulas": {"$ref": "#/$defs/metric"},
+        "relation_precision": {"$ref": "#/$defs/metric"},
+        "relation_coverage": {"$ref": "#/$defs/metric"},
+        "reading_order": {"$ref": "#/$defs/metric"},
+        "necessary_content": {"$ref": "#/$defs/metric"},
+        "pages": {"type": "array", "items": {"$ref": "#/$defs/metric"}},
+        "fallback_area": {"type": "object", "required": ["source_area_pt2", "union_area_pt2", "value", "basis"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "status": {"enum": ["PASS", "FAIL", "REVIEW_REQUIRED", "NOT_SCORED"]},
+    "metric": {
+      "type": "object",
+      "required": ["eligible_count", "scored_count", "correct_count", "uncertain_count", "not_scored_count", "value", "status"],
+      "properties": {
+        "eligible_count": {"type": "integer", "minimum": 0},
+        "scored_count": {"type": "integer", "minimum": 0},
+        "correct_count": {"type": "integer", "minimum": 0},
+        "uncertain_count": {"type": "integer", "minimum": 0},
+        "not_scored_count": {"type": "integer", "minimum": 0},
+        "value": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "status": {"$ref": "#/$defs/status"}
+      }
+    }
+  }
+}

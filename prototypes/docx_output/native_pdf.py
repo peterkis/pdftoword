@@ -39,6 +39,18 @@ def _abnormal_unicode(char: str) -> bool:
     )
 
 
+def _font_size_pt(textpage: Any, index: int) -> float | None:
+    """Convert the local PDF font size through its character matrix to page points."""
+    local_size = float(pdfium.raw.FPDFText_GetFontSize(textpage, index))
+    matrix = pdfium.raw.FS_MATRIX()
+    if not pdfium.raw.FPDFText_GetMatrix(textpage, index, ctypes.byref(matrix)):
+        return None
+    # c,d are the transformed vertical em vector; translation and horizontal
+    # stretch must not determine Word's point size. This also handles rotation.
+    size = local_size * math.hypot(matrix.c, matrix.d)
+    return size if math.isfinite(size) and size > 0 else None
+
+
 PDFIUM_LOCK = threading.RLock()
 
 
@@ -207,12 +219,14 @@ def extract(
                         pdfium.raw.FPDFText_GetFontInfo(
                             textpage, ci, buffer, len(buffer), ctypes.byref(font_flags)
                         )
+                        font_size = _font_size_pt(textpage, ci)
                         chars.append(
                             {
                                 "text": char,
                                 "bbox": cb,
                                 "font": buffer.value.decode("utf-8", errors="replace"),
-                                "size": float(pdfium.raw.FPDFText_GetFontSize(textpage, ci)),
+                                "size": font_size if font_size is not None else 11.0,
+                                "font_size_verified": font_size is not None,
                                 "bold": bool(font_flags.value & (1 << 18)),
                                 "index": ci,
                             }
@@ -306,6 +320,9 @@ def extract(
                     )
                     img_ratio = union_area(image_boxes) / (w * h)
                     reason = ["vector_text_overlap_review"] if ambiguous_paths else []
+                    info['font_size_rule'] = 'local_font_size_times_character_matrix_vertical_scale'
+                    if any(not c['font_size_verified'] for c in chars):
+                        reason.append('unverified_font_size_using_default_style')
                     if image_text_overlap:
                         reason.append("image_text_overlap_review")
                     count = max(1, len(chars))
@@ -358,7 +375,7 @@ def extract(
                                 "text": c["text"],
                                 "bbox": c["bbox"],
                                 "font_family": c["font"] or None,
-                                "font_size_pt": c["size"] or None,
+                                "font_size_pt": c["size"] if c["font_size_verified"] else None,
                                 "bold": c["bold"],
                                 "italic": False,
                                 "underline": False,
