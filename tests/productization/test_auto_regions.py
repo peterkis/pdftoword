@@ -123,6 +123,15 @@ def test_mixed_preparation_zero_http_and_preserves_native(case: Path) -> None:
     assert len(plan["pages"][0]["regions"]) == 2
 
 
+def test_auto_preparation_keeps_native_review_issues(case: Path) -> None:
+    """Route preparation must not discard findings raised by native extraction."""
+    source = case / "formula.pdf"
+    source.write_bytes(pdf_bytes(b"BT /F1 14 Tf 30 340 Td (x$^2$) Tj ET"))
+    job = convert(source, mode="auto", output_root=case / "jobs")
+    issues = read(job / "layout.auto.json")["issues"]
+    assert any(issue["type"] == "NATIVE_FORMULA_DELIMITER_REVIEW" for issue in issues)
+
+
 def test_region_execution_produces_new_editable_docx(
     case: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -140,6 +149,17 @@ def test_region_execution_produces_new_editable_docx(
     with pytest.raises(DemoError, match="ALREADY_ATTEMPTED"):
         execute_routes(job, plan["plan_hash"], 2, True)
     assert calls == ["pp", "ovis"]
+
+
+def test_ambiguous_staged_inputs_are_rejected_before_model_calls(
+    case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    job, plan = prepared(case)
+    (job / "input.extra").write_bytes(b"unexpected")
+    calls = transport(monkeypatch)
+    with pytest.raises(DemoError, match="ROUTE_INPUT_AMBIGUOUS"):
+        execute_routes(job, plan["plan_hash"], 2, True)
+    assert calls == []
 
 
 @pytest.mark.parametrize("fault", ["hash", "budget", "source", "crop", "expiry"])
@@ -237,6 +257,13 @@ def test_api_uses_same_prepared_plan(case: Path) -> None:
     )
     assert invalid.status_code == 400
     assert not (job / "route-execution.json").exists()
+    malformed = client.post(
+        "/api/route/" + job.name + "/execute",
+        headers=headers,
+        json=[],
+    )
+    assert malformed.status_code == 400
+    assert malformed.json()["detail"] == "ROUTE_REQUEST_OBJECT_REQUIRED"
 
 
 def test_region_table_keeps_surrounding_prose_editable(case: Path) -> None:

@@ -58,10 +58,17 @@ def deduplicate_asset_bytes(job: Path, ir: Json) -> None:
     # Unreferenced files are left for existing explicit job cleanup; no user files are deleted.
 
 
+def input_file(job: Path) -> Path:
+    """Return the single staged input, rejecting ambiguous or linked files."""
+    candidates = sorted(job.glob("input.*"))
+    if len(candidates) != 1 or not candidates[0].is_file() or candidates[0].is_symlink():
+        raise DemoError("ROUTE_INPUT_AMBIGUOUS")
+    return candidates[0]
+
+
 def prepare_routes(job: Path, ir: Json) -> Json:
     """Create an immutable local plan and source-preserving provisional DOCX content."""
     pages = []
-    ir["issues"] = []  # Auto builds region decisions instead of legacy whole-page findings.
     for p in ir["pages"]:
         index = p["page_index"]
         path = job / f"observation-{index}.json"
@@ -95,7 +102,7 @@ def prepare_routes(job: Path, ir: Json) -> Json:
     plan: Json = {
         "schema_version": "route-plan/1",
         "job_id": job.name,
-        "source_sha256": digest(next(job.glob("input.*"))),
+        "source_sha256": digest(input_file(job)),
         "selected_pages": [p["page_index"] for p in pages],
         "profile": "mixed-ovis-pp-v1",
         "pages": pages,
@@ -129,7 +136,7 @@ def validate_plan(job: Path, plan_hash: str, budget: int) -> Json:
         raise DemoError("ROUTE_PLAN_EXPIRED")
     if isinstance(budget, bool) or not isinstance(budget, int) or budget != plan["request_budget"]:
         raise DemoError("ROUTE_BUDGET_MISMATCH")
-    if digest(next(job.glob("input.*"))) != plan["source_sha256"]:
+    if digest(input_file(job)) != plan["source_sha256"]:
         raise DemoError("ROUTE_SOURCE_CHANGED")
     if plan["request_budget"] and target_fingerprints() != plan["target_fingerprints"]:
         raise DemoError("ROUTE_TARGET_CHANGED")

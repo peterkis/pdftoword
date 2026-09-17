@@ -278,9 +278,16 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         from .route_plan import execute_routes, validate_plan
 
         body = await request.json()
+        if not isinstance(body, dict):
+            raise DemoError("ROUTE_REQUEST_OBJECT_REQUIRED")
         job = job_path(job_id, output_root)
         plan_hash, budget = body.get("plan_hash"), body.get("budget")
-        if not isinstance(plan_hash, str) or body.get("confirm_no_auth") is not True:
+        if (
+            not isinstance(plan_hash, str)
+            or not isinstance(budget, int)
+            or isinstance(budget, bool)
+            or body.get("confirm_no_auth") is not True
+        ):
             raise DemoError("EXPLICIT_MODEL_AUTHORIZATION_REQUIRED")
         validate_plan(job, plan_hash, budget)
         return start(lambda: execute_routes(job, plan_hash, budget, True))
