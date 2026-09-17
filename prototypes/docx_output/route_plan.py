@@ -49,7 +49,7 @@ def target_fingerprints() -> Json:
     }
 
 
-def deduplicate_asset_bytes(job: Path, ir: Json) -> None:
+def deduplicate_asset_bytes(ir: Json) -> None:
     """Share identical bytes while keeping separate placement/source asset records."""
     paths: dict[str, str] = {}
     for asset in ir["assets"]:
@@ -97,7 +97,7 @@ def prepare_routes(job: Path, ir: Json) -> Json:
                 region["pixel_size"] = list(image.size)
             region["input_sha256"] = asset["sha256"]
         pages.append(decision)
-    deduplicate_asset_bytes(job, ir)
+    deduplicate_asset_bytes(ir)
     total = sum(r["request_budget"] for p in pages for r in p["regions"])
     plan: Json = {
         "schema_version": "route-plan/1",
