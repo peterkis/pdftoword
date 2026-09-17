@@ -22,7 +22,7 @@ async function openJob(id){
   $('pages').replaceChildren();for(const p of layout.pages){const o=document.createElement('option');o.value=p.page_index;o.textContent='源第 '+(p.page_index+1)+' 页';$('pages').append(o);}
   $('auto-download').href='/api/download/'+jobId+'/auto';
   $('reviewed-download').href=data.reviewed?'/api/download/'+jobId+'/reviewed':'';
-  selected=null;$('blocks').hidden=false;$('rendered').hidden=true;$('rendered').replaceChildren();show();
+  selected=null;$('blocks').hidden=false;$('rendered').hidden=true;$('rendered').replaceChildren();show();await showRoute();
 }
 function show(){
   if(!layout)return;
@@ -79,6 +79,17 @@ $('jobs').onchange=()=>openJob($('jobs').value).catch(message);
 $('pages').onchange=()=>{pageIndex=Number($('pages').value);selected=null;show();};
 $('revision').onchange=()=>{const next=$('revision').value;if(!data?.[next]){$('revision').value=revision;message('还未保存此版本');return;}revision=next;preview=revision==='reviewed'&&unsavedPreview;layout=data[revision];selected=null;$('text').value='';show();};
 $('zoom').oninput=()=>{$('source-wrap').style.width=$('zoom').value+'%';};
+function syncUploadMode(){
+  const form=$('upload'), auto=form.elements.mode.value==='auto';
+  form.elements.content_provider.disabled=auto;
+  if(auto)form.elements.content_provider.value='ovis-pp';
+  for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey']){
+    form.elements[name].disabled=auto;
+    if(auto)form.elements[name].checked=false;
+  }
+}
+$('upload').elements.mode.onchange=syncUploadMode;
+syncUploadMode();
 $('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
 on('edit',()=>operation({action:'text',text:$('text').value}));
 on('split',()=>operation({action:'split',offset:[...$('text').value.slice(0,$('text').selectionStart)].length}));on('merge',()=>operation({action:'merge'}));
@@ -91,6 +102,29 @@ on('undo',async()=>{if(!operations.length)return;const next=operations.slice(0,-
 on('save',async()=>{if(!jobId)throw new Error('请先选择任务');await api('/api/review/'+jobId,{operations});await openJob(jobId);$('status').textContent='已另存 reviewed.docx；auto 保持原样。';});
 on('reconstruction',()=>{$('blocks').hidden=false;$('rendered').hidden=true;});
 on('render',async()=>{if(!jobId)return;if(preview)throw new Error('请先保存修正，再渲染 reviewed.docx');const requested=revision;await api('/api/render/'+jobId,{revision});await wait();revision=requested;$('revision').value=revision;layout=data[revision];show();const qa=revision==='auto'?data.qa:data.qa_reviewed;$('rendered').replaceChildren();$('blocks').hidden=true;$('rendered').hidden=false;if(qa?.render_status!=='RENDERED'){$('rendered').textContent='DOCX_VISUAL_REVIEW_PENDING：请下载 DOCX，在本机 Word 打开检查。';return;}for(let n=1;n<=qa.rendered_page_count;n++)$('rendered').append(img('render-'+n,''));});
+let currentRoute=null;
+async function showRoute(){
+  currentRoute=await api('/api/route/'+jobId);
+  $('route-panel').hidden=!currentRoute.available;
+  if(!currentRoute.available)return;
+  $('route-summary').textContent=(currentRoute.executed?'已执行的区域计划 · ':'待批准 · ')+'请求上限 '+currentRoute.request_budget+' · '+currentRoute.provider_aliases.join(' / ');
+  $('route-confirm').checked=false;
+  $('route-execute').disabled=currentRoute.executed||currentRoute.request_budget===0;
+  $('route-regions').replaceChildren();
+  for(const p of currentRoute.pages)for(const r of p.regions){
+    const button=document.createElement('button');
+    button.textContent='第 '+(p.page_index+1)+' 页 · '+r.route+' · '+r.status;
+    button.onclick=()=>{pageIndex=p.page_index;$('pages').value=pageIndex;show();
+      const [x,y,x1,y1]=r.bbox;for(const [k,v] of Object.entries({x,y,width:x1-x,height:y1-y}))$('region').setAttribute(k,v);};
+    $('route-regions').append(button);
+  }
+}
+on('route-execute',async()=>{
+  if(!$('route-confirm').checked)throw new Error('请批准区域计划后执行');
+  await api('/api/route/'+jobId+'/execute',{plan_hash:currentRoute.plan_hash,budget:currentRoute.request_budget,confirm_no_auth:true});
+  await wait();
+});
+on('route-cancel',async()=>{await api('/api/route/'+jobId+'/cancel',{});$('status').textContent='已请求停止后续发送；正在执行的请求会保留结果。';});
 let drag=null;
 function point(event){const rect=$('overlay').getBoundingClientRect();const p=layout.pages.find(p=>p.page_index===pageIndex);return [(event.clientX-rect.left)/rect.width*p.width_pt,(event.clientY-rect.top)/rect.height*p.height_pt];}
 $('overlay').onpointerdown=e=>{if(!selected)return;drag=point(e);$('overlay').setPointerCapture(e.pointerId);};

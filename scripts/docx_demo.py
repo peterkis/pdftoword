@@ -28,8 +28,15 @@ def main() -> int:
     c.add_argument("--input", type=Path, required=True)
     c.add_argument("--content-provider", choices=["ovis", "ovis-pp", "pp"], default="ovis-pp")
     c.add_argument("--pages")
-    c.add_argument("--mode", choices=["native", "raster"], required=True)
+    c.add_argument("--mode", choices=["auto", "native", "raster"], default="auto")
     c.add_argument("--output-root", type=Path, default=JOBS)
+    c.add_argument("--dry-run-route", action="store_true")
+    execute = sub.add_parser("execute-route")
+    execute.add_argument("--job-id", required=True)
+    execute.add_argument("--plan-hash", required=True)
+    execute.add_argument("--budget", type=int, required=True)
+    execute.add_argument("--confirm-no-auth", action="store_true")
+    execute.add_argument("--output-root", type=Path, default=JOBS)
     for flag in [
         "allow-model-calls",
         "confirm-no-auth",
@@ -67,7 +74,19 @@ def main() -> int:
                 args.content_provider,
             )
             print((job / "auto.docx").resolve())
+        elif args.command == "execute-route":
+            from prototypes.docx_output.route_plan import execute_routes
+
+            job = execute_routes(
+                job_path(args.job_id, args.output_root),
+                args.plan_hash,
+                args.budget,
+                args.confirm_no_auth,
+            )
+            print((job / "auto.docx").resolve())
         elif args.command == "convert":
+            if args.dry_run_route and args.mode != "auto":
+                raise DemoError("DRY_RUN_REQUIRES_AUTO")
             job = convert(
                 args.input,
                 args.pages,
@@ -81,7 +100,7 @@ def main() -> int:
                 args.synthetic,
                 args.content_provider,
             )
-            print((job / "auto.docx").resolve())
+            print((job / ("route-plan.json" if args.dry_run_route else "auto.docx")).resolve())
         elif args.command == "render":
             qa = render(job_path(args.job_id, args.output_root), args.revision)
             print(qa["render_status"])

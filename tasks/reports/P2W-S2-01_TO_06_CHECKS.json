@@ -1,0 +1,101 @@
+{
+  "status": "READY_FOR_REVIEW_WITH_ACCEPTANCE_LIMITS",
+  "source_commit": "f558caf42807fb078ca74935483539aaeb4bd56e",
+  "source_tree": "84cfc9a118372adc4caec270aadc06921a317b2d",
+  "working_tree": "existing S1 changes preserved; S2 changes uncommitted",
+  "source_sha256": {
+    "prototypes/docx_output/input_analysis.py": "be022fa518daab7f357385e4aa12a74825c6bbb214c32c5b4fb9b6b9ff68b07b",
+    "prototypes/docx_output/native_pdf.py": "dc0f1bb311a7ef8ec1dc5d105039441a83189be14b86beb30ce8441b050ea1fa",
+    "prototypes/docx_output/page_classifier.py": "3584a8f8ef13d1a412418d789a48ce782029f15e07867bc55119ea5db4be4e31",
+    "prototypes/docx_output/region_router.py": "701406c6629d84508f26549f59a0cb4995f3d3a19cd758a6da7ec785894a05b0",
+    "prototypes/docx_output/route_plan.py": "73bec01d0d4f801b7ab5933f73c828c6d0d8147b9226d432337a44b0a27a57fc",
+    "prototypes/docx_output/region_bridge.py": "f16f9b121e2f07af2d991119b610031337f47bf726261cfed8989e3628c4311d",
+    "prototypes/docx_output/region_content.py": "6da6ae3cb1c0fb4477fe849699cc033e7ec55d0cda8ef352a94e5979ec46e7dc",
+    "prototypes/docx_output/mixed_fusion.py": "8d8cb90e1c9524e9c50bf77fcf6803ae947d63726ca22192ab70f48d7b8b440d",
+    "prototypes/docx_output/pipeline.py": "d25e092095d3a5e06b973e84306e0d7f5e49761f2495b2fc2ef817453dd4ab83",
+    "prototypes/docx_output/server.py": "6da605c93938c53e298183ebb309ab0c37096c371dcf730053d9eecb1138b72c"
+  },
+  "quality_steps": [
+    {
+      "name": "pytest",
+      "status": "PASS",
+      "returncode": 0,
+      "duration_seconds": 32.813
+    },
+    {
+      "name": "ruff",
+      "status": "PASS",
+      "returncode": 0,
+      "duration_seconds": 0.039
+    },
+    {
+      "name": "mypy",
+      "status": "FAIL",
+      "returncode": 1,
+      "duration_seconds": 0.235
+    },
+    {
+      "name": "task_catalog",
+      "status": "PASS",
+      "returncode": 0,
+      "duration_seconds": 0.041
+    },
+    {
+      "name": "model_baseline",
+      "status": "PASS",
+      "returncode": 0,
+      "duration_seconds": 0.036
+    },
+    {
+      "name": "schema_samples",
+      "status": "PASS",
+      "returncode": 0,
+      "duration_seconds": 0.075
+    }
+  ],
+  "tests": {
+    "PASS": 1278,
+    "FAIL": 0,
+    "ERROR": 0,
+    "SKIP": 0,
+    "XFAIL": 0,
+    "XPASS": 0
+  },
+  "full_quality_exit_code": 1,
+  "mypy_existing_errors": 19,
+  "new_code_mypy": "PASS",
+  "plan_package_validation": "PASS",
+  "plan_tool_tests": 11,
+  "model_http_requests": 8,
+  "response_reuses": 11,
+  "network_failure_count": 0,
+  "source_samples": "two user-selected PDFs, four physical pages; all scanned; no native text objects",
+  "genuine_mixed_pdf_acceptance": "PENDING_INPUT",
+  "controlled_mixed_regressions": "PASS",
+  "microsoft_word_acceptance": "DEFERRED_BY_USER_TO_LATER_DELIVERY",
+  "user_manual_acceptance": {
+    "status": "ACCEPTED_WITH_FINDINGS",
+    "recorded_at": "2026-09-17T04:27:44Z",
+    "scope": "本轮用户实际输出的人工核对",
+    "accepted": ["内容", "来源", "可编辑性", "图片与局部降级", "无重复漏失"],
+    "finding": "排版与PDF原图不一致，保留为后续排版主线发现",
+    "mixed_pdf_scope": "本次四页输入均为扫描页，不扩展为真实混合PDF全面验收"
+  },
+  "pages_version": "15.1.1",
+  "pages_opened": [
+    "electronic_synthetic",
+    "real_volume_1",
+    "real_volume_2"
+  ],
+  "pages_edit_and_save": [
+    "electronic_synthetic",
+    "real_volume_2"
+  ],
+  "raw_evidence_note": "First 7 responses retained as complete JSON objects with HTTP byte hashes; final additional response also retains exact HTTP bytes. No response overwritten.",
+  "delivery_jobs": [
+    "demo-d34f05a7339646dbbf5fc8ac601e78aa",
+    "demo-24bc01511929443b906cb63569538168"
+  ],
+  "final_rebuild_http_requests": 0,
+  "word_parts_identical_to_pages_checked": true
+}

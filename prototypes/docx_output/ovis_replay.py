@@ -108,13 +108,20 @@ def recover_ovis(job: Path, ir: Json, p: Json, body: Json, request_id: str) -> N
         or truncated_html
         or bool(re.search(r"<(?!img\b)[A-Za-z!/][^>]*>", IMAGE.sub("", content)))
     )
+    # Whitespace-delimited runs of 3+ underscores are exercise blanks. Mask only
+    # the syntax check; retain the literal provider text in candidates and Word.
+    markdown_context = "\n".join(
+        line if re.fullmatch(r"\s*_{3,}\s*", line)
+        else re.sub(r"(?<!\S)_{3,}(?!\S)", "BLANK", line)
+        for line in plain_context.split("\n")
+    )
     if (
         unsupported_html
         or invalid_xml
         or alternate_formula
         or re.search(
             r"(?m)^\s*(?:[-+*]\s|>|~~~|```|\|?\s*:?-{3,})|\*\*|__|~~|`|\[[^\]]+\]\(|(?<!\w)[*_][^*_]+[*_](?!\w)",
-            plain_context,
+            markdown_context,
         )
     ):
         bid = f"p{p['page_index']}-markdown-fallback"

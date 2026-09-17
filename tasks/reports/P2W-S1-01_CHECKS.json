@@ -1,0 +1,262 @@
+{
+  "task_id": "P2W-S1-01",
+  "checked_at": "2026-09-15",
+  "base_tree": "924dc06f22bfa7e2401e2cb89ca71461769ad09c",
+  "baseline_inspection": {
+    "status": "EXACT_BASELINE",
+    "head": "3241f10804a899f8ec2b0bdb6512e1f6cd5e456a",
+    "expected_baseline": "3241f10804a899f8ec2b0bdb6512e1f6cd5e456a",
+    "repository_root_detected": true,
+    "worktree_change_count": 1,
+    "worktree_clean": false,
+    "anchors": [
+      {
+        "path": "AGENTS.md",
+        "expected_git_blob": "3560b55986f8bcbc2e0a8a58fcba06be03684cc9",
+        "base_git_blob": "3560b55986f8bcbc2e0a8a58fcba06be03684cc9",
+        "head_git_blob": "3560b55986f8bcbc2e0a8a58fcba06be03684cc9",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "pyproject.toml",
+        "expected_git_blob": "080e8b14176fae323b14c53be560803ec3186a43",
+        "base_git_blob": "080e8b14176fae323b14c53be560803ec3186a43",
+        "head_git_blob": "080e8b14176fae323b14c53be560803ec3186a43",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "prototypes/docx_output/pipeline.py",
+        "expected_git_blob": "820282f2bb708b73dd41e4a63b48cbb3820ebe47",
+        "base_git_blob": "820282f2bb708b73dd41e4a63b48cbb3820ebe47",
+        "head_git_blob": "820282f2bb708b73dd41e4a63b48cbb3820ebe47",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "prototypes/docx_output/native_pdf.py",
+        "expected_git_blob": "5997d91e58dfddc23587fe4d48a142ebd00cfa2f",
+        "base_git_blob": "5997d91e58dfddc23587fe4d48a142ebd00cfa2f",
+        "head_git_blob": "5997d91e58dfddc23587fe4d48a142ebd00cfa2f",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "prototypes/docx_output/ovis_replay.py",
+        "expected_git_blob": "2ad1d4a23ef7a7ae62400a733e26d01f67bf4cfc",
+        "base_git_blob": "2ad1d4a23ef7a7ae62400a733e26d01f67bf4cfc",
+        "head_git_blob": "2ad1d4a23ef7a7ae62400a733e26d01f67bf4cfc",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "prototypes/docx_output/raster_bridge.py",
+        "expected_git_blob": "3ac965b1d1f2640d0863531d409351520cf48a44",
+        "base_git_blob": "3ac965b1d1f2640d0863531d409351520cf48a44",
+        "head_git_blob": "3ac965b1d1f2640d0863531d409351520cf48a44",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "prototypes/docx_output/formula.py",
+        "expected_git_blob": "b8bb8cbec3526c9de98372b0fa2f414e58d67bc2",
+        "base_git_blob": "b8bb8cbec3526c9de98372b0fa2f414e58d67bc2",
+        "head_git_blob": "b8bb8cbec3526c9de98372b0fa2f414e58d67bc2",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "prototypes/docx_output/prototype-scope.md",
+        "expected_git_blob": "eb9694ac44fb2f82af540bcb1dc0e43972c73274",
+        "base_git_blob": "eb9694ac44fb2f82af540bcb1dc0e43972c73274",
+        "head_git_blob": "eb9694ac44fb2f82af540bcb1dc0e43972c73274",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "specs/layout-ir.schema.json",
+        "expected_git_blob": "461de3922eef18d1674d1e1ec3247a4a13ab6bfe",
+        "base_git_blob": "461de3922eef18d1674d1e1ec3247a4a13ab6bfe",
+        "head_git_blob": "461de3922eef18d1674d1e1ec3247a4a13ab6bfe",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "tests/conftest.py",
+        "expected_git_blob": "1113cdc51553b5cd61a8bff14be20af6417405b6",
+        "base_git_blob": "1113cdc51553b5cd61a8bff14be20af6417405b6",
+        "head_git_blob": "1113cdc51553b5cd61a8bff14be20af6417405b6",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      },
+      {
+        "path": "prototypes/docx_output/server.py",
+        "expected_git_blob": "57691e7cc185d9c54d6ec23067d2f13942afe69c",
+        "base_git_blob": "57691e7cc185d9c54d6ec23067d2f13942afe69c",
+        "head_git_blob": "57691e7cc185d9c54d6ec23067d2f13942afe69c",
+        "source_anchor_matches": true,
+        "changed_since_baseline": false
+      }
+    ],
+    "note": "This checks selected Git objects, not tests, model services or all product functionality.",
+    "baseline_is_ancestor": true
+  },
+  "plan_outside_repository": true,
+  "initial_catalog_todo_count": 41,
+  "initial_progress_todo_count": 41,
+  "legacy_id_and_title_matches": 97,
+  "mapping_source_sha256": {
+    "legacy_ticket_map.json": "8d772d7f0fcbc5b5872b4a057eaf59fae3bea199ac8799ee4870fad6e8ece6d8",
+    "legacy_ticket_map.csv": "e11824e689fadcad0c51dca5b6b4665ca63fd35fb1bb47c622a39dc0e6495dbb"
+  },
+  "module_inventory": {
+    "prototypes/docx_output/pipeline.py": {
+      "sha256": "ce7620d43ade127e256ec08b97c7b6cee4bb4e9f3636ec6f0ee0953e8c989c75",
+      "top_level_definitions": [
+        "source_image",
+        "finish",
+        "reconstruct",
+        "replay",
+        "export",
+        "convert"
+      ]
+    },
+    "prototypes/docx_output/native_pdf.py": {
+      "sha256": "b638038ef710caed0635431ed7220d5ece11278c593bce48fcadfdcd81a8aa3b",
+      "top_level_definitions": [
+        "_abnormal_unicode",
+        "parse_pages",
+        "cluster_regions",
+        "extract"
+      ]
+    },
+    "prototypes/docx_output/raster_bridge.py": {
+      "sha256": "6829d220a1e3207f060232d54e206738c713c0baa6ba7daf0c9661e61469429e",
+      "top_level_definitions": [
+        "endpoint",
+        "recognize"
+      ]
+    },
+    "prototypes/docx_output/ovis_replay.py": {
+      "sha256": "51923fdaf7790705a79a78fe9045ef7622720f9d6bb6f664c8fae89172bfd394",
+      "top_level_definitions": [
+        "recover_ovis",
+        "associate_ovis"
+      ]
+    },
+    "prototypes/docx_output/formula.py": {
+      "sha256": "d86610b1d9004e357b24d78b9ecf92c5e8316c7a07f6932859b310c93b00d187",
+      "top_level_definitions": [
+        "node",
+        "run",
+        "Parser",
+        "to_omml",
+        "unrendered_math",
+        "MathSpans"
+      ]
+    },
+    "prototypes/docx_output/pp_layout.py": {
+      "sha256": "910aca2a949b043148c05b1dfe554f5d1cb40a5f14e943d832868aa2acf1b540",
+      "top_level_definitions": [
+        "rows_of",
+        "cells_of",
+        "_apply_pp_layout",
+        "apply_pp_layout",
+        "record_validation",
+        "image_grid_columns"
+      ]
+    },
+    "prototypes/docx_output/layout_rules.py": {
+      "sha256": "07ece150fe4030e8108b0e4b4513fe44472fd4f30b6e7ca9923a0c9c0abb162f",
+      "top_level_definitions": [
+        "LayoutRules",
+        "preflight",
+        "accept_candidate"
+      ]
+    },
+    "prototypes/docx_output/structure.py": {
+      "sha256": "9aa8f1774571cd0e12f12d7310f3ec88b1d08c5c159003badddc5475b785238d",
+      "top_level_definitions": [
+        "chat_content",
+        "image_content",
+        "recover",
+        "associate",
+        "recover_monkey"
+      ]
+    },
+    "prototypes/docx_output/writer.py": {
+      "sha256": "866f60a5d6b1425b2ce6fede490ff28cd89d6e7fc115f46aa0bc7b8f02b286c5",
+      "top_level_definitions": [
+        "fonts",
+        "text_column_widths",
+        "build",
+        "inspect_package"
+      ]
+    },
+    "prototypes/docx_output/review.py": {
+      "sha256": "64a0cbb62a6ad34bfe40916c7d21448d8d117fc48237bf77a819e2df04a09d83",
+      "top_level_definitions": [
+        "write_preview",
+        "_apply_overrides",
+        "split_parts",
+        "replan_text",
+        "valid_relation",
+        "apply_overrides"
+      ]
+    },
+    "prototypes/docx_output/server.py": {
+      "sha256": "495872bb0e3e61a8b7f527727883f3e34693a9eb9da6d191fa62ccfc8dd733cc",
+      "top_level_definitions": [
+        "EvidenceJSONResponse",
+        "BodyLimit",
+        "create_app"
+      ]
+    },
+    "prototypes/docx_output/render.py": {
+      "sha256": "3753b1554b39ab41a2dc848dc513b710f333cf51acc377c95824df4c25474e43",
+      "top_level_definitions": [
+        "render"
+      ]
+    }
+  },
+  "model_requests": 0,
+  "service_metadata_requests": 0,
+  "limitations": [
+    "Selected module inventory and entry-point inspection only; not a whole-repository code review.",
+    "No new conversion, model inference, renderer or human Word acceptance."
+  ],
+  "preservation": {
+    "protected_roots": [
+      "tmp/raster-regression",
+      "tmp/model-contract-discovery",
+      "tmp/docx-demo",
+      "tmp/t0015-offline-baseline"
+    ],
+    "files_before": 706,
+    "files_after": 706,
+    "file_set_equal": true,
+    "sha256_equal": true,
+    "snapshot_aggregate_sha256": "0892cd3da1cf64cfd24477b33148309fa87d40f6c45d5a34a6d3d00e66ca9ee0",
+    "tracked_files_compared_excluding_readme": 182,
+    "newline_only_differences_from_git_blob": [
+      "scripts/smoke_models.py",
+      "tasks/tickets.csv"
+    ],
+    "remaining_tracked_files_byte_identical_to_head": 180
+  },
+  "documentation_checks": {
+    "relative_links_valid": 24,
+    "sensitive_pattern_matches": 0,
+    "scope_files": [
+      "README.md",
+      "docs/development-plan/README.md",
+      "docs/development-plan/legacy_ticket_map.json",
+      "docs/development-plan/legacy_ticket_map.csv",
+      "docs/decisions/productization-profile-v1.md",
+      "tasks/reports/P2W-S1-01_REPORT.md",
+      "tasks/reports/P2W-S1-01_CHECKS.json"
+    ],
+    "note": "Targeted pattern scan, not a comprehensive secret detector."
+  }
+}

@@ -95,10 +95,15 @@ def finish(job: Path, ir: Json, revision: str = "auto") -> Json:
         )
         for p in ir["pages"]
     }
+    auto_states = ir["metadata"].get("auto_route", {}).get("content_states", {})
+    for key, state in auto_states.items():
+        if state == "blank":
+            page_editable_content[key] = True
     qa = dict(
         execution_status=(
             "COMPLETE"
-            if stats["has_editable_runs"] and all(page_editable_content.values())
+            if all(page_editable_content.values())
+            and (stats["has_editable_runs"] or bool(auto_states))
             else "DEMO_OUTPUT_INSUFFICIENT"
         ),
         page_editable_content=page_editable_content,
@@ -115,6 +120,8 @@ def finish(job: Path, ir: Json, revision: str = "auto") -> Json:
         unresolved_issue_count=sum(i["status"] == "open" for i in ir["issues"]),
         **stats,
     )
+    if ir["metadata"].get("auto_route", {}).get("pending_regions", 0):
+        qa["execution_status"] = "PARTIAL"
     save(job / f"layout.{revision}.json", ir)
     save(job / ("qa.json" if revision == "auto" else "qa.reviewed.json"), qa)
     save(
@@ -282,7 +289,9 @@ def convert(
     validate_input(source)
     if content_provider not in {"ovis", "ovis-pp", "pp"}:
         raise DemoError("INVALID_CONTENT_PROVIDER")
-    if mode not in {"native", "raster"}:
+    if mode == "auto" and (content_provider != "ovis-pp" or ovis or monkey):
+        raise DemoError("AUTO_PROFILE_OVIS_PP_REQUIRED")
+    if mode not in {"native", "raster", "auto"}:
         raise DemoError("INVALID_MODE")
     if mode == "raster" and not (allow_model_calls and confirm_no_auth):
         raise DemoError("EXPLICIT_MODEL_AUTHORIZATION_REQUIRED")
@@ -329,6 +338,10 @@ def convert(
                 responses = recognize(job, ir, p, manifest, ovis, monkey, content_provider)
                 save(job / "state.json", {"state": "结构恢复"})
                 reconstruct(job, ir, p, responses, manifest, content_provider)
+        if mode == "auto":
+            from .route_plan import prepare_routes
+
+            prepare_routes(job, ir)
         finish(job, ir)
     except Exception as exc:
         save(job / "layout.partial.json", ir)

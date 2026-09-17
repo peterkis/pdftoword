@@ -902,14 +902,10 @@ def test_multiline_emphasis_falls_back(private_case: Path, raw: str) -> None:
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
 
 
-def test_browser_split_uses_codepoint_offset() -> None:
+def test_browser_split_uses_codepoint_offset(node: str) -> None:
     import json
-    import shutil
     import subprocess
 
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("Node runtime required for browser handler test")
     script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
     handler = next(line for line in script.splitlines() if line.startswith("on('split'"))
     fixture = (
@@ -1003,13 +999,9 @@ def test_split_label_detaches_old_association(private_case: Path) -> None:
     assert not result["relations"] or all(r["type"] != "label_of" for r in result["relations"])
 
 
-def test_revision_switch_restores_preview_assets() -> None:
-    import shutil
+def test_revision_switch_restores_preview_assets(node: str) -> None:
     import subprocess
 
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("Node required")
     script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
     handler = next(
         line for line in script.splitlines() if line.startswith("$('revision').onchange")
@@ -1049,18 +1041,20 @@ def test_currency_exports_as_literal_text(private_case: Path, raw: str) -> None:
 def test_invalid_native_xml_char_falls_back(
     private_case: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import pypdfium2 as pdfium  # type: ignore[import-untyped]
+    from prototypes.docx_output.input_analysis import PdfInspectorBackend
     from prototypes.docx_output.pipeline import convert
     from tests.demo.synthetic import make_pdf
 
     source = private_case / "invalid-char.pdf"
     make_pdf(source)
-    original = pdfium.raw.FPDFText_GetUnicode
-    monkeypatch.setattr(
-        pdfium.raw,
-        "FPDFText_GetUnicode",
-        lambda page, index: 1 if index == 0 else original(page, index),
-    )
+    original = PdfInspectorBackend.extract
+
+    def faulty(self: PdfInspectorBackend, path: Path) -> common.Json:
+        result = original(self, path)
+        result["items"][0]["text"] = chr(1) + result["items"][0]["text"][1:]
+        return result
+
+    monkeypatch.setattr(PdfInspectorBackend, "extract", faulty)
     job = convert(source, output_root=private_case / "jobs")
     ir = common.read(job / "layout.auto.json")
     assert any(i["type"] == "INVALID_XML_TEXT_FALLBACK" for i in ir["issues"])
@@ -1211,13 +1205,9 @@ def test_repeated_preview_crops_do_not_accumulate(private_case: Path) -> None:
     assert len(list((job / "assets").glob("a-review*.png"))) == 1
 
 
-def test_undo_refreshes_selected_editor() -> None:
-    import shutil
+def test_undo_refreshes_selected_editor(node: str) -> None:
     import subprocess
 
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("Node required")
     script = (common.ROOT / "prototypes/docx_output/static/app.js").read_text()
     handler = next(line for line in script.splitlines() if line.startswith("on('undo'"))
     fixture = (
@@ -1400,13 +1390,9 @@ def test_successful_render_removes_attempt(
     assert not list((job / "rendered/auto").glob("attempt-*"))
 
 
-def test_unavailable_revision_keeps_auto_selected() -> None:
-    import shutil
+def test_unavailable_revision_keeps_auto_selected(node: str) -> None:
     import subprocess
 
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("Node required")
     handler = next(
         line
         for line in (common.ROOT / "prototypes/docx_output/static/app.js").read_text().splitlines()
@@ -1439,13 +1425,9 @@ def test_unclosed_ovis_formula_exports_fallback(private_case: Path) -> None:
     assert finish(job, ir)["fallback_area_ratio"] == pytest.approx(1)
 
 
-def test_revision_switch_clears_stale_selection() -> None:
-    import shutil
+def test_revision_switch_clears_stale_selection(node: str) -> None:
     import subprocess
 
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("Node required")
     handler = next(
         line
         for line in (common.ROOT / "prototypes/docx_output/static/app.js").read_text().splitlines()
@@ -1716,18 +1698,20 @@ def test_pp_fallback_page_marks_job_incomplete(private_case: Path) -> None:
 def test_invalid_native_charbox_preserves_page(
     private_case: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import pypdfium2 as pdfium
+    from prototypes.docx_output.input_analysis import PdfInspectorBackend
     from prototypes.docx_output.pipeline import convert
     from tests.demo.synthetic import make_pdf
 
     source = private_case / "badbox.pdf"
     make_pdf(source)
-    original = pdfium.PdfTextPage.get_charbox
+    original = PdfInspectorBackend.extract
 
-    def charbox(self: object, index: int, **kwargs: object) -> tuple[float, float, float, float]:
-        return (0, 0, 0, 0) if index == 0 else original(self, index, **kwargs)
+    def faulty(self: PdfInspectorBackend, path: Path) -> common.Json:
+        result = original(self, path)
+        result["items"][0]["width"] = 0.0
+        return result
 
-    monkeypatch.setattr(pdfium.PdfTextPage, "get_charbox", charbox)
+    monkeypatch.setattr(PdfInspectorBackend, "extract", faulty)
     job = convert(source, output_root=private_case / "jobs")
     assert common.read(job / "qa.json")["fallback_area_ratio"] == pytest.approx(1)
     assert any(
@@ -2059,18 +2043,20 @@ def test_sentence_end_before_truncated_tag_falls_back(private_case: Path, raw: s
 def test_native_abnormal_unicode_line_preserves_source(
     private_case: Path, monkeypatch: pytest.MonkeyPatch, codepoint: int
 ) -> None:
-    import pypdfium2 as pdfium
+    from prototypes.docx_output.input_analysis import PdfInspectorBackend
     from prototypes.docx_output.pipeline import convert
     from tests.demo.synthetic import make_pdf
 
     source = private_case / "abnormal.pdf"
     make_pdf(source)
-    original = pdfium.raw.FPDFText_GetUnicode
-    monkeypatch.setattr(
-        pdfium.raw,
-        "FPDFText_GetUnicode",
-        lambda page, index: codepoint if index == 0 else original(page, index),
-    )
+    original = PdfInspectorBackend.extract
+
+    def faulty(self: PdfInspectorBackend, path: Path) -> common.Json:
+        result = original(self, path)
+        result["items"][0]["text"] = chr(codepoint) + result["items"][0]["text"][1:]
+        return result
+
+    monkeypatch.setattr(PdfInspectorBackend, "extract", faulty)
     job = convert(source, output_root=private_case / "jobs")
     ir = common.read(job / "layout.auto.json")
     assert any(i["type"] == "NATIVE_UNICODE_FALLBACK" for i in ir["issues"])

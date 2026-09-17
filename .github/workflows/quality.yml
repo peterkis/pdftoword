@@ -1,0 +1,51 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    env:
+      PYTHONUTF8: '1'
+      UV_NO_PROGRESS: '1'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          version: '0.11.28'
+          python-version: '3.12.13'
+          enable-cache: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.18.0'
+      - name: Synchronize locked dependencies
+        run: uv sync --locked
+      - name: Run the shared offline quality gate
+        run: uv run --locked python scripts/quality.py --output-dir tmp/quality/ci
+      - name: Upload only sanitized engineering reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: quality-${{ matrix.os }}
+          path: |
+            tmp/quality/ci/public/summary.json
+            tmp/quality/ci/public/environment.json
+            tmp/quality/ci/public/tests.json
+            tmp/quality/ci/public/junit.xml
+          if-no-files-found: warn
+          retention-days: 7
