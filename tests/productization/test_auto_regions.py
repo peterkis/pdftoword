@@ -398,6 +398,32 @@ def test_region_labels_mixed_is_not_ordinary_figure() -> None:
     )
 
 
+def test_full_crop_single_text_box_stays_pending_for_illustration_review() -> None:
+    from prototypes.docx_output.region_bridge import layout_purpose
+
+    assert (
+        layout_purpose(
+            {
+                "result": {
+                    "layoutParsingResults": [
+                        {
+                            "prunedResult": {
+                                "width": 100,
+                                "height": 100,
+                                "parsing_res_list": [
+                                    {"block_label": "text", "block_bbox": [0, 0, 100, 100]}
+                                ],
+                            }
+                        }
+                    ]
+                }
+            },
+            [100, 100],
+        )
+        == "unknown"
+    )
+
+
 def test_human_review_cannot_be_discarded_by_old_plan(
     case: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
