@@ -105,3 +105,10 @@ uv run --locked python scripts/evaluate_raster_models.py promote \
 见 `specs/t0016-evaluation-correction-v1.2.json`：confirmed 参考在既定规范化后必须非空，标注校验和内容评分均拒绝无效参考，不自动改写为答案。耗时的 count/median_ms/min_ms/max_ms 只统计 COMPLETE；无成功结果时为 0/null/null/null。failed_count 与 failures（request_id、status、duration_ms）单独保存，公开摘要保持相同区分。
 
 两个真实运行仍使用其封存的 v1.1 评分和当时工具哈希。本轮没有重新 evaluate/promote 它们；新代码版本与历史证据版本不同是有意保留的来源事实，不应手工改写历史哈希。修复不改变 T0016 的 ACCEPTED_WITH_QUALITY_FINDINGS 结论。
+
+## P2W-S1-02 统一工程门禁
+
+`uv run --locked python scripts/quality.py` 串行执行完整测试、Ruff、mypy、原两个校验器及 Schema 样例检查。
+Python 3.12.13、Node 24.18.0 是必需环境；失败整体非零，原始输出与可公开报告分别保存。
+独立 Schema 入口为 `uv run --locked python scripts/validate_schema_samples.py`。
+详见[门禁说明](../docs/26_QUALITY_GATE.md)。不启动模型、服务或历史评测。

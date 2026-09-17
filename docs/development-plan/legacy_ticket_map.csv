@@ -1,0 +1,98 @@
+﻿legacy_id,legacy_phase,legacy_title,planning_assessment,new_task_ids,note
+T0001,P0,初始化 Monorepo 与工具链,PRIOR_ACCEPTED_WITH_RECORDED_SCOPE,"[""P2W-S1-01"", ""P2W-S4-10""]",保留此前收窄范围及已有验收；本计划不重验其历史模型运行，也不把原型能力倒填到旧报告。
+T0002,P0,建立 CI 与质量门禁,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-02""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0003,P0,配置与秘密管理,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0004,P0,作业状态机,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-01"", ""P2W-S4-03""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0005,P0,作业目录与资产存储,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-01"", ""P2W-S4-02"", ""P2W-S4-03"", ""P2W-S4-06""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0006,P0,定义引擎 Adapter 协议,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-01"", ""P2W-S2-01"", ""P2W-S4-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0007,P0,实现 Layout IR 1.1 域模型,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-01"", ""P2W-S4-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0008,P0,候选、来源与证据模型,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-03"", ""P2W-S2-06"", ""P2W-S3-01"", ""P2W-S4-02""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0009,P0,错误码与 Issue 分类,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-02"", ""P2W-S4-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0010,P0,模型网关客户端骨架,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0011,P0,CLI 与本地 API 骨架,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-04"", ""P2W-S4-01"", ""P2W-S4-03""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0012,P0,黄金测试框架,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-02"", ""P2W-S1-03"", ""P2W-S1-04"", ""P2W-S1-06""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0013,P0,日志与指标基础,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-02"", ""P2W-S4-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0014,P0,模型部署基线与架构文档对齐,PRIOR_ACCEPTED_WITH_RECORDED_SCOPE,"[""P2W-S1-01""]",保留此前收窄范围及已有验收；本计划不重验其历史模型运行，也不把原型能力倒填到旧报告。
+T0015,P0,服务契约发现,PRIOR_ACCEPTED_WITH_RECORDED_SCOPE,"[""P2W-S1-01""]",保留此前收窄范围及已有验收；本计划不重验其历史模型运行，也不把原型能力倒填到旧报告。
+T0016,P0,JPG/PNG 与数学试卷回归,PRIOR_ACCEPTED_WITH_RECORDED_SCOPE,"[""P2W-S1-01""]",保留此前收窄范围及已有验收；本计划不重验其历史模型运行，也不把原型能力倒填到旧报告。
+T0017,P0,旋转、UVDoc、多栏、表格和公式专项能力矩阵,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-05"", ""P2W-S3-06"", ""P2W-S3-08"", ""P2W-S3-11"", ""P2W-S3-13""]",按公式/表格/多栏/方向/展平分维度累计；全部维度有证据才可关闭整个原任务。
+T0101,P1,PDF 文件预检,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0102,P1,PDFium 页面几何与渲染,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-01"", ""P2W-S3-13""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0103,P1,pdf-inspector Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-01""]",S2-01按用户决策接入pdf-inspector 1.20.0负责分类和原生文字，PDFium负责渲染与几何；原Ticket完整验收不自动完成。
+T0104,P1,原生文字质量评分,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-02""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0105,P1,原生文字转 Layout IR,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0106,P1,图片和矢量对象提取,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-01""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0107,P1,简单阅读顺序与段落聚合,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-07"", ""P2W-S3-11""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0108,P1,样式归一化与字体映射,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-07""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0109,P1,基础 DOCX Planner/Builder,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-07""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0110,P1,电子 PDF 端到端作业,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-04"", ""P2W-S2-07""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0111,P1,电子 PDF 黄金回归,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-03"", ""P2W-S1-05"", ""P2W-S2-08""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0201,P2,Paddle 布局能力 Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0202,P2,页面复杂度与路由评分,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-02"", ""P2W-S2-04""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0203,P2,区域切分与覆盖合并,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-03""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0204,P2,高质量区域裁剪,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-05"", ""P2W-S3-13""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0205,P2,Paddle 文字 OCR 能力 Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-05"", ""P2W-S4-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0206,P2,OCR 坐标归一化,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0207,P2,隐藏文字层检测与去重,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-02"", ""P2W-S2-06""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0208,P2,栅格文字替换为可编辑段落,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-06""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0209,P2,普通配图与内部文字元数据,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-03""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0210,P2,混合页面融合,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-06""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0211,P2,混合 PDF 端到端与回归,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-03"", ""P2W-S1-05"", ""P2W-S2-04"", ""P2W-S2-08""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0301,P3,PP-OCRv6 Medium 升级策略,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-14""]",标题仍是旧升级逻辑；当前已用Medium。新增风险复识别策略而不是重新部署Small→Medium。
+T0302,P3,PP-StructureV3 表格 Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-06"", ""P2W-S4-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0303,P3,表格质量与图片降级,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-03"", ""P2W-S3-06"", ""P2W-S3-07"", ""P2W-S3-08""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0304,P3,PP-FormulaNet Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-04"", ""P2W-S4-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0305,P3,公式 OMML 与回渲染,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-03"", ""P2W-S3-04"", ""P2W-S3-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0306,P3,化学与复杂图形保留规则,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0307,P3,扫描页快速流水线,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-08"", ""P2W-S3-15""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0308,P3,扫描页专项融合,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-14"", ""P2W-S3-15""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0309,P3,扫描 PDF 回归集,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-03"", ""P2W-S1-05"", ""P2W-S3-15""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0401,P4,MonkeyOCRv2 网关 Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-14"", ""P2W-S4-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0402,P4,Monkey 标签与内容归一化,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-05"", ""P2W-S3-02"", ""P2W-S3-14""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0403,P4,Monkey 坐标归一化,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-05"", ""P2W-S3-14""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0404,P4,复杂页升级策略,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-14""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0405,P4,几何权威仲裁,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-06"", ""P2W-S3-14""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0406,P4,Monkey End-to-End 内容候选,DEFERRED_BY_PROPOSAL_REQUIRES_EXPLICIT_SCOPE_DECISION,"[""P2W-S3-14""]",本轮产品目标不需要Monkey端到端正文；layout-only合同不证明正文能力。经用户同意可延后，不标已完成。
+T0407,P4,系统置信度计算,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-14""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0408,P4,OvisOCR2 内容复核 Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-05"", ""P2W-S3-02"", ""P2W-S3-14"", ""P2W-S4-05""]",保留review.content能力；demo扫描profile已使用Ovis为主内容。通过S1-01/S3-14明确场景化职责，不默改旧事实。
+T0409,P4,复核触发和冲突融合,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-14""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0410,P4,GPU 队列与客户端背压,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-04"", ""P2W-S4-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0411,P4,Monkey/Ovis 影子模式,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-14""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0412,P4,复杂页回归门禁,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-03"", ""P2W-S1-05"", ""P2W-S3-13"", ""P2W-S3-15""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0501,P5,文档层级聚合,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-07"", ""P2W-S3-01"", ""P2W-S3-02"", ""P2W-S3-09""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0502,P5,题号识别器,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-09""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0503,P5,大题/小题/子题层级,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-09""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0504,P5,选项识别与布局,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-09""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0505,P5,图片去重与统一资产,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-03"", ""P2W-S3-10""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0506,P5,题图锚定评分,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-10""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0507,P5,图题和跨页关系,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-09"", ""P2W-S3-10""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0508,P5,高级 DOCX Layout Planner,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-01"", ""P2W-S3-03"", ""P2W-S3-07"", ""P2W-S3-11""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0509,P5,题图稳定容器,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-10""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0510,P5,Word 原生表格输出,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-07"", ""P2W-S3-08""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0511,P5,Word 公式输出,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-04"", ""P2W-S3-05""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0512,P5,分页和 keep 规则,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-08"", ""P2W-S3-11""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0513,P5,页眉页脚与正式页码,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S2-07"", ""P2W-S3-11""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0514,P5,完整 DOCX 端到端,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-11""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0515,P5,试卷黄金回归,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-03"", ""P2W-S1-05"", ""P2W-S3-15""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0601,P6,Issue 生成器,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-03"", ""P2W-S3-12""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0602,P6,内容与结构 QA,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-04"", ""P2W-S3-03"", ""P2W-S3-12""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0603,P6,DOCX 包和重新打开检查,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-04"", ""P2W-S4-08""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0604,P6,DOCX 回渲染 Adapter,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-04"", ""P2W-S4-08""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0605,P6,结构化视觉比较,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-04"", ""P2W-S3-15"", ""P2W-S4-08""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0606,P6,审校 API,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-12"", ""P2W-S4-06"", ""P2W-S4-07""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0607,P6,审校 UI,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-07"", ""P2W-S4-10""]",现有原生HTML审阅不是原定React完整交付；本机Beta可先行，S4-10正式桌面再按真实范围验收。
+T0608,P6,人工修正与锁定,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-12"", ""P2W-S4-07""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0609,P6,区域重识别,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S3-12"", ""P2W-S4-07""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0610,P6,质量和转换报告,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-04"", ""P2W-S1-06"", ""P2W-S2-08"", ""P2W-S3-12"", ""P2W-S3-15"", ""P2W-S4-07"", ""P2W-S4-11""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0701,P7,性能基准与剖析,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-05"", ""P2W-S4-04"", ""P2W-S4-11""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0702,P7,缓存和去重,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-02""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0703,P7,并发与背压优化,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-04""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0704,P7,取消、恢复与断点,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-03""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0705,P7,模型网关安全加固,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-05"", ""P2W-S4-06""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0706,P7,数据清理与隐私测试,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-06""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0707,P7,客户端打包,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-09"", ""P2W-S4-10""]",当前旧任务文案为macOS应用/CLI；本计划同时保留Windows兼容及独立安装/Word证据，不暗示Mac包跨OS通用。
+T0708,P7,统一模型网关部署,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-05"", ""P2W-S4-12""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0709,P7,观测与运维,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-12"", ""P2W-S4-04""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0710,P7,SBOM、许可证和供应链,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-06"", ""P2W-S4-09"", ""P2W-S4-12""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0711,P7,发布资格回归,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S1-06"", ""P2W-S4-08"", ""P2W-S4-11"", ""P2W-S4-12""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。
+T0712,P7,用户与开发文档,GAP_OR_PROTOTYPE_ONLY_NOT_REACCEPTED,"[""P2W-S4-07"", ""P2W-S4-09"", ""P2W-S4-10"", ""P2W-S4-12""]",现有原型可能覆盖部分行为；必须按原验收项映射证据后才能关闭，不批量DONE。

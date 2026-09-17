@@ -180,6 +180,14 @@ def test_offline_recompute_and_public_privacy(collected: Path) -> None:
         assert forbidden not in text
     for path in (collected / "responses.private").glob("*"):
         assert "third-party" not in path.read_text()
+
+
+def test_posix_evidence_permissions(collected: Path) -> None:
+    """POSIX modes are separate from all-platform public-data privacy checks."""
+    import sys
+
+    if sys.platform == 'win32':
+        pytest.skip('POSIX_MODE_NOT_APPLICABLE')
     assert all(p.stat().st_mode & 0o777 == 0o600 for p in collected.rglob("*") if p.is_file())
     assert all(p.stat().st_mode & 0o777 == 0o700 for p in collected.rglob("*") if p.is_dir())
 

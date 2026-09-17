@@ -1,0 +1,141 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "annotation_version",
+    "sample_id",
+    "source_sha256",
+    "reviewer_type",
+    "reviewer_id",
+    "coverage_complete",
+    "units"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "product-annotation/1.0"
+    },
+    "annotation_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sample_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reviewer_type": {
+      "enum": [
+        "human",
+        "agent_visual"
+      ]
+    },
+    "reviewer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coverage_complete": {
+      "type": "boolean"
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "unit_id",
+          "page",
+          "kind",
+          "status",
+          "reference",
+          "note"
+        ],
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "formula",
+              "table",
+              "reading_order",
+              "figure_edge",
+              "route"
+            ]
+          },
+          "status": {
+            "enum": [
+              "confirmed",
+              "uncertain"
+            ]
+          },
+          "reference": {
+            "type": "object"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "anchors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "page",
+          "kind",
+          "bbox"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "kind": {
+            "enum": [
+              "figure",
+              "question",
+              "caption",
+              "text",
+              "table",
+              "formula"
+            ]
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

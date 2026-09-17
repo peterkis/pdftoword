@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import ctypes
 import itertools
 import math
-import threading
 import unicodedata
 from pathlib import Path
-from typing import Any
 
 import pypdfium2 as pdfium  # type: ignore[import-untyped]
 
@@ -27,6 +24,7 @@ from .common import (
     union_area,
 )
 from .formula import unrendered_math
+from .input_analysis import PDFIUM_LOCK, PdfInspectorBackend, observe_page, open_pdf
 from .structure import QUESTION, image_content
 
 
@@ -37,21 +35,6 @@ def _abnormal_unicode(char: str) -> bool:
         or char == "\ufffd"
         or unicodedata.category(char) == "Co"
     )
-
-
-def _font_size_pt(textpage: Any, index: int) -> float | None:
-    """Convert the local PDF font size through its character matrix to page points."""
-    local_size = float(pdfium.raw.FPDFText_GetFontSize(textpage, index))
-    matrix = pdfium.raw.FS_MATRIX()
-    if not pdfium.raw.FPDFText_GetMatrix(textpage, index, ctypes.byref(matrix)):
-        return None
-    # c,d are the transformed vertical em vector; translation and horizontal
-    # stretch must not determine Word's point size. This also handles rotation.
-    size = local_size * math.hypot(matrix.c, matrix.d)
-    return size if math.isfinite(size) and size > 0 else None
-
-
-PDFIUM_LOCK = threading.RLock()
 
 
 def parse_pages(selection: str | None, total: int) -> list[int]:
@@ -99,35 +82,39 @@ def extract(
     job: Path, ir: Json, source: Path, selection: str | None, raster_only: bool = False
 ) -> None:
     """Extract native text/font/bbox and local figure crops, never performing OCR."""
+    extracted = PdfInspectorBackend().extract(source) if not raster_only else {}
     with PDFIUM_LOCK:
-        try:
-            document = pdfium.PdfDocument(source)
-        except pdfium.PdfiumError as exc:
-            raise DemoError("PDF_OPEN_FAILED_OR_PASSWORD_REQUIRED") from exc
+        document = open_pdf(source)
         try:
             if pdfium.raw.FPDF_GetSecurityHandlerRevision(document) >= 0:
                 raise DemoError("PDF_PASSWORD_REQUIRED_UNSUPPORTED")
+            if not len(document):
+                raise DemoError("PDF_EMPTY_DOCUMENT")
             selected = parse_pages(selection, len(document))
             ir["source"]["page_count"] = len(document)
             ir["metadata"]["selected_pages_1based"] = [i + 1 for i in selected]
             for index in selected:
                 native = document[index]
                 bitmap = None
-                textpage = None
                 try:
                     w, h = native.get_size()
                     if not math.isfinite(w + h) or min(w, h) <= 0:
                         raise DemoError("INVALID_PAGE_SIZE")
                     scale = min(2.0, 4000 / max(w, h))
-                    bitmap = native.render(scale=scale)
+                    try:
+                        bitmap = native.render(scale=scale)
+                    except pdfium.PdfiumError as exc:
+                        raise DemoError("PDF_RENDER_FAILED") from exc
                     converter = bitmap.get_posconv(native)
                     bw, bh = bitmap.width, bitmap.height
                     p = page(index, w, h, "native")
                     ir["pages"].append(p)
                     path = job / "assets" / f"source-{index}.png"
                     image = bitmap.to_pil()
-                    image.save(path)
-                    image.close()
+                    try:
+                        image.save(path)
+                    finally:
+                        image.close()
                     path.chmod(0o600)
                     info = {
                         "image_path": str(path.relative_to(job)),
@@ -149,88 +136,53 @@ def extract(
                         p["page_type"] = "scanned"
                         continue
 
-                    def convert_box(
-                        raw_box: Any,
-                        converter: Any = converter,
-                        w: float = w,
-                        h: float = h,
-                        bw: int = bw,
-                        bh: int = bh,
-                    ) -> list[float]:
-                        left, bottom, right, top = raw_box
-                        points = [
-                            converter.to_bitmap(x, y) for x in (left, right) for y in (bottom, top)
-                        ]
-                        return [
-                            min(x for x, _ in points) * w / bw,
-                            min(y for _, y in points) * h / bh,
-                            max(x for x, _ in points) * w / bw,
-                            max(y for _, y in points) * h / bh,
-                        ]
+                    observation = observe_page(native, index, extracted)
+                    g = observation.geometry
+                    from .common import save
 
-                    objects = list(native.get_objects())
+                    save(job / f"observation-{index}.json", observation.record())
+                    info["native_backend"] = observation.backend
+                    info["page_geometry"] = g.record()
                     path_boxes = []
                     image_boxes = []
-                    for obj in objects:
-                        if obj.type in {
-                            pdfium.raw.FPDF_PAGEOBJ_IMAGE,
-                            pdfium.raw.FPDF_PAGEOBJ_PATH,
-                        }:
-                            bounds = convert_box(obj.get_bounds())
-                            # Paths can be zero-width axes; retain a thin region around them.
-                            if bounds[2] == bounds[0]:
-                                bounds[2] += 1
-                            if bounds[3] == bounds[1]:
-                                bounds[3] += 1
-                            if box_valid(bounds):
-                                if obj.type == pdfium.raw.FPDF_PAGEOBJ_IMAGE:
-                                    image_boxes.append(bounds)
-                                else:
-                                    path_boxes.append(bounds)
-                    textpage = native.get_textpage()
+                    for obj in observation.objects:
+                        bounds = list(obj["bbox"])
+                        if bounds[2] == bounds[0]:
+                            bounds[2] += 1
+                        if bounds[3] == bounds[1]:
+                            bounds[3] += 1
+                        if box_valid(bounds):
+                            if obj["type"] == pdfium.raw.FPDF_PAGEOBJ_IMAGE:
+                                image_boxes.append(bounds)
+                            elif obj["type"] == pdfium.raw.FPDF_PAGEOBJ_PATH:
+                                path_boxes.append(bounds)
                     chars: list[Json] = []
-                    source_chars: list[str] = []
+                    source_chars = [r["text"] for r in observation.text_runs]
                     bad = 0
                     invalid_box = 0
                     angles = 0
-                    for ci in range(textpage.count_chars()):
-                        char = chr(pdfium.raw.FPDFText_GetUnicode(textpage, ci))
-                        source_chars.append(char)
-                        if char in "\r\n":
-                            continue
-                        if _abnormal_unicode(char):
-                            bad += 1
-                        cb = convert_box(textpage.get_charbox(ci, loose=True))
-                        if not box_valid(cb):
-                            if char.isspace():
-                                continue
+                    for ri, run in enumerate(observation.text_runs):
+                        bad += sum(_abnormal_unicode(c) for c in run["text"])
+                        if not run["geometry_verified"]:
                             invalid_box += 1
                             continue
-                        if not 0 <= cb[0] < cb[2] <= w + 1 or not 0 <= cb[1] < cb[3] <= h + 1:
-                            invalid_box += 1
-                        angle = pdfium.raw.FPDFText_GetCharAngle(textpage, ci)
-                        if abs(angle) > 0.02:
-                            angles += 1
-                        font_flags = ctypes.c_int()
-                        length = pdfium.raw.FPDFText_GetFontInfo(
-                            textpage, ci, None, 0, ctypes.byref(font_flags)
-                        )
-                        buffer = ctypes.create_string_buffer(max(1, min(length, 4096)))
-                        pdfium.raw.FPDFText_GetFontInfo(
-                            textpage, ci, buffer, len(buffer), ctypes.byref(font_flags)
-                        )
-                        font_size = _font_size_pt(textpage, ci)
+                        angles += bool(run["rotation"])
                         chars.append(
                             {
-                                "text": char,
-                                "bbox": cb,
-                                "font": buffer.value.decode("utf-8", errors="replace"),
-                                "size": font_size if font_size is not None else 11.0,
-                                "font_size_verified": font_size is not None,
-                                "bold": bool(font_flags.value & (1 << 18)),
-                                "index": ci,
+                                "text": run["text"],
+                                "bbox": run["bbox"],
+                                "font": run["font"],
+                                "size": run["font_size"],
+                                "font_size_verified": True,
+                                "bold": run["bold"],
+                                "italic": run["italic"],
+                                "underline": run["underline"],
+                                "index": ri,
+                                "source_id": run["id"],
                             }
                         )
+                    if observation.backend["status"] != "OK":
+                        invalid_box += 1
                     full_background = [
                         bounds for bounds in image_boxes if area(bounds) / (w * h) >= 0.9
                     ]
@@ -320,12 +272,12 @@ def extract(
                     )
                     img_ratio = union_area(image_boxes) / (w * h)
                     reason = ["vector_text_overlap_review"] if ambiguous_paths else []
-                    info['font_size_rule'] = 'local_font_size_times_character_matrix_vertical_scale'
-                    if any(not c['font_size_verified'] for c in chars):
-                        reason.append('unverified_font_size_using_default_style')
+                    info["font_size_rule"] = "pdf_inspector_effective_run_font_size"
+                    if any(not c["font_size_verified"] for c in chars):
+                        reason.append("unverified_font_size_using_default_style")
                     if image_text_overlap:
                         reason.append("image_text_overlap_review")
-                    count = max(1, len(chars))
+                    count = max(1, sum(len(c["text"]) for c in chars))
                     if bad:
                         reason.append("abnormal_unicode")
                     if invalid_box / count > 0.01:
@@ -368,7 +320,10 @@ def extract(
                             text,
                             "native_pdf",
                             "question" if QUESTION.match(text) else "paragraph",
-                            {"pdf_char_indices": [c["index"] for c in row]},
+                            {
+                                "native_run_ids": [c["source_id"] for c in row],
+                                "backend": "pdf-inspector",
+                            },
                         )
                         b["content"]["runs"] = [
                             {
@@ -377,8 +332,8 @@ def extract(
                                 "font_family": c["font"] or None,
                                 "font_size_pt": c["size"] if c["font_size_verified"] else None,
                                 "bold": c["bold"],
-                                "italic": False,
-                                "underline": False,
+                                "italic": c["italic"],
+                                "underline": c["underline"],
                                 "superscript": False,
                                 "subscript": False,
                                 "color": None,
@@ -407,8 +362,16 @@ def extract(
                                 [bid],
                                 index,
                             )
+                        b["engine"] = "pdf-inspector"
+                        b["engine_version"] = extracted["version"]
+                        for candidate in b["content_candidates"]:
+                            candidate["model_id"] = "pdf-inspector"
+                            candidate["model_version"] = extracted["version"]
                         p["blocks"].append(b)
-                        ir["provenance"][bid] = {"pdf_char_indices": [c["index"] for c in row]}
+                        ir["provenance"][bid] = {
+                            "native_run_ids": [c["source_id"] for c in row],
+                            "backend": "pdf-inspector",
+                        }
                     for fi, f in enumerate(figures):
                         bid = f"p{index}-figure{fi}"
                         aid = crop(job, ir, p, f, bid)
@@ -458,10 +421,10 @@ def extract(
                             index,
                         )
                 finally:
-                    if textpage is not None:
-                        textpage.close()
-                    if bitmap is not None:
-                        bitmap.close()
-                    native.close()
+                    try:
+                        if bitmap is not None:
+                            bitmap.close()
+                    finally:
+                        native.close()
         finally:
             document.close()

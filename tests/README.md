@@ -30,3 +30,12 @@ tests/
    尚未按上述规则完成精简与确认；在任何提交前必须先审查。
 5. 现有数学试卷样本（JPG、纯图像输入、中文为主、含公式与多图）不能替代
    P1 所需的纯电子 PDF Fixture。
+
+## 完整门禁与平台策略（P2W-S1-02）
+
+最终使用 `uv run --locked python scripts/quality.py`，直接 pytest 仍用于局部开发。
+默认 collection/执行阶段禁止真实 Python HTTP/socket 网络；进程内 MockTransport/TestClient 可用。
+五个 JavaScript 处理器测试必须有 Node 24.18.0，缺失为错误。
+平台跳过仅允许[精确白名单](quality-skip-allowlist.json)；其他 skip、XFAIL、XPASS 使完整门禁失败。
+POSIX 权限与 Windows 应用访问隔离分别验证，不能以 chmod 位替代 Windows ACL。
+详见[质量门禁](../docs/26_QUALITY_GATE.md)。

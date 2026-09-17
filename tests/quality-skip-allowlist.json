@@ -1,0 +1,12 @@
+[
+  {
+    "nodeid": "tests/unit/test_raster_evidence.py::test_posix_evidence_permissions",
+    "platform": "win32",
+    "reason": "POSIX_MODE_NOT_APPLICABLE"
+  },
+  {
+    "nodeid": "tests/demo/test_output.py::test_symlink_path_security",
+    "platform": "win32",
+    "reason": "WINDOWS_SYMLINK_PRIVILEGE_UNAVAILABLE"
+  }
+]

@@ -101,7 +101,7 @@ GPU 模型网关 :8100（目标架构，尚未部署）
 本仓库自 T0001 起包含可运行的工程骨架。当前开发环境为 **macOS + zsh**，保留 Windows 路径兼容测试。
 跨机器复制后必须重建 `.venv`，不能复用 Windows 虚拟环境。
 完整操作见 [本机调试与 FRP](docs/25_LOCAL_DEVELOPMENT.md)。
-当前可运行的是领域配置与 Gate 契约工具；Core API、桌面 UI 和完整转换流水线尚未实现。
+当前可运行领域配置、Gate 契约工具及下述 DEMO-001 本机输出审阅原型；生产 Core API、桌面 UI 和完整转换流水线尚未实现。
 
 ### 目录
 
@@ -155,3 +155,16 @@ uv run mypy .          # 类型检查
 运行 `uv run --locked python scripts/docx_demo.py serve`，打开 `http://127.0.0.1:8765`。
 详见 [启动与审阅说明](prototypes/docx_output/README.md) 和
 [原型边界](prototypes/docx_output/prototype-scope.md)。它不代表完整生产转换链路或阶段验收。
+
+
+### 增量产品化计划（P2W）
+
+从 DEMO-001 继续开发，独立计划位于仓库外 `~/Plans/pdftoword-development-plan/`。
+[计划入口与旧任务映射](docs/development-plan/README.md)、
+[受限 profile 与交付边界](docs/decisions/productization-profile-v1.md)、
+[P2W-S1-01 基线报告](tasks/reports/P2W-S1-01_REPORT.md)已接入。
+新 P2W-S1–S4 编号与原 97 项 Ticket 分开维护；本次只交付 P2W-S1-01 待审阅。
+
+### S2 自动入口与混合区域识别
+
+已新增 pdf-inspector 原生提取、auto 本地路由、按计划授权的区域识别与独立结果作业。使用方式见[自动入口说明](docs/28_AUTO_MIXED_PDF.md)。功能验证与尚缺验收见后续 S2 交付记录；不自动改变 S1 接受状态。

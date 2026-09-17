@@ -1,0 +1,237 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "revision",
+    "status",
+    "items",
+    "events"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "product-dataset/1.1"
+    },
+    "dataset_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "DRAFT",
+        "FROZEN"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sample_id",
+          "document_family",
+          "category",
+          "split",
+          "usage",
+          "source_sha256",
+          "original_sha256",
+          "private_path",
+          "input_type",
+          "selected_pages",
+          "license_status",
+          "license_evidence",
+          "local_read_authorized",
+          "sensitivity",
+          "model_send_authorized",
+          "allowed_providers",
+          "participated_in_tuning",
+          "annotation_status",
+          "annotation_path",
+          "reviewer_type",
+          "family_review"
+        ],
+        "properties": {
+          "sample_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "document_family": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "category": {
+            "enum": [
+              "N",
+              "R",
+              "M",
+              "T",
+              "C",
+              "UNCLASSIFIED"
+            ]
+          },
+          "split": {
+            "enum": [
+              "development",
+              "validation",
+              "holdout"
+            ]
+          },
+          "usage": {
+            "enum": [
+              "initial",
+              "regression",
+              "reserve"
+            ]
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "original_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "private_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "input_type": {
+            "enum": [
+              "pdf",
+              "jpg",
+              "png"
+            ]
+          },
+          "selected_pages": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "license_status": {
+            "const": "CONFIRMED"
+          },
+          "license_evidence": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "local_read_authorized": {
+            "const": true
+          },
+          "sensitivity": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "synthetic"
+            ]
+          },
+          "model_send_authorized": {
+            "type": "boolean"
+          },
+          "allowed_providers": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "pp",
+                "ovis",
+                "monkey"
+              ]
+            }
+          },
+          "participated_in_tuning": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "annotation_status": {
+            "enum": [
+              "PENDING",
+              "PARTIAL",
+              "AGENT_VISUAL",
+              "REVIEWED_HUMAN"
+            ]
+          },
+          "annotation_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewer_type": {
+            "enum": [
+              null,
+              "human",
+              "agent_visual"
+            ]
+          },
+          "family_review": {
+            "enum": [
+              "PENDING",
+              "CONFIRMED"
+            ]
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event_id",
+          "sample_id",
+          "action",
+          "actor",
+          "timestamp",
+          "reason"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "sample_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "action": {
+            "enum": [
+              "holdout_access",
+              "tuning",
+              "reassign",
+              "replace",
+              "human_review"
+            ]
+          },
+          "actor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

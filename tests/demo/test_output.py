@@ -362,11 +362,23 @@ def test_html_and_path_security(private_case: Path) -> None:
     assert "<script>alert" not in html and "&lt;script&gt;" in html
     with pytest.raises(DemoError):
         safe_path(job, "../private")
-    (job / "escape").symlink_to(private_case)
-    with pytest.raises(DemoError):
-        safe_path(job, "escape/input.png")
     with pytest.raises(DemoError):
         job_path("../other", private_case)
+
+
+def test_symlink_path_security(private_case: Path) -> None:
+    """Skip only Windows' explicit missing-symlink-privilege error, never other failures."""
+    import sys
+
+    job, _, _ = setup_ir(private_case)
+    try:
+        (job / 'escape').symlink_to(private_case, target_is_directory=True)
+    except OSError as exc:
+        if sys.platform == 'win32' and exc.winerror == 1314:
+            pytest.skip('WINDOWS_SYMLINK_PRIVILEGE_UNAVAILABLE')
+        raise
+    with pytest.raises(DemoError):
+        safe_path(job, 'escape/input.png')
 
 
 def test_server_session_host_origin_and_assets(private_case: Path) -> None:

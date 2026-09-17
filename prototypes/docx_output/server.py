@@ -217,7 +217,7 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                 await file.close()
             validate_input(source)
             mode, pages = (
-                str(form.get("mode", "native")),
+                str(form.get("mode", "auto")),
                 str(form.get("pages", "")).strip() or None,
             )
 
@@ -243,6 +243,60 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
             if directory.exists():
                 shutil.rmtree(directory)
             raise
+
+    @app.get("/api/route/{job_id}")
+    def route_summary(job_id: str) -> Json:
+        job = job_path(job_id, output_root)
+        if not (job / "route-plan.json").is_file():
+            return {"available": False}
+        plan = read(job / "route-plan.json")
+        result_pages = (read(job / "region-results.json")["pages"]
+                        if (job / "region-results.json").exists() else plan["pages"])
+        return {
+            "available": True,
+            "plan_hash": plan["plan_hash"],
+            "request_budget": plan["request_budget"],
+            "provider_aliases": plan["provider_aliases"],
+            "status": plan["status"],
+            "executed": (job / "route-execution.json").exists() or plan["job_id"] != job.name,
+            "pages": [
+                {
+                    "page_index": p["page_index"],
+                    "page_type": p["page_type"],
+                    "content_state": p["content_state"],
+                    "regions": [
+                        {k: r[k] for k in ("region_id", "bbox", "route", "reason", "status")}
+                        for r in p["regions"]
+                    ],
+                }
+                for p in result_pages
+            ],
+        }
+
+    @app.post("/api/route/{job_id}/execute")
+    async def execute_route(job_id: str, request: Request) -> Json:
+        from .route_plan import execute_routes, validate_plan
+
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise DemoError("ROUTE_REQUEST_OBJECT_REQUIRED")
+        job = job_path(job_id, output_root)
+        plan_hash, budget = body.get("plan_hash"), body.get("budget")
+        if (
+            not isinstance(plan_hash, str)
+            or not isinstance(budget, int)
+            or isinstance(budget, bool)
+            or body.get("confirm_no_auth") is not True
+        ):
+            raise DemoError("EXPLICIT_MODEL_AUTHORIZATION_REQUIRED")
+        validate_plan(job, plan_hash, budget)
+        return start(lambda: execute_routes(job, plan_hash, budget, True))
+
+    @app.post("/api/route/{job_id}/cancel")
+    async def cancel_route(job_id: str) -> Json:
+        job = job_path(job_id, output_root)
+        save(job / "route-cancelled.json", {"cancelled": True})
+        return {"cancelled": True}
 
     @app.get("/api/job/{job_id}")
     def job_data(job_id: str) -> Json:
