@@ -96,7 +96,6 @@ def extract(
             for index in selected:
                 native = document[index]
                 bitmap = None
-                textpage = None
                 try:
                     w, h = native.get_size()
                     if not math.isfinite(w + h) or min(w, h) <= 0:
@@ -423,13 +422,9 @@ def extract(
                         )
                 finally:
                     try:
-                        if textpage is not None:
-                            textpage.close()
+                        if bitmap is not None:
+                            bitmap.close()
                     finally:
-                        try:
-                            if bitmap is not None:
-                                bitmap.close()
-                        finally:
-                            native.close()
+                        native.close()
         finally:
             document.close()
