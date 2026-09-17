@@ -1,5 +1,5 @@
-# Normalize text files to LF in the repository; checkout follows the
-# platform convention (core.autocrlf).
+# Normalize text files to LF in both the repository and working tree so
+# byte-hashed evidence remains stable across platforms.
 * text=auto eol=lf
 
 # Scripts that require explicit line endings.
