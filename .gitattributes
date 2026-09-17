@@ -1,6 +1,6 @@
 # Normalize text files to LF in the repository; checkout follows the
 # platform convention (core.autocrlf).
-* text=auto
+* text=auto eol=lf
 
 # Scripts that require explicit line endings.
 *.sh text eol=lf
