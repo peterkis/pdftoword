@@ -12,7 +12,7 @@ from pathlib import Path
 import httpx
 from jsonschema import Draft202012Validator
 
-from .common import ROOT, DemoError, Json, digest, job_path, read, save
+from .common import ROOT, DemoError, Json, box_valid, digest, job_path, read, save
 from .raster_bridge import PP_PARAMETERS, PROMPTS, endpoint
 from .structure import chat_content
 
@@ -153,7 +153,8 @@ def layout_purpose(body: Json, pixel_size: list[int]) -> str:
             "use_doc_preprocessor"
         ):
             raise DemoError("COORDINATE_MAPPING_UNRESOLVED")
-        labels = {r["block_label"] for r in raw["parsing_res_list"]}
+        entries = raw["parsing_res_list"]
+        labels = {r["block_label"] for r in entries}
         if not labels:
             return "unknown"
         figure = {"image", "figure", "chart", "seal"}
@@ -172,6 +173,17 @@ def layout_purpose(body: Json, pixel_size: list[int]) -> str:
         }
         if labels <= figure:
             return "figure"
+        # A single text box covering the whole crop is a common false positive
+        # on illustrations. Keep the image pending review instead of replacing
+        # it with unconstrained OCR content.
+        if labels == {"text"} and len(entries) == 1:
+            bbox = entries[0].get("block_bbox")
+            if (
+                box_valid(bbox)
+                and bbox[2] - bbox[0] >= raw["width"] * 0.95
+                and bbox[3] - bbox[1] >= raw["height"] * 0.95
+            ):
+                return "unknown"
         if labels <= text:
             return "text"
         if labels <= (text | figure) and labels & text:
