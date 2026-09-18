@@ -488,3 +488,55 @@ def test_unsupported_block_semantics_are_not_silently_flattened(case: Path, kind
         loss["code"] == "BLOCK_TYPE_UNSUPPORTED" and loss["block_type"] == kind
         for loss in audit["losses"]
     )
+
+
+@pytest.mark.parametrize("cropped", [False, True])
+def test_image_visibility_and_source_dimensions(case: Path, cropped: bool) -> None:
+    from docx.oxml import OxmlElement
+    from docx.shared import Pt
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    source, ir = source_job(case)
+    asset = ir["assets"][0]
+    doc = Document()
+    shape = doc.add_picture(str(source / asset["path"]), width=Pt(1), height=Pt(1))
+    if cropped:
+        crop = OxmlElement("a:srcRect")
+        crop.set("l", "50000")
+        shape._inline.xpath(".//pic:blipFill")[0].append(crop)
+    raw, target = case / "raw-image.docx", case / "bound-image.docx"
+    doc.save(str(raw))
+    entry = {
+        "block": ir["pages"][0]["blocks"][1],
+        "raw": {"type": "image", "content": "", "image_path": asset["path"]},
+    }
+    if cropped:
+        with pytest.raises(DemoError, match="DOCVORTEX_IMAGE_GEOMETRY_UNSUPPORTED"):
+            bind_source_ranges(raw, target, ir, [entry])
+        assert not target.exists()
+    else:
+        bind_source_ranges(raw, target, ir, [entry])
+        output = Document(str(target)).inline_shapes[0]
+        from PIL import Image
+
+        with Image.open(source / asset["path"]) as original:
+            width, height = original.size
+        assert output.width == Pt(90)
+        assert abs(output.height / output.width - height / width) < 0.00001
+
+
+def test_table_header_semantics_explicitly_unsupported(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = "table"
+    ir["pages"][0]["blocks"][0]["content"]["plain_text"] = "A"
+    ir["metadata"]["structure_evidence"] = {
+        "question": {"selected_html": "<table><thead><tr><th>A</th></tr></thead></table>"}
+    }
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"]
+    assert any(loss["code"] == "DOCVORTEX_TABLE_HEADER_UNSUPPORTED" for loss in audit["losses"])

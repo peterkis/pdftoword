@@ -20,7 +20,7 @@ from ..structure_processors.bridge import bridge, direct_middle, inline_text, ta
 from ..writer import fonts, inspect_package
 from .capabilities import unsupported
 from .legacy import LegacyRenderer
-from .verification import verify_formula, verify_inline_order, verify_table
+from .verification import preserve_image_geometry, verify_formula, verify_inline_order, verify_table
 
 
 def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -> list[Json]:
@@ -85,13 +85,15 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
             if len(blips) != 1:
                 raise DemoError("DOCVORTEX_IMAGE_RANGE_MISMATCH")
             rid = blips[0].get(qn("r:embed"))
-            image_hash = hashlib.sha256(doc.part.related_parts[rid].blob).hexdigest()
+            image_bytes = doc.part.related_parts[rid].blob
+            image_hash = hashlib.sha256(image_bytes).hexdigest()
             aid = b["content"]["source_asset_id"] if formula_image else b["content"]["asset_id"]
             asset = next(a for a in ir["assets"] if a["id"] == aid)
             if asset["path"] != source["image_path"]:
                 raise DemoError("DOCVORTEX_SOURCE_ASSET_MISMATCH")
             if image_hash != asset["sha256"]:
                 raise DemoError("DOCVORTEX_IMAGE_BYTES_CHANGED")
+            preserve_image_geometry(element, image_bytes, asset["source_bbox"])
             images.append(
                 {
                     "sha256": image_hash,

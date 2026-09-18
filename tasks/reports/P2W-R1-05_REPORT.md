@@ -196,3 +196,10 @@ User clarification: issues affecting experimental credibility must be fixed; cap
 List/list_item and other unimplemented structural block types now fail the renderer capability allowlist with BLOCK_TYPE_UNSUPPORTED. They leave explicit fallback evidence instead of being silently flattened and accepted. This is a capability boundary, not implementation of list rendering. List boundaries are deferred to P2W-R2-01 and list/heading style support to P2W-R2-02 under the existing plan. Text-backed figures also fail their capability check.
 
 Nine actual renderer regressions cover unsupported block kinds. Full quality pr8-quality-r10: 1362 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 11: image visibility and unsupported table headers
+
+Verified image bytes are no longer sufficient for acceptance: cropped or transformed drawings are rejected. Supported inline images are sized using source-asset width, original pixel aspect ratio and the existing Legacy printable bounds. Regressions verify crop rejection and restoration of a tiny drawing to source dimensions. Table thead/th/tfoot semantics are explicitly unsupported and leave fallback evidence; full table-header support is deferred to P2W-R3-02.
+
+The initial focused image test used bbox aspect ratio rather than pixel aspect ratio and failed; the assertion was corrected to verify preservation of the actual asset pixels. That failed run remains pr8-r11-focused.txt. Final quality pr8-quality-r11: 1365 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

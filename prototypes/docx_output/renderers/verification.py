@@ -21,7 +21,9 @@ def verify_table(element: Any, markup: str, parent: Any) -> None:
     tables = root.findall(".//table")
     if len(tables) != 1 or element.tag != qn("w:tbl"):
         raise DemoError("DOCVORTEX_TABLE_TOPOLOGY_UNVERIFIED")
-    rows = tables[0].xpath("./tr|./thead/tr|./tbody/tr|./tfoot/tr")
+    if tables[0].xpath(".//thead|.//th|.//tfoot"):
+        raise DemoError("DOCVORTEX_TABLE_HEADER_UNSUPPORTED")
+    rows = tables[0].xpath("./tr|./tbody/tr")
     occupied: dict[tuple[int, int], tuple[int, int, int, int, str]] = {}
     expected = []
     try:
@@ -140,3 +142,36 @@ def verify_inline_order(element: Any, spans: list[Any]) -> None:
             raise DemoError("DOCVORTEX_INLINE_ORDER_CHANGED")
         if kind == "math":
             verify_formula(output, source)
+
+
+def preserve_image_geometry(element: Any, image_bytes: bytes, source_bbox: list[float]) -> None:
+    """Reject visual cropping/transforms and apply the supported Legacy image dimensions."""
+    import io
+
+    from docx.shape import InlineShape
+    from docx.shared import Pt
+    from PIL import Image
+
+    try:
+        for crop in element.xpath(".//a:srcRect"):
+            if any(int(value) != 0 for value in crop.attrib.values()):
+                raise ValueError
+        for transform in element.xpath(".//a:xfrm"):
+            if any(
+                transform.get(key, "0") not in {"0", "false"} for key in ("rot", "flipH", "flipV")
+            ):
+                raise ValueError
+        if element.xpath(".//wp:anchor"):
+            raise ValueError
+        inline = element.xpath(".//wp:inline")
+        if len(inline) != 1 or len(element.xpath(".//pic:pic")) != 1:
+            raise ValueError
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            width, height = image.size
+        natural = max(1.0, source_bbox[2] - source_bbox[0])
+        display_width = min(505.28, natural, 650 * width / height)
+        shape = InlineShape(inline[0])
+        shape.width = Pt(display_width)
+        shape.height = Pt(display_width * height / width)
+    except (ValueError, OSError, ZeroDivisionError):
+        raise DemoError("DOCVORTEX_IMAGE_GEOMETRY_UNSUPPORTED") from None
