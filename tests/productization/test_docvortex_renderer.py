@@ -778,3 +778,19 @@ def test_image_alternative_text_is_explicitly_unsupported(case: Path) -> None:
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "IMAGE_ALT_TEXT_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize(
+    "placement", ["below_stem", "right_of_stem", "option_grid", "full_width", "local_group"]
+)
+def test_noninline_image_placement_explicitly_unsupported(case: Path, placement: str) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][1]["content"]["placement_hint"] = placement
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "IMAGE_PLACEMENT_UNSUPPORTED" for loss in audit["losses"])

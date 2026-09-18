@@ -280,3 +280,8 @@ The renderer reports source IDs of accepted non-image formula outputs; finish us
 ## PR #8 review round 24: unsupported image alternative text
 
 Non-null image alt_text now triggers IMAGE_ALT_TEXT_UNSUPPORTED before SDK rendering, with retained fallback evidence. An actual-render regression verifies the boundary; alternative-text writing remains a later capability, not implemented in this POC. Full quality pr8-quality-r24: 1392 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 25: unsupported image placement hints
+
+Only null/inline image placement is supported; below_stem/right_of_stem/option_grid/full_width/local_group explicitly trigger IMAGE_PLACEMENT_UNSUPPORTED with retained audit evidence before SDK execution. Five regressions cover the schema's non-inline values. These layouts remain with later flow/figure-placement work rather than being implemented here. Full quality pr8-quality-r25: 1397 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
