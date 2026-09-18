@@ -306,3 +306,32 @@ def test_reassociated_manual_warning_keeps_unique_issue_id(case: Path) -> None:
         assert len(result["issues"]) == 2
         assert len({item["id"] for item in result["issues"]}) == 2
         assert manual in result["issues"]
+
+
+@pytest.mark.parametrize("action", ["text", "candidate"])
+@pytest.mark.parametrize("kind", ["heading", "continuation"])
+def test_actual_review_operations_lock_selected_manual_content(
+    case: Path, action: str, kind: str
+) -> None:
+    from prototypes.docx_output.common import candidate
+    from prototypes.docx_output.review import apply_overrides
+
+    ir = text_ir(case) if kind == "heading" else continuation_ir(case)
+    block = ir["pages"][0]["blocks"][0]
+    text = "a manually corrected paragraph"
+    operation = {"action": action, "block_id": block["id"], "reason": "Synthetic review"}
+    if action == "text":
+        operation["text"] = text
+    else:
+        option = candidate("review-choice", "ovis_ocr2", text, {})
+        option["selected"] = False
+        block["content_candidates"].append(option)
+        operation["candidate_id"] = option["id"]
+    reviewed = apply_overrides(case, ir, {"operations": [operation]})
+    selected = reviewed["pages"][0]["blocks"][0]
+    assert selected["source_type"] != "manual_correction"
+    assert selected["geometry_source"] != "manual_correction"
+    result = DocVortexStructureProcessor().process(reviewed)
+    assert not any(proposal["adopted"] for proposal in result.loss_report["proposals"])
+    assert not result.document["relations"]
+    assert result.document["pages"][0]["blocks"][0]["content"]["plain_text"] == text
