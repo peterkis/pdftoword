@@ -217,3 +217,8 @@ The call-count finding is not reproducible: two extra negative calls are in test
 ## PR #8 review round 13: unsupported image modes
 
 Only preserve_as_image is supported for imageContent in the DocVortex renderer. editable_text and metadata_only explicitly fail capability checks with IMAGE_RENDER_MODE_UNSUPPORTED before SDK execution; no new mode implementation was added. Two actual-render regressions verify the fallback audit. Full quality pr8-quality-r13: 1369 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 14: manually reassociated warning IDs
+
+A recurring stage warning now reuses its previous ID only when no retained/manual warning occupies it; otherwise it allocates a reserved fresh ID. The regression changes manual block association and processes two subsequent edits, verifying both records survive with unique IDs. Full quality pr8-quality-r14: 1370 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

@@ -252,7 +252,7 @@ class DocVortexStructureProcessor:
             old = next(
                 (item for item in prior_issue_records if issue_key(item) == issue_key(fresh)), None
             )
-            if old is not None:
+            if old is not None and all(item["id"] != old["id"] for item in candidate["issues"]):
                 fresh["id"] = old["id"]
             else:
                 index = len(reserved_issue_ids)

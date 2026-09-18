@@ -293,3 +293,16 @@ def test_reprocessing_preserves_managed_and_unrelated_issues(case: Path) -> None
         result["pages"][0]["blocks"][0]["content"]["plain_text"] = text
         result = processor.process(result).document
         assert result["issues"] == expected
+
+
+def test_reassociated_manual_warning_keeps_unique_issue_id(case: Path) -> None:
+    processor = DocVortexStructureProcessor()
+    result = processor.process(text_ir(case, "first\nsecond")).document
+    result["issues"][0]["block_ids"] = []
+    manual = copy.deepcopy(result["issues"][0])
+    for text in ["changed\nsecond", "another\nsecond"]:
+        result["pages"][0]["blocks"][0]["content"]["plain_text"] = text
+        result = processor.process(result).document
+        assert len(result["issues"]) == 2
+        assert len({item["id"] for item in result["issues"]}) == 2
+        assert manual in result["issues"]
