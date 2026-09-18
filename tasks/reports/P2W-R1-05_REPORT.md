@@ -340,3 +340,8 @@ Any nonempty block children list explicitly produces BLOCK_CHILDREN_UNSUPPORTED 
 ## PR #8 review round 33: closed output payload binding
 
 Body-level payloads outside paragraphs/tables/section properties are rejected. Paragraph/run semantic wrappers, numbering/embedded sections and header/footer story references are unsupported; unselected math in plain text is rejected. Non-table sources must bind to paragraphs. Six regressions cover wrapped extra content, a substituted table container, added math and unbound header/footer stories. Full quality pr8-quality-r33-final: 1424 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 34: break semantics
+
+Only absent/textWrapping w:br types are accepted as source newlines; page/column breaks explicitly reject with DOCVORTEX_BREAK_TYPE_UNSUPPORTED. Four regressions preserve ordinary line breaks while rejecting forced pagination/columns. Full quality pr8-quality-r34: 1428 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

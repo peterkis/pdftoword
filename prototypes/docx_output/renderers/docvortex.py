@@ -46,6 +46,9 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
             raise DemoError("DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED")
     if body.xpath(".//w:numPr|.//w:pPr/w:sectPr|.//w:headerReference|.//w:footerReference"):
         raise DemoError("DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED")
+    for line_break in body.xpath(".//w:br"):
+        if line_break.get(qn("w:type"), "textWrapping") != "textWrapping":
+            raise DemoError("DOCVORTEX_BREAK_TYPE_UNSUPPORTED")
     elements = [e for e in body if e.tag in {qn("w:p"), qn("w:tbl")}]
     if len(elements) != len(entries):
         raise DemoError("DOCVORTEX_OUTPUT_RANGE_COUNT_MISMATCH")

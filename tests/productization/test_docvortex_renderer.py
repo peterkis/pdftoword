@@ -1067,3 +1067,27 @@ def test_unmapped_header_footer_story_is_rejected(case: Path, story: str) -> Non
             [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}],
         )
     assert not target.exists()
+
+
+@pytest.mark.parametrize("kind", [None, "textWrapping", "page", "column"])
+def test_only_text_wrapping_breaks_match_source_newlines(case: Path, kind: str | None) -> None:
+    from docx.oxml.ns import qn
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    b["content"]["plain_text"] = "A\nB"
+    doc = Document()
+    paragraph = doc.add_paragraph("A\nB")
+    if kind is not None:
+        paragraph._p.xpath(".//w:br")[0].set(qn("w:type"), kind)
+    raw, target = case / "break.docx", case / "bound.docx"
+    doc.save(str(raw))
+    entries = [{"block": b, "raw": {"type": "text", "content": "A\nB"}}]
+    if kind in {"page", "column"}:
+        with pytest.raises(DemoError, match="DOCVORTEX_BREAK_TYPE_UNSUPPORTED"):
+            bind_source_ranges(raw, target, ir, entries)
+        assert not target.exists()
+    else:
+        bind_source_ranges(raw, target, ir, entries)
+        assert Document(str(target)).paragraphs[0].text == "A\nB"
