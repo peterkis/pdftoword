@@ -124,13 +124,12 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     item["content"] = copy.deepcopy(evidence["inline_spans"])
             elif kind == "formula" and content.get("latex"):
                 item.update(type="equation", content=content["latex"])
-                if content.get("source_asset_id") and (
-                    not for_renderer or content.get("render_mode") == "omml_with_image_fallback"
-                ):
-                    assets = {a["id"]: a for a in selected["assets"]}
-                    aid = content["source_asset_id"]
-                    if aid in assets:
-                        item["image_path"] = assets[aid]["path"]
+                assets = {asset["id"]: asset for asset in selected["assets"]}
+                aid = content["source_asset_id"]
+                if aid not in assets:
+                    raise DemoError("BRIDGE_FORMULA_ASSET_MISSING")
+                if not for_renderer or content.get("render_mode") == "omml_with_image_fallback":
+                    item["image_path"] = assets[aid]["path"]
             else:
                 raise DemoError("BRIDGE_UNSUPPORTED_CONTENT")
             if evidence.get("coordinate_space") == "pdf_points" and evidence.get("lines"):

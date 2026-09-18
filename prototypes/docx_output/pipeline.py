@@ -140,7 +140,8 @@ def finish(
                 or (
                     b["content"]["kind"] == "text"
                     and b["type"] in {
-                        "paragraph", "heading", "question", "option", "formula", "table"
+                        "paragraph", "heading", "question", "option", "formula", "table",
+                        "major_question", "subquestion", "text_line", "text_span"
                     }
                     and not re.fullmatch(
                         r"[A-D][.．、]?", b["content"].get("plain_text", "").strip()

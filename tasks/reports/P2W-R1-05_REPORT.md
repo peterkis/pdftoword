@@ -285,3 +285,8 @@ Non-null image alt_text now triggers IMAGE_ALT_TEXT_UNSUPPORTED before SDK rende
 ## PR #8 review round 25: unsupported image placement hints
 
 Only null/inline image placement is supported; below_stem/right_of_stem/option_grid/full_width/local_group explicitly trigger IMAGE_PLACEMENT_UNSUPPORTED with retained audit evidence before SDK execution. Five regressions cover the schema's non-inline values. These layouts remain with later flow/figure-placement work rather than being implemented here. Full quality pr8-quality-r25: 1397 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 26: main-text editability and formula source references
+
+Page editability includes supported major_question/subquestion/text_line/text_span main content. Formula source_asset_id must resolve before public projection even for valid OMML-only LaTeX; a dangling reference leaves explicit rejection evidence. Five actual-path regressions cover these cases. Focused renderer tests: 71 passed. Full quality pr8-quality-r26: 1402 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

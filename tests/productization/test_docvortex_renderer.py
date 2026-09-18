@@ -794,3 +794,46 @@ def test_noninline_image_placement_explicitly_unsupported(case: Path, placement:
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "IMAGE_PLACEMENT_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize("kind", ["major_question", "subquestion", "text_line", "text_span"])
+def test_supported_main_text_page_is_editable(case: Path, kind: str) -> None:
+    from prototypes.docx_output.pipeline import finish
+
+    source, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    b["type"] = kind
+    ir["pages"][0]["blocks"] = [b]
+    ir["pages"][0]["reading_order"] = [b["id"]]
+    ir["relations"] = []
+    target = case / "main-text-output"
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("*.docx"))
+    qa = finish(target, ir, renderer=DocVortexRenderer())
+    assert qa["page_editable_content"] == {"0": True}
+    assert qa["execution_status"] == "COMPLETE"
+
+
+def test_formula_source_reference_must_resolve_even_for_valid_omml(case: Path) -> None:
+    source, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    b.update(type="formula", render_policy="editable")
+    b["content"] = {
+        "kind": "formula",
+        "latex": "x^2",
+        "mathml": None,
+        "source_asset_id": "missing",
+        "render_mode": "omml",
+        "confidence": 0,
+        "omml_status": "pending",
+    }
+    target = new_job(case / "jobs")
+    for asset in ir["assets"]:
+        destination = target / asset["path"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / asset["path"], destination)
+    with pytest.raises(DemoError):
+        DocVortexRenderer().render(target, RenderPlan.from_ir(ir), "auto")
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "BRIDGE_FORMULA_ASSET_MISSING" for loss in audit["losses"])
+    assert not (target / "auto.docx").exists()
