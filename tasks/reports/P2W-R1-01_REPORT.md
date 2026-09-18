@@ -101,3 +101,18 @@
 - 公共入口按提供的审查清单登记：`docvortex.postprocess.document.model_json_to_middle_json`、`docvortex.content.table.*` 的白名单函数、`docvortex.render.docx.render_docx`。没有导入内部实现。
 - 六项 MU-HEADING / MU-PARAGRAPH / MU-TABLE / MU-FORMULA / MU-CAPTION / MU-ORDER 都绑定 R1-05 及后续 R1/R2/R3 必做任务。阅读顺序不把 index 排序等同模型预测。
 - 采用/适配/拒绝尚无运行结论；公共共享层的字段损失、依赖许可和项目差异在 R1-05 用实际固定版本验证。本项仅 Legacy identity loss-report 可执行。
+
+
+## PR #7 首轮审查修复（2026-09-18）
+
+Codex 对 `9cfb53a` 提出的 3 个 P2 均有复现与修复：
+
+- staged input 统一验证 PDF/PNG/JPG/JPEG，篡改拒绝。
+- stored response 独立于 raw 路径校验，复用缓存按已有 region/provider 命名契约定位 JSON；缺失、篡改均拒绝。
+- RenderPlan elements 通过块 ID 查表，遵循显式 reading_order，与 Legacy 输出一致。
+
+`uv run pytest tests/productization/test_renderer_boundary.py -q`：修复前 6 failed / 11 passed，修复后 17 passed。日志 `tmp/docx-demo/r1-01-evidence/review-{red,green}.txt`。定向 Ruff/mypy exit 0，`git diff --check` exit 0。
+
+`uv run scripts/quality.py --output-dir tmp/docx-demo/r1-01-evidence/review-quality`：1299 passed、无失败/跳过；Ruff/schema/catalog/baseline 正常，全仓 mypy 仍为已知私有 19 错误，整体 exit 1。
+
+真实问题页再次在禁网条件下生成 A/B，34 个旧文件不变，DOCX 内容部件及来源语义与原版一致。新证据在 `tmp/docx-demo/r1-01-review-fixes/`，原证据不覆盖；产物 ID/hash 见 `P2W-R1-01_REVIEW_FIXES.json`。视觉与 Word 接受仍 NOT_RUN。此记录是修复验证，不预先宣称后续远端审查通过。

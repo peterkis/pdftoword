@@ -34,7 +34,9 @@ class RenderPlan:
                      "style_ref": "Heading 1" if b["type"] == "heading" else
                      "Caption" if b["type"] in {"caption", "footer"} else "Normal",
                      "source_style_ref": b.get("style_ref")}
-                    for p in self.document["pages"] for b in p["blocks"]]}
+                    for p in self.document["pages"]
+                    for by_id in [{b["id"]: b for b in p["blocks"]}]
+                    for bid in p["reading_order"] for b in [by_id[bid]]]}
 
     def legacy_ir(self) -> Json:
         """Reject unsupported layout instead of silently dropping plan directives."""

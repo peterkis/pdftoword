@@ -216,3 +216,50 @@ def test_sealed_responses_verify_both_wire_and_stored(case: Path) -> None:
     stored.write_text(json.dumps({"changed": True}))
     with pytest.raises(DemoError, match="STORED_RESPONSE_HASH"):
         compare_renderers(source, output_root=case / "jobs")
+
+
+@pytest.mark.parametrize("suffix", [".png", ".jpg", ".jpeg", ".pdf"])
+def test_staged_input_hash_all_formats(case: Path, suffix: str) -> None:
+    source, ir = source_job(case)
+    staged = source / ("input" + suffix)
+    staged.write_bytes(b"synthetic original bytes")
+    ir["source"]["sha256"] = digest(staged)
+    ir["source"]["filename"] = "original" + suffix
+    save(source / "layout.auto.json", ir)
+    compare_renderers(source, output_root=case / "valid-jobs")
+    staged.write_bytes(b"altered staged input")
+    with pytest.raises(DemoError, match="INPUT_HASH_MISMATCH"):
+        compare_renderers(source, output_root=case / "invalid-jobs")
+    assert not (case / "invalid-jobs").exists()
+
+
+@pytest.mark.parametrize("fault", ["tampered", "missing"])
+def test_cached_response_without_wire_path(case: Path, fault: str) -> None:
+    source, _ = source_job(case)
+    stored = source / "response-p0-region0-pp.json"
+    save(stored, {"synthetic": True})
+    save(source / "request-manifest.json", {"requests": [{
+        "region_id": "p0-region0", "provider": "pp", "status": "COMPLETE",
+        "http_attempted": False, "stored_response_sha256": digest(stored),
+        "reused_from": {"job_id": "prior", "hash_basis": "stored_normalized_json"},
+    }]})
+    compare_renderers(source, output_root=case / "valid-jobs")
+    if fault == "tampered":
+        save(stored, {"changed": True})
+    else:
+        stored.unlink()
+    with pytest.raises(DemoError, match="STORED_RESPONSE_HASH"):
+        compare_renderers(source, output_root=case / "invalid-jobs")
+    assert not (case / "invalid-jobs").exists()
+
+
+def test_plan_elements_follow_explicit_reading_order(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"].reverse()
+    plan = RenderPlan.from_ir(ir)
+    assert [e["source_ids"][0] for e in plan.as_dict()["elements"]] == ["question", "figure"]
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(source, output_root=case / "jobs")
+    for row in read(comparison / "comparison.json")["outputs"]:
+        child = case / "jobs" / row["job_id"]
+        assert xml_parts(child / "auto.docx") == xml_parts(source / "auto.docx")

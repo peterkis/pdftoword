@@ -32,21 +32,35 @@ def verify_source(source: Path, ir: Json, hashes: dict[str, str]) -> Json:
         source / "request-manifest.json"
     ).exists() else {}
     verified = 0
+    verified_raw = 0
     for request in manifest.get("requests", []):
-        if name := request.get("raw_response_path"):
-            safe_path(source, name)
-            if hashes.get(name) != request.get("response_sha256") or name not in hashes:
+        raw_name = request.get("raw_response_path")
+        if raw_name:
+            safe_path(source, raw_name)
+            if hashes.get(raw_name) != request.get("response_sha256") or raw_name not in hashes:
                 raise DemoError("RESPONSE_HASH_MISMATCH_OR_MISSING")
-            stored_name = str(Path(name).with_suffix(".json"))
-            if request.get("stored_response_sha256") and (
-                hashes.get(stored_name) != request["stored_response_sha256"]
-            ):
+            verified_raw += 1
+        if stored_hash := request.get("stored_response_sha256"):
+            if raw_name:
+                stored_name = str(Path(raw_name).with_suffix(".json"))
+            elif request.get("region_id") and request.get("provider"):
+                stored_name = f"response-{request['region_id']}-{request['provider']}.json"
+            else:
+                raise DemoError("STORED_RESPONSE_PATH_MISSING")
+            safe_path(source, stored_name)
+            if hashes.get(stored_name) != stored_hash:
                 raise DemoError("STORED_RESPONSE_HASH_MISMATCH_OR_MISSING")
             verified += 1
-    if "input.pdf" in hashes and hashes["input.pdf"] != ir["source"]["sha256"]:
-        raise DemoError("INPUT_HASH_MISMATCH")
+    staged_inputs = [name for name in hashes if Path(name).parent == Path(".")
+                     and Path(name).stem == "input"
+                     and Path(name).suffix.lower() in {".pdf", ".png", ".jpg", ".jpeg"}]
+    for name in staged_inputs:
+        if hashes[name] != ir["source"]["sha256"]:
+            raise DemoError("INPUT_HASH_MISMATCH")
     return {"historical_request_count": len(manifest.get("requests", [])),
             "verified_stored_responses": verified,
+            "verified_raw_responses": verified_raw,
+            "verified_staged_inputs": staged_inputs,
             "response_reexecution_count": 0,
             "provider_versions": ir.get("model_registry", {}),
             "unsealed_files": "snapshot_sha256_only_not_historical_authentication"}
