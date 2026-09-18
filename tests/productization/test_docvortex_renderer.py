@@ -229,7 +229,7 @@ def test_table_html_cannot_bypass_local_asset_registry(case: Path, source_kind: 
     assert not (case / "forbidden.docx").exists()
 
 
-def test_editable_table_has_one_verified_source_range(case: Path) -> None:
+def test_table_width_limit_keeps_raw_candidate_and_explicit_rejection(case: Path) -> None:
     source, ir = source_job(case)
     ir["pages"][0]["blocks"][0]["type"] = "table"
     ir["pages"][0]["blocks"][0]["content"]["plain_text"] = "ABC"
@@ -245,18 +245,15 @@ def test_editable_table_has_one_verified_source_range(case: Path) -> None:
         source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
     )
     b = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
-    assert not read(b / "docvortex-render-audit.auto.json")["fallback"]
-    assert len(Document(str(b / "auto.docx")).tables) == 1
-    mapping = read(b / "source-map.auto.json")
-    assert mapping["blocks"][0]["kind"] == "table"
-    with zipfile.ZipFile(b / "auto.docx") as package:
-        xml = etree.fromstring(package.read("word/document.xml"))
-        ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
-        marker = xml.xpath(
-            "//w:bookmarkStart[@w:name=$name]", namespaces=ns, name=mapping["blocks"][0]["marker"]
-        )[0]
-        assert marker.getnext().tag.endswith("}tbl")
-        assert marker.getnext().getnext().tag.endswith("}bookmarkEnd")
+    audit = read(b / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "COMPLETE"
+    assert any(
+        loss["code"] == "DOCVORTEX_VISIBILITY_UNSUPPORTED:UNSUPPORTED_TABLE_WIDTH"
+        for loss in audit["losses"]
+    )
+    assert len(Document(str(b / audit["raw_docx"])).tables) == 1
+    assert Document(str(b / "auto.docx")).paragraphs[0].text == "ABC"
+    assert read(b / "render-manifest.auto.json")["effective_renderer"] == "legacy"
 
 
 def test_deduplicated_image_paths_keep_distinct_source_boxes(case: Path) -> None:
@@ -293,8 +290,10 @@ def test_ordinary_html_table_with_void_tag_and_entity(case: Path) -> None:
         source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
     )
     target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
-    assert not read(target / "docvortex-render-audit.auto.json")["fallback"]
-    assert Document(str(target / "auto.docx")).tables[0].cell(0, 0).text == "A\nB\u00a0C"
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "COMPLETE"
+    assert Document(str(target / audit["raw_docx"])).tables[0].cell(0, 0).text == "A\nB\u00a0C"
+    assert Document(str(target / "auto.docx")).paragraphs[0].text == "A\nB\u00a0C"
 
 
 @pytest.mark.parametrize("change", ["boundaries", "merge"])
@@ -851,3 +850,44 @@ def test_rotated_blocks_are_explicitly_unsupported(case: Path, index: int) -> No
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "BLOCK_ROTATION_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize("rotation", [90, 180, 270])
+def test_page_rotation_is_explicitly_unsupported(case: Path, rotation: int) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["rotation"] = rotation
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "PAGE_ROTATION_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize("mode", ["direct", "inherited", "white"])
+def test_invisible_text_is_rejected_before_publishing(case: Path, mode: str) -> None:
+    from docx.shared import RGBColor
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    doc = Document()
+    run = doc.add_paragraph().add_run(b["content"]["plain_text"])
+    if mode == "direct":
+        run.font.hidden = True
+    elif mode == "inherited":
+        doc.styles["Normal"].font.hidden = True
+    else:
+        run.font.color.rgb = RGBColor(255, 255, 255)
+    raw, target = case / "hidden.docx", case / "rejected.docx"
+    doc.save(str(raw))
+    with pytest.raises(DemoError, match="DOCVORTEX_VISIBILITY_UNSUPPORTED"):
+        bind_source_ranges(
+            raw,
+            target,
+            ir,
+            [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}],
+        )
+    assert not target.exists()

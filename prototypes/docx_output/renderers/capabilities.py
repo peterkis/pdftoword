@@ -18,6 +18,8 @@ def unsupported(plan: RenderPlan) -> list[Json]:
         if ir["metadata"].get(key):
             findings.append({"code": "LEGACY_GROUPING_UNSUPPORTED", "field": key})
     for page in ir["pages"]:
+        if page.get("rotation") not in {None, 0}:
+            findings.append({"code": "PAGE_ROTATION_UNSUPPORTED", "page_index": page["page_index"]})
         for b in page["blocks"]:
             if b["type"] not in {
                 "paragraph",

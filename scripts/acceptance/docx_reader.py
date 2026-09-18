@@ -452,6 +452,12 @@ def _body_regions(document: Any) -> list[tuple[int, int, int, int]]:
     return regions
 
 
+def validate_visible_content(document: Any, styles: Any, font_table: Any, theme: Any) -> None:
+    """Reject invisible or unverified presentation without consulting any reference content."""
+    if _hidden_content(document, styles, font_table, theme):
+        raise ValueError("HIDDEN_CONTENT")
+
+
 def _hidden_content(document: Any, styles: Any, font_table: Any, theme: Any) -> bool:
     """Resolve vanish through defaults and used paragraph/character style chains."""
     val = f"{{{NS['w']}}}val"

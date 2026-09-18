@@ -7,13 +7,14 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 from docx.text.paragraph import Paragraph
 from lxml import etree
 
-from ..common import DemoError, Json, digest, safe_path, save
+from ..common import ROOT, DemoError, Json, digest, safe_path, save
 from ..docvortex_runtime import call_worker, local_implementation_identity
 from ..planning.render_plan import RenderPlan
 from ..structure_processors.bridge import bridge, direct_middle, inline_text, table_text
@@ -147,6 +148,33 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
         style.element.get_or_add_rPr().get_or_add_rFonts().set(
             qn("w:eastAsia"), info["east_asia"] or "sans-serif"
         )
+    from importlib.util import module_from_spec, spec_from_file_location
+
+    spec = spec_from_file_location(
+        "p2w_visibility_reader", ROOT / "scripts/acceptance/docx_reader.py"
+    )
+    if spec is None or spec.loader is None:
+        raise DemoError("DOCVORTEX_VISIBILITY_HELPER_UNAVAILABLE")
+    visibility = module_from_spec(spec)
+    spec.loader.exec_module(visibility)
+    xml = visibility.xml
+
+    def related_xml(kind: str, empty: str) -> Any:
+        try:
+            part = doc.part.part_related_by(kind)
+        except KeyError:
+            return etree.Element(qn(empty))
+        return xml(part.blob)
+
+    try:
+        visibility.validate_visible_content(
+            xml(etree.tostring(doc.element)),
+            xml(etree.tostring(doc.styles.element)),
+            related_xml(RT.FONT_TABLE, "w:fonts"),
+            related_xml(RT.THEME, "a:theme"),
+        )
+    except ValueError as exc:
+        raise DemoError("DOCVORTEX_VISIBILITY_UNSUPPORTED:" + str(exc)) from None
     doc.save(str(target))
     return records
 

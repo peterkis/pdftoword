@@ -302,3 +302,12 @@ The f7cf512 Ubuntu CI again failed only the existing synthetic CLI/API acceptanc
 ## Synthetic CI failure diagnostic follow-up
 
 The d1379fc Ubuntu artifact classifies the repeated fixture failure as worker_exit / AssertionError (pr8-r27-ubuntu/acceptance-fixture-diagnostic.json). Added bounded numeric return/call counters, cli/api entry and four fixed known worker codes to distinguish counter mismatch from API or startup failure. No raw exception, document text or path is published. YAML parse, embedded Python compilation and synthetic redaction checks pass. This diagnostic-only change does not claim the intermittent failure is fixed; core test evidence remains the preceding 1404-pass run.
+
+
+## PR #8 review round 28: page rotation and actual visibility
+
+Nonzero page rotation is explicitly unsupported. Before publication, the renderer reuses the existing independent OOXML visibility validator through a public reference-free entry point, resolving direct/inherited hidden text and invisible foreground/background formatting. It loads only the fixed local reader path; that dependency's hash is included in persisted implementation evidence. Three rotation and three visibility regressions were added.
+
+The reused conservative validator rejects SDK tables whose 9638-twip grid exceeds its 9360-twip bound. R1-05 does not relax that validator or implement new table layout: raw SDK tables remain preserved, the public renderer explicitly falls back, and POC axes reject fallback. Table support within that visibility boundary remains for R3-02. Earlier ordinary-table tests now verify raw structure plus truthful rejection, rather than claiming accepted editable-table output. Initial integration failures (XML wrapper API mismatch, then conservative table width rejection) are retained in pr8-r28-focused*.txt.
+
+Full quality pr8-quality-r28: 1410 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 42 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN. The diagnostic-only 9e781de CI passed both platforms; intermittent earlier synthetic failures remain documented, not claimed fixed.

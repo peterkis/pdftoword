@@ -13,7 +13,11 @@ from .common import ROOT, DemoError, Json, digest
 def local_implementation_identity() -> dict[str, str]:
     """Hash local projection, validation and execution dependencies using relative labels."""
     package = Path(__file__).parent
-    return {str(path.relative_to(package)): digest(path) for path in sorted(package.rglob("*.py"))}
+    hashes = {
+        str(path.relative_to(package)): digest(path) for path in sorted(package.rglob("*.py"))
+    }
+    hashes["scripts/acceptance/docx_reader.py"] = digest(ROOT / "scripts/acceptance/docx_reader.py")
+    return hashes
 
 
 def call_worker(payload: Json) -> Json:
