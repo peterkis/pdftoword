@@ -154,3 +154,10 @@ Full quality run tmp/docx-demo/r1-05/pr8-quality-r3: 1339 passed, no failed/skip
 The renderer verifies table cell coordinates, row/column spans and per-cell text against selected HTML. Changed boundaries or merges fail closed. Block and inline OMML are compared as bounded mathematical trees against the existing source LaTeX parser; unknown constructs/properties or differing expressions trigger explicit Legacy fallback rather than acceptance of the candidate. The accepted math subset is intentionally conservative and excludes unverified constructs.
 
 Four regressions reject changed cell boundaries/merges and changed block/inline equations before source binding. Renderer tests: 20 passed. Full quality tmp/docx-demo/r1-05/pr8-quality-r4: 1343 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass. Targeted mypy: 41 files, exit 0. Overall quality exit 1 remains the 19 existing private-script mypy errors. git diff --check exit 0. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 5
+
+Text-backed table blocks without nonempty selected HTML now trigger TABLE_STRUCTURE_EVIDENCE_MISSING on the renderer bridge and explicitly use the Legacy fallback. Three regressions cover absent, empty and whitespace-only evidence. Full quality tmp/docx-demo/r1-05/pr8-quality-r5: 1346 passed; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall quality remains exit 1 from the 19 existing private-script mypy errors.
+
+The preceding ad7f69b macOS CI failed one existing CLI/API acceptance test (test_cli_and_upload_api_run_real_shared_pipeline_once); all other tests and checks passed. Its sanitized artifact has no exception detail, so the cause is undetermined. The failure is retained in tmp/docx-demo/r1-05/pr8-r4-macos/ and pr8-r4-ci-failed.txt; this record is not replaced by subsequent CI outcomes.

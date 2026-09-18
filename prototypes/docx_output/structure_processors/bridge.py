@@ -90,6 +90,11 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     if content["plain_text"]
                     else [],
                 )
+                if for_renderer and b["type"] == "table" and not (
+                    isinstance(evidence.get("selected_html"), str)
+                    and evidence["selected_html"].strip()
+                ):
+                    raise DemoError("TABLE_STRUCTURE_EVIDENCE_MISSING")
                 if b["type"] == "table" and evidence.get("selected_html"):
                     if table_text(evidence["selected_html"]) != content["plain_text"]:
                         raise DemoError("TABLE_EVIDENCE_TEXT_MISMATCH")

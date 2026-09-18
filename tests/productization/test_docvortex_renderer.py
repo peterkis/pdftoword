@@ -339,3 +339,18 @@ def test_changed_formula_rejected_before_source_binding(case: Path, inline: bool
             raw, case / "rejected.docx", ir, [{"block": ir["pages"][0]["blocks"][0], "raw": source}]
         )
     assert not (case / "rejected.docx").exists()
+
+
+@pytest.mark.parametrize("markup", [None, "", "   "])
+def test_table_without_structure_evidence_falls_back(case: Path, markup: str | None) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = "table"
+    ir["metadata"]["structure_evidence"] = {"question": {"selected_html": markup}}
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"]
+    assert any(loss["code"] == "TABLE_STRUCTURE_EVIDENCE_MISSING" for loss in audit["losses"])
