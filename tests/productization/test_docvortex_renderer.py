@@ -691,3 +691,21 @@ def test_omml_only_formula_never_accepts_raster_fallback(case: Path) -> None:
     assert audit["fallback"]
     assert any(loss["code"] == "DOCVORTEX_OMML_ONLY_FORMULA_FAILED" for loss in audit["losses"])
     assert not (target / "auto.docx").exists()
+
+
+def test_text_outside_table_cells_cannot_be_silently_lost(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = "table"
+    ir["pages"][0]["blocks"][0]["content"]["plain_text"] = "AB"
+    ir["metadata"]["structure_evidence"] = {
+        "question": {"selected_html": "<table><tr><td>A</td></tr></table>B"}
+    }
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"]
+    assert any(loss["code"] == "DOCVORTEX_OUTPUT_CONTENT_CHANGED" for loss in audit["losses"])
+    assert Document(str(target / "auto.docx")).paragraphs[0].text == "AB"

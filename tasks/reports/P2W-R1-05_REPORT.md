@@ -249,3 +249,10 @@ The preceding 259e5bf Ubuntu CI had one failure in the same existing CLI/API acc
 ## PR #8 review round 19: OMML-only policy
 
 Only omml_with_image_fallback supplies a formula image to the renderer. Source binding also rejects non-OMML output for an OMML-only formula with DOCVORTEX_OMML_ONLY_FORMULA_FAILED. The actual-render regression verifies no image projection, explicit failure audit and no accepted DOCX for unsupported LaTeX. Full quality pr8-quality-r19: 1379 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 20: table-tail finding verified as already guarded
+
+The reported selected_html `<table><tr><td>A</td></tr></table>B` / plain_text AB was executed before any implementation change. The existing full-range text comparison rejected the SDK candidate with DOCVORTEX_OUTPUT_CONTENT_CHANGED and explicitly fell back; the final Legacy paragraph retained AB. Thus the reported silent-loss acceptance is not reproducible. Before-change evidence: tmp/docx-demo/r1-05/table-tail-before.json. Only a regression and this record were added; production behavior was not changed.
+
+Full quality pr8-quality-r20: 1380 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
