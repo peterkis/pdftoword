@@ -145,7 +145,9 @@ def verify_inline_order(element: Any, spans: list[Any]) -> None:
             verify_formula(output, source)
 
 
-def preserve_image_geometry(element: Any, image_bytes: bytes, source_bbox: list[float]) -> None:
+def preserve_image_geometry(
+    element: Any, image_bytes: bytes, source_bbox: list[float]
+) -> tuple[int, int]:
     """Reject visual cropping/transforms and apply the supported Legacy image dimensions."""
     import io
 
@@ -174,5 +176,6 @@ def preserve_image_geometry(element: Any, image_bytes: bytes, source_bbox: list[
         shape = InlineShape(inline[0])
         shape.width = Pt(display_width)
         shape.height = Pt(display_width * height / width)
+        return width, height
     except (ValueError, OSError, ZeroDivisionError):
         raise DemoError("DOCVORTEX_IMAGE_GEOMETRY_UNSUPPORTED") from None

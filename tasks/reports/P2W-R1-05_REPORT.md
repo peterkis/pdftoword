@@ -311,3 +311,8 @@ Nonzero page rotation is explicitly unsupported. Before publication, the rendere
 The reused conservative validator rejects SDK tables whose 9638-twip grid exceeds its 9360-twip bound. R1-05 does not relax that validator or implement new table layout: raw SDK tables remain preserved, the public renderer explicitly falls back, and POC axes reject fallback. Table support within that visibility boundary remains for R3-02. Earlier ordinary-table tests now verify raw structure plus truthful rejection, rather than claiming accepted editable-table output. Initial integration failures (XML wrapper API mismatch, then conservative table width rejection) are retained in pr8-r28-focused*.txt.
 
 Full quality pr8-quality-r28: 1410 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 42 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN. The diagnostic-only 9e781de CI passed both platforms; intermittent earlier synthetic failures remain documented, not claimed fixed.
+
+
+## PR #8 review round 29: drawing visibility and containers
+
+The reference-free visibility entry point also invokes the existing independent picture-container validator with dimensions decoded from the verified asset bytes. This checks drawing hidden flags plus the existing container/transform constraints before publication. Regressions reject hidden wp:docPr and pic:cNvPr drawings. Focused renderer tests: 81 passed. Full quality pr8-quality-r29: 1412 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 42 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

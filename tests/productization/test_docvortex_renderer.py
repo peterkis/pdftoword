@@ -891,3 +891,23 @@ def test_invisible_text_is_rejected_before_publishing(case: Path, mode: str) -> 
             [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}],
         )
     assert not target.exists()
+
+
+@pytest.mark.parametrize("tag", ["wp:docPr", "pic:cNvPr"])
+def test_hidden_drawing_is_rejected_before_publication(case: Path, tag: str) -> None:
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    source, ir = source_job(case)
+    asset = ir["assets"][0]
+    doc = Document()
+    shape = doc.add_picture(str(source / asset["path"]))
+    shape._inline.xpath(".//" + tag)[0].set("hidden", "1")
+    raw, target = case / "hidden-image.docx", case / "rejected.docx"
+    doc.save(str(raw))
+    entry = {
+        "block": ir["pages"][0]["blocks"][1],
+        "raw": {"type": "image", "content": "", "image_path": asset["path"]},
+    }
+    with pytest.raises(DemoError, match="DOCVORTEX_VISIBILITY_UNSUPPORTED:HIDDEN_CONTENT"):
+        bind_source_ranges(raw, target, ir, [entry])
+    assert not target.exists()

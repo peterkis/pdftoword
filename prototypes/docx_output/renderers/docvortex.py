@@ -32,6 +32,7 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
     if len(elements) != len(entries):
         raise DemoError("DOCVORTEX_OUTPUT_RANGE_COUNT_MISMATCH")
     records = []
+    image_sizes: dict[str, tuple[int, int]] = {}
     ns = {
         "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
         "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -96,7 +97,7 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
                 raise DemoError("DOCVORTEX_SOURCE_ASSET_MISMATCH")
             if image_hash != asset["sha256"]:
                 raise DemoError("DOCVORTEX_IMAGE_BYTES_CHANGED")
-            preserve_image_geometry(element, image_bytes, asset["source_bbox"])
+            image_sizes[rid] = preserve_image_geometry(element, image_bytes, asset["source_bbox"])
             images.append(
                 {
                     "sha256": image_hash,
@@ -172,6 +173,7 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
             xml(etree.tostring(doc.styles.element)),
             related_xml(RT.FONT_TABLE, "w:fonts"),
             related_xml(RT.THEME, "a:theme"),
+            image_sizes,
         )
     except ValueError as exc:
         raise DemoError("DOCVORTEX_VISIBILITY_UNSUPPORTED:" + str(exc)) from None
