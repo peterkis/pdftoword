@@ -107,3 +107,36 @@ def verify_formula(element: Any, latex: str) -> None:
             raise DemoError("DOCVORTEX_FORMULA_CHANGED")
     except DemoError as exc:
         raise DemoError("DOCVORTEX_FORMULA_UNVERIFIED:" + str(exc)) from None
+
+
+def verify_inline_order(element: Any, spans: list[Any]) -> None:
+    """Validate one interleaved stream of literal characters and source math nodes."""
+    from ..structure_processors.bridge import inline_text
+
+    expected: list[tuple[str, Any]] = []
+    for span in spans:
+        if span.get("type") == "equation_inline":
+            expected.append(("math", inline_text(span.get("content"))))
+        else:
+            expected.extend(("text", char) for char in inline_text(span.get("content")))
+    actual: list[tuple[str, Any]] = []
+
+    def walk(node: Any) -> None:
+        if node.tag == qn("m:oMath"):
+            actual.append(("math", node))
+        elif node.tag == qn("w:t"):
+            actual.extend(("text", char) for char in node.text or "")
+        elif node.tag in {qn("w:br"), qn("w:cr"), qn("w:tab")}:
+            actual.append(("text", "\t" if node.tag == qn("w:tab") else "\n"))
+        else:
+            for child in node:
+                walk(child)
+
+    walk(element)
+    if len(expected) != len(actual):
+        raise DemoError("DOCVORTEX_INLINE_ORDER_CHANGED")
+    for (kind, source), (actual_kind, output) in zip(expected, actual, strict=True):
+        if kind != actual_kind or (kind == "text" and source != output):
+            raise DemoError("DOCVORTEX_INLINE_ORDER_CHANGED")
+        if kind == "math":
+            verify_formula(output, source)

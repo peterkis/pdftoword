@@ -79,6 +79,8 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     raise DemoError("BRIDGE_ASSET_MISSING")
                 item.update(type="image", content="", image_path=assets[aid]["path"])
             elif kind == "text":
+                if for_renderer and b["type"] == "formula":
+                    raise DemoError("FORMULA_STRUCTURE_EVIDENCE_MISSING")
                 types = {
                     "heading": "paragraph_title",
                     "caption": "image_caption",

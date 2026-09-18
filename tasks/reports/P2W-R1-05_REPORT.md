@@ -175,3 +175,10 @@ Corrected verification: renderer tests 24 passed; full quality pr8-quality-r6-co
 ## PR #8 review round 7
 
 Caption/footer paragraphs now explicitly receive the planned Caption style during source binding, after their content has been verified. Two actual DOCX regressions check both paragraph style and unchanged text. Full quality pr8-quality-r7: 1349 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 8
+
+Inline verification now checks one ordered stream of literal characters and source-equivalent math, rejecting formula displacement relative to prose. Text-backed formula blocks explicitly fall back with FORMULA_STRUCTURE_EVIDENCE_MISSING. POC checks the child effective renderer and audit immediately after the renderer axis; a Legacy fallback leaves an INVALID_FALLBACK rejection record and raises POC_RENDERER_AXIS_FALLBACK without publishing a successful POC manifest.
+
+Three regressions cover these cases, including unchanged source files after rejected POC. Full quality pr8-quality-r8: 1352 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors. Word/visual acceptance NOT_RUN.

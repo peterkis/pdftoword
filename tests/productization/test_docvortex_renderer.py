@@ -384,3 +384,56 @@ def test_caption_style_preserved_in_actual_output(case: Path, kind: str) -> None
     paragraph = Document(str(target / "auto.docx")).paragraphs[0]
     assert paragraph.style is not None and paragraph.style.name == "Caption"
     assert paragraph.text == ir["pages"][0]["blocks"][0]["content"]["plain_text"]
+
+
+def test_inline_formula_reordering_is_rejected(case: Path) -> None:
+    from prototypes.docx_output.formula import to_omml
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    doc = Document()
+    paragraph: Any = doc.add_paragraph("AB")._p
+    paragraph.append(etree.fromstring(to_omml("x").encode()))
+    raw = case / "reordered.docx"
+    doc.save(str(raw))
+    spans = [
+        {"type": "text", "content": "A"},
+        {"type": "equation_inline", "content": "x"},
+        {"type": "text", "content": "B"},
+    ]
+    with pytest.raises(DemoError, match="DOCVORTEX_INLINE_ORDER_CHANGED"):
+        bind_source_ranges(
+            raw,
+            case / "rejected.docx",
+            ir,
+            [{"block": ir["pages"][0]["blocks"][0], "raw": {"type": "text", "content": spans}}],
+        )
+
+
+def test_text_backed_formula_explicitly_falls_back(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = "formula"
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"]
+    assert any(loss["code"] == "FORMULA_STRUCTURE_EVIDENCE_MISSING" for loss in audit["losses"])
+
+
+def test_poc_rejects_renderer_axis_fallback(case: Path) -> None:
+    from prototypes.docx_output.reuse_poc import run_poc
+
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = "heading"
+    save(source / "layout.auto.json", ir)
+    before = inventory(source)
+    with pytest.raises(DemoError, match="POC_RENDERER_AXIS_FALLBACK"):
+        run_poc(source, output_root=case / "poc")
+    rejection = next((case / "poc").rglob("renderer-axis-rejection.json"))
+    assert read(rejection)["effective_renderer"] == "legacy"
+    assert read(rejection)["status"] == "INVALID_FALLBACK"
+    assert not list((case / "poc").rglob("poc-manifest.json"))
+    assert inventory(source) == before

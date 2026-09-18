@@ -20,7 +20,7 @@ from ..structure_processors.bridge import bridge, direct_middle, inline_text, ta
 from ..writer import fonts, inspect_package
 from .capabilities import unsupported
 from .legacy import LegacyRenderer
-from .verification import verify_formula, verify_table
+from .verification import verify_formula, verify_inline_order, verify_table
 
 
 def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -> list[Json]:
@@ -49,6 +49,7 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
         if isinstance(source["content"], list):
             inline_formulas = [s for s in source["content"] if s.get("type") == "equation_inline"]
             if inline_formulas:
+                verify_inline_order(root, source["content"])
                 expected = "".join(
                     inline_text(s.get("content"))
                     for s in source["content"]

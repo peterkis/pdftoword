@@ -178,6 +178,23 @@ def run_poc(source: Path, output_root: Path = JOBS, source_seal: Path | None = N
     renderer_axis = compare_renderers(
         source, output_root=root / "jobs", renderer_b=DocVortexRenderer(), source_seal=source_seal
     )
+    renderer_record = read(renderer_axis / "comparison.json")
+    renderer_job = root / "jobs" / renderer_record["outputs"][1]["job_id"]
+    render_manifest = read(renderer_job / "render-manifest.auto.json")
+    render_audit = read(renderer_job / "docvortex-render-audit.auto.json")
+    if render_manifest["effective_renderer"] != "docvortex-public" or render_audit["fallback"]:
+        save(
+            root / "renderer-axis-rejection.json",
+            {
+                "status": "INVALID_FALLBACK",
+                "comparison": renderer_axis.name,
+                "requested_renderer": "docvortex-public",
+                "effective_renderer": render_manifest["effective_renderer"],
+                "losses": render_audit["losses"],
+                "source_unchanged": inventory(source) == before,
+            },
+        )
+        raise DemoError("POC_RENDERER_AXIS_FALLBACK")
     processor = DocVortexStructureProcessor()
     shared_axis = compare_renderers(
         source, output_root=root / "jobs", structure_processor=processor, source_seal=source_seal
