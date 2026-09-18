@@ -72,6 +72,8 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
                     raise DemoError("DOCVORTEX_FORMULA_UNVERIFIED")
                 verify_formula(maths[0], expected)
             else:
+                if b["content"].get("render_mode") != "omml_with_image_fallback":
+                    raise DemoError("DOCVORTEX_OMML_ONLY_FORMULA_FAILED")
                 formula_image = bool(
                     source.get("image_path") and root.xpath(".//a:blip", namespaces=ns)
                 )

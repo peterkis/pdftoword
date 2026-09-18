@@ -244,3 +244,8 @@ Selected table HTML is restricted before SDK rendering to table/tbody/tr/td/br a
 Formula blocks containing imageContent are now classified from their original IR type as formula images. Fallback asset IDs and OMML counts distinguish image-backed formulas from equation conversion failures, avoiding both undercounts and negative OMML totals. Actual-render regression checks qa.json and source-map evidence. Full quality pr8-quality-r18: 1378 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors.
 
 The preceding 259e5bf Ubuntu CI had one failure in the same existing CLI/API acceptance test previously seen on macOS. Artifact retained at tmp/docx-demo/r1-05/pr8-r17-ubuntu/. A 100-run local loop of that exact test did not reproduce it (logs ci-flake-diagnosis/run-*.txt); cause remains undetermined, not claimed fixed. No retries were used for model or controlled POC evidence. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 19: OMML-only policy
+
+Only omml_with_image_fallback supplies a formula image to the renderer. Source binding also rejects non-OMML output for an OMML-only formula with DOCVORTEX_OMML_ONLY_FORMULA_FAILED. The actual-render regression verifies no image projection, explicit failure audit and no accepted DOCX for unsupported LaTeX. Full quality pr8-quality-r19: 1379 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

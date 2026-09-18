@@ -124,7 +124,9 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     item["content"] = copy.deepcopy(evidence["inline_spans"])
             elif kind == "formula" and content.get("latex"):
                 item.update(type="equation", content=content["latex"])
-                if content.get("source_asset_id"):
+                if content.get("source_asset_id") and (
+                    not for_renderer or content.get("render_mode") == "omml_with_image_fallback"
+                ):
                     assets = {a["id"]: a for a in selected["assets"]}
                     aid = content["source_asset_id"]
                     if aid in assets:

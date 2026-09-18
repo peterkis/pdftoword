@@ -663,3 +663,31 @@ def test_image_backed_formula_is_counted_as_formula_fallback(case: Path) -> None
     assert qa["formula_image_count"] == 1
     assert qa["omml_formula_count"] == 0
     assert read(target / "source-map.auto.json")["blocks"][1]["formula_image"]
+
+
+def test_omml_only_formula_never_accepts_raster_fallback(case: Path) -> None:
+    source, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][1]
+    b.update(type="formula", render_policy="editable")
+    b["content"] = {
+        "kind": "formula",
+        "latex": r"\frac{",
+        "mathml": None,
+        "source_asset_id": ir["assets"][0]["id"],
+        "render_mode": "omml",
+        "confidence": 0,
+        "omml_status": "pending",
+    }
+    value = bridge(ir, for_renderer=True)
+    assert "image_path" not in value.ledger["entries"][1]["raw"]
+    target = new_job(case / "jobs")
+    for asset in ir["assets"]:
+        destination = target / asset["path"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / asset["path"], destination)
+    with pytest.raises(DemoError, match="UNSUPPORTED_IR_CONTENT"):
+        DocVortexRenderer().render(target, RenderPlan.from_ir(ir), "auto")
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"]
+    assert any(loss["code"] == "DOCVORTEX_OMML_ONLY_FORMULA_FAILED" for loss in audit["losses"])
+    assert not (target / "auto.docx").exists()
