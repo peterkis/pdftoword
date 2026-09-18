@@ -648,3 +648,18 @@ def test_rich_table_cell_markup_is_explicitly_unsupported(case: Path, cell: str)
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "TABLE_RICH_CONTENT_UNSUPPORTED" for loss in audit["losses"])
+
+
+def test_image_backed_formula_is_counted_as_formula_fallback(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][1]["type"] = "formula"
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    assert not read(target / "docvortex-render-audit.auto.json")["fallback"]
+    qa = read(target / "qa.json")
+    assert qa["formula_image_count"] == 1
+    assert qa["omml_formula_count"] == 0
+    assert read(target / "source-map.auto.json")["blocks"][1]["formula_image"]

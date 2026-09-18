@@ -237,3 +237,10 @@ Renderer inline evidence is limited to plain string text/equation_inline spans c
 ## PR #8 review round 17: plain-table markup boundary
 
 Selected table HTML is restricted before SDK rendering to table/tbody/tr/td/br and td rowspan/colspan attributes. Links, emphasis, style attributes and other rich cell semantics produce explicit TABLE_RICH_CONTENT_UNSUPPORTED evidence; header semantics retain their dedicated unsupported code. Four actual-render regressions cover hyperlinks, strong/em and CSS attributes. Rich table content remains with R3-01/R3-02. Full quality pr8-quality-r17: 1377 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 18: image-backed formula accounting
+
+Formula blocks containing imageContent are now classified from their original IR type as formula images. Fallback asset IDs and OMML counts distinguish image-backed formulas from equation conversion failures, avoiding both undercounts and negative OMML totals. Actual-render regression checks qa.json and source-map evidence. Full quality pr8-quality-r18: 1378 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors.
+
+The preceding 259e5bf Ubuntu CI had one failure in the same existing CLI/API acceptance test previously seen on macOS. Artifact retained at tmp/docx-demo/r1-05/pr8-r17-ubuntu/. A 100-run local loop of that exact test did not reproduce it (logs ci-flake-diagnosis/run-*.txt); cause remains undetermined, not claimed fixed. No retries were used for model or controlled POC evidence. Word/visual acceptance NOT_RUN.

@@ -127,7 +127,8 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
                 "images": images,
                 "fallback": formula_image
                 or (b["content"]["kind"] == "image" and b["type"] != "figure"),
-                "formula_image": formula_image,
+                "formula_image": formula_image
+                or (b["type"] == "formula" and b["content"]["kind"] == "image"),
             }
         )
     # Thin public-output adaptation to the existing explicit POC stylesheet.
@@ -232,7 +233,11 @@ class DocVortexRenderer:
                     "effective_renderer": self.name,
                     "fonts": fonts(),
                     "rendered_fallback_asset_ids": [
-                        e["block"]["content"]["source_asset_id"]
+                        e["block"]["content"][
+                            "asset_id"
+                            if e["block"]["content"]["kind"] == "image"
+                            else "source_asset_id"
+                        ]
                         for e, r in zip(value.ledger["entries"], records, strict=True)
                         if r["formula_image"]
                     ],
@@ -241,9 +246,9 @@ class DocVortexRenderer:
                     "formula_image_count": sum(b["formula_image"] for b in records),
                     "fallback_region_count": sum(b["fallback"] for b in records),
                     "omml_formula_count": sum(
-                        e["raw"]["type"] == "equation" for e in value.ledger["entries"]
+                        e["raw"]["type"] == "equation" and not r["formula_image"]
+                        for e, r in zip(value.ledger["entries"], records, strict=True)
                     )
-                    - sum(b["formula_image"] for b in records)
                     + sum(
                         sum(s.get("type") == "equation_inline" for s in e["raw"]["content"])
                         for e in value.ledger["entries"]
