@@ -290,3 +290,10 @@ Only null/inline image placement is supported; below_stem/right_of_stem/option_g
 ## PR #8 review round 26: main-text editability and formula source references
 
 Page editability includes supported major_question/subquestion/text_line/text_span main content. Formula source_asset_id must resolve before public projection even for valid OMML-only LaTeX; a dangling reference leaves explicit rejection evidence. Five actual-path regressions cover these cases. Focused renderer tests: 71 passed. Full quality pr8-quality-r26: 1402 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 27: rotation boundary and synthetic CI diagnostics
+
+Nonzero block rotations explicitly produce BLOCK_ROTATION_UNSUPPORTED before SDK execution; text/image regressions verify rejection evidence. Rotation implementation remains outside the bounded renderer. Full quality pr8-quality-r27: 1404 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors.
+
+The f7cf512 Ubuntu CI again failed only the existing synthetic CLI/API acceptance test; artifact retained in pr8-r26-ubuntu. Added a CI diagnostic classifier for that named synthetic test only: it publishes fixed-category assertion/exception labels, never raw failure text, document content or paths. YAML parsing, embedded Python compilation and synthetic redaction smoke checks passed. No root-cause fix is claimed yet. Word/visual acceptance NOT_RUN.
