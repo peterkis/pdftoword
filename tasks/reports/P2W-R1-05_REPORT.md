@@ -270,3 +270,8 @@ Corrected focused tests: 25 passed. Full quality pr8-quality-r21-corrected: 1384
 Formula content on non-formula blocks is explicitly unsupported, preventing tables/paragraphs being reported as accepted equations. Caption grouping is evaluated after all shared leaves are mapped and requires both caption and owner to remain preserved and unlocked, including duplicate-source detection. Five regressions cover two rejected content/type combinations and actual SDK output with owner-changed/missing/duplicate failure injection at the worker boundary. The first focused test fixture used an invalid null asset ID and was corrected before final verification; its failed run remains retained.
 
 Full quality pr8-quality-r22: 1389 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 42 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 23: per-page OMML editability evidence
+
+The renderer reports source IDs of accepted non-image formula outputs; finish uses those verified IDs for per-page editability, excluding auxiliary content. Two actual finish regressions distinguish an OMML-only editable page from an image-fallback-only noneditable page. Focused renderer tests: 60 passed. Full quality pr8-quality-r23: 1391 passed, 0 failed/skipped; catalog/baseline/schema pass. Initial Ruff reported two long lines, corrected by line wrapping; subsequent uv run ruff check . passes. Targeted mypy 41 files passes; full mypy retains the 19 existing private-script errors. git diff --check passes. Word/visual acceptance NOT_RUN.

@@ -243,6 +243,11 @@ class DocVortexRenderer:
                         for e, r in zip(value.ledger["entries"], records, strict=True)
                         if r["formula_image"]
                     ],
+                    "editable_formula_block_ids": [
+                        e["block"]["id"]
+                        for e, r in zip(value.ledger["entries"], records, strict=True)
+                        if e["raw"]["type"] == "equation" and not r["formula_image"]
+                    ],
                     "editable_text_char_count": stats["package_text_char_count"],
                     "placed_figure_count": sum(b["kind"] == "figure" for b in records),
                     "formula_image_count": sum(b["formula_image"] for b in records),

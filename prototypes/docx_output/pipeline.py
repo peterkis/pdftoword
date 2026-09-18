@@ -131,13 +131,23 @@ def finish(
         ]
         fallback += union_area([b for b in bounded if area(b)])
     auxiliary_ids = {r["from"] for r in ir["relations"] if r["type"] in {"label_of", "caption_of"}}
+    editable_formula_ids = set(stats.get("editable_formula_block_ids", []))
     page_editable_content = {
         str(p["page_index"]): any(
-            b["content"]["kind"] == "text"
-            and b["type"] in {"paragraph", "heading", "question", "option", "formula", "table"}
-            and b["id"] not in auxiliary_ids
-            and not re.fullmatch(r"[A-D][.．、]?", b["content"].get("plain_text", "").strip())
-            and bool(b["content"].get("plain_text", "").strip())
+            b["id"] not in auxiliary_ids
+            and (
+                (b["content"]["kind"] == "formula" and b["id"] in editable_formula_ids)
+                or (
+                    b["content"]["kind"] == "text"
+                    and b["type"] in {
+                        "paragraph", "heading", "question", "option", "formula", "table"
+                    }
+                    and not re.fullmatch(
+                        r"[A-D][.．、]?", b["content"].get("plain_text", "").strip()
+                    )
+                    and bool(b["content"].get("plain_text", "").strip())
+                )
+            )
             for b in p["blocks"]
         )
         for p in ir["pages"]

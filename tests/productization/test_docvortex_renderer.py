@@ -735,3 +735,33 @@ def test_formula_content_with_other_block_type_rejects(case: Path, kind: str) ->
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "BLOCK_CONTENT_COMBINATION_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize("latex,editable", [("x^2", True), (r"\frac{", False)])
+def test_formula_only_page_editability_matches_actual_output(
+    case: Path, latex: str, editable: bool
+) -> None:
+    from prototypes.docx_output.pipeline import finish
+
+    source, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    b.update(type="formula", render_policy="hybrid")
+    b["content"] = {
+        "kind": "formula",
+        "latex": latex,
+        "mathml": None,
+        "source_asset_id": ir["assets"][0]["id"],
+        "render_mode": "omml_with_image_fallback",
+        "confidence": 0,
+        "omml_status": "pending",
+    }
+    ir["pages"][0]["blocks"] = [b]
+    ir["pages"][0]["reading_order"] = [b["id"]]
+    ir["relations"] = []
+    target = case / "formula-output"
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("*.docx"))
+    qa = finish(target, ir, renderer=DocVortexRenderer())
+    assert qa["page_editable_content"] == {"0": editable}
+    assert qa["omml_formula_count"] == int(editable)
+    assert qa["formula_image_count"] == int(not editable)
+    assert qa["execution_status"] == ("COMPLETE" if editable else "DEMO_OUTPUT_INSUFFICIENT")
