@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import ast
 import copy
 import re
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any
 
 from .common import (
     DemoError,
@@ -305,7 +303,7 @@ def recover(job: Path, ir: Json, p: Json, responses: Json, requests: Json) -> No
                     p["page_index"],
                 )
             p["blocks"].append(child)
-    recover_monkey(ir, p, responses)
+    recover_monkey(ir, p, responses, requests)
     if "ovis" in responses:
         content = chat_content(responses["ovis"])
         ir["provenance"].setdefault("ovis_content", {})[str(p["page_index"])] = content
@@ -466,51 +464,56 @@ def associate(ir: Json, p: Json) -> None:
     p["reading_order"] = [b["id"] for b in blocks]
 
 
-def recover_monkey(ir: Json, p: Json, responses: Json) -> None:
-    """Normalize optional geometry consistently without replacing primary content."""
-    if "monkey" in responses:
+def recover_monkey(ir: Json, p: Json, responses: Json, requests: Json | None = None) -> None:
+    """Compatibility entry: attach independent model geometry, never select content."""
+    from .geometry.candidate import attach, full_page
+    from .geometry.monkey_adapter import adapt as monkey_geometry
+    from .geometry.pp_adapter import adapt as pp_geometry
+
+    for provider, adapter in (("monkey", monkey_geometry), ("pp", pp_geometry)):
+        if provider not in responses:
+            continue
         try:
-            try:
-                monkey: Any = ast.literal_eval(chat_content(responses["monkey"]))
-            except (ValueError, SyntaxError) as exc:
-                raise DemoError("MONKEY_PARSE_FAILED") from exc
-            if not isinstance(monkey, list):
-                raise DemoError("INVALID_CANDIDATE_WIRE_TYPE")
-            alternatives = []
-            for m in monkey:
-                if (
-                    not isinstance(m, dict)
-                    or not isinstance(m.get("label"), str)
-                    or not isinstance(m.get("bbox"), list)
-                    or any(
-                        not isinstance(v, int | float) or isinstance(v, bool) or not 0 <= v <= 1000
-                        for v in m["bbox"]
-                    )
-                ):
-                    raise DemoError("MONKEY_INVALID_GEOMETRY")
-                alternatives.append(
-                    {
-                        "label": m["label"],
-                        "raw_bbox": m["bbox"],
-                        "raw_unit": "normalized_1000",
-                        "bbox_pt": transform(
-                            m["bbox"], p["width_pt"] / 1000, p["height_pt"] / 1000
-                        ),
-                    }
-                )
-            ir["provenance"].setdefault("monkey_geometry", {})[str(p["page_index"])] = alternatives
-            issue(
-                ir,
-                "GEOMETRY_ALTERNATIVES",
-                "Monkey几何仅作为可见候选，未覆盖主结果。",
-                [],
-                p["page_index"],
+            info = ir["provenance"]["pages"][str(p["page_index"])]
+            chain = full_page(p, info)
+            request: Json = next(
+                (
+                    r
+                    for r in (requests or {}).get("requests", [])
+                    if r.get("provider") == provider
+                    and r.get("page_index", p["page_index"]) == p["page_index"]
+                ),
+                {},
             )
-        except (ValueError, SyntaxError, TypeError, KeyError, AttributeError, RecursionError):
+            evidence = {
+                "request_id": request.get("request_id"),
+                "model_fingerprint": request.get("service_fingerprint"),
+                "prompt_fingerprint": request.get("prompt_sha256"),
+                "response_sha256": request.get("pruned_response_sha256"),
+            }
+            output = adapter(responses[provider], p["page_index"], chain, evidence)
+        except (ValueError, TypeError, KeyError, AttributeError):
+            output = {
+                "geometry_candidates": [],
+                "rejections": [
+                    {"provider": provider, "index": None, "reason": "TRANSFORM_UNAVAILABLE"}
+                ],
+            }
+        attach(p, output)
+        if provider == "monkey":
+            ir["provenance"].setdefault("monkey_geometry", {})[str(p["page_index"])] = [
+                {
+                    "label": c["label"],
+                    "raw_bbox": c["raw_geometry"],
+                    "raw_unit": c["raw_unit"],
+                    "bbox_pt": c["bbox_pt"],
+                }
+                for c in output["geometry_candidates"]
+            ]
             issue(
                 ir,
-                "MONKEY_CANDIDATE_REJECTED",
-                "可选Monkey几何无法解析或校验，保留主结果；不自动重试。",
+                "MONKEY_CANDIDATE_REJECTED" if output["rejections"] else "GEOMETRY_ALTERNATIVES",
+                "Monkey独立几何候选未覆盖主内容；拒绝原因已记录。",
                 [],
                 p["page_index"],
             )

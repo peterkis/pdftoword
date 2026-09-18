@@ -25,6 +25,8 @@ from .common import (
     union_area,
 )
 from .formula import unrendered_math
+from .geometry.candidate import attach
+from .geometry.native_adapter import adapt as native_geometry
 from .input_analysis import PDFIUM_LOCK, PdfInspectorBackend, observe_page, open_pdf
 from .structure import QUESTION, image_content
 
@@ -145,6 +147,11 @@ def extract(
                     save(job / f"observation-{index}.json", observation.record())
                     info["native_backend"] = observation.backend
                     info["page_geometry"] = g.record()
+                    attach(p, native_geometry(observation.record(), index, {
+                        "observation_sha256": digest(job / f"observation-{index}.json"),
+                        "backend": observation.backend.get("backend"),
+                        "backend_version": observation.backend.get("version"),
+                    }))
                     path_boxes = []
                     image_boxes = []
                     for obj in observation.objects:

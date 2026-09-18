@@ -272,7 +272,7 @@ def reconstruct(
     recover_ovis(job, ir, p, responses["ovis"], request_id("ovis"))
     if content_provider == "ovis-pp":
         apply_pp_layout(job, ir, p, responses.get("pp", {}), request_id("pp"))
-    recover_monkey(ir, p, responses)
+    recover_monkey(ir, p, responses, manifest)
 
 
 def replay(

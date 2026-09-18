@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.example/schemas/geometry-candidate-1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "provider",
+    "page_index",
+    "label",
+    "hierarchy_level",
+    "granularity",
+    "raw_geometry",
+    "raw_quad",
+    "raw_unit",
+    "quad_pt",
+    "bbox_pt",
+    "transform_chain",
+    "raw_output_index",
+    "order_source",
+    "order_status",
+    "provider_order",
+    "engine_confidence",
+    "system_confidence",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "geometry-candidate/1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider": {
+      "enum": [
+        "native",
+        "pp",
+        "monkey"
+      ]
+    },
+    "page_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "hierarchy_level": {
+      "enum": [
+        "glyph",
+        "line",
+        "region",
+        "column"
+      ]
+    },
+    "granularity": {
+      "enum": [
+        "semantic_region",
+        "ocr_line_box",
+        "formula_box",
+        "native_advance_em_run"
+      ]
+    },
+    "raw_geometry": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      ]
+    },
+    "raw_quad": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "raw_unit": {
+      "enum": [
+        "pdf_point",
+        "input_pixel",
+        "normalized_1000"
+      ]
+    },
+    "quad_pt": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "bbox_pt": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "transform_chain": {
+      "type": "object",
+      "required": [
+        "kind",
+        "target"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "crop_resize_pad/1",
+            "pdf_visible/1"
+          ]
+        },
+        "target": {
+          "const": "visible_rotated_top_left_pt"
+        }
+      }
+    },
+    "raw_output_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "order_source": {
+      "enum": [
+        "provider_array",
+        "provider_fields",
+        "native_stream"
+      ]
+    },
+    "order_status": {
+      "enum": [
+        "unknown",
+        "partial"
+      ]
+    },
+    "provider_order": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "engine_confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "system_confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "evidence": {
+      "type": "object"
+    }
+  }
+}
