@@ -1,0 +1,427 @@
+{
+  "task": "P2W-R1-05",
+  "version": "0.4.9",
+  "source_commit": "e5b4b206a1cf62ac2b08247d7f42c1d0672487bf",
+  "wheel": "docvortex-0.4.9-py3-none-any.whl",
+  "wheel_sha256": "03e1616466a2f309115bb4c003d3f3aed4fd5b5d9b97129835aa312b2c57d2fb",
+  "source_match": {
+    "matched": 386,
+    "mismatches": []
+  },
+  "source_archive": "PARTIAL_DOWNLOAD_RETAINED_NOT_USED",
+  "requirements_sha256": "5da31a2184acadc864366986b1f7a858457ecc3f6796ad96b8529be2ed227a75",
+  "dependencies": [
+    {
+      "name": "numpy",
+      "version": "2.5.3",
+      "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+      "license_files": [
+        {
+          "name": "LICENSE.txt",
+          "sha256": "649a589ab31076e79e9ce62ba24eae9959598124176640dbc95f87bd10f34fcf"
+        },
+        {
+          "name": "LICENSE.txt",
+          "sha256": "fbc539f47d0cf83bc61378080fb873d5c14630126cacbfe754035c3926daa5ec"
+        },
+        {
+          "name": "COPYING",
+          "sha256": "3f2c1ffa76383a55ae0aac01c9737cd70050dff63e1f026694fbe9d662573c98"
+        },
+        {
+          "name": "LICENSE",
+          "sha256": "e340270d4f64384569a91d546acb5b094d69ce47f0c015db77abb74dc6f815af"
+        },
+        {
+          "name": "dragon4_LICENSE.txt",
+          "sha256": "f7b14309e5f54e5022b26448eefd419988ada2aec01d3c1162d84a0ea8f21f2c"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "211e7d737d6179a08f791ebb0a99897ce7cd2457410c542876d125576edfe910"
+        },
+        {
+          "name": "LICENSE",
+          "sha256": "c17011467b4fe6e20fbfbeda4df09e58c2bca5480a063e55735a4000a379aad9"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "a85ca13fdf90160b64a0698215868c13b74d835ad0a4e2ba44713b8c5058a056"
+        },
+        {
+          "name": "LICENSE.txt",
+          "sha256": "a14cc25e10d40a3aa705b7de2fb764a6535d8ee9b2db4e1724900585457dfd55"
+        },
+        {
+          "name": "LICENSE",
+          "sha256": "05f3b88351988ecfad10abe92c0c50e5875c6452d5009a0084cc291551ffcca6"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "103166b62b80443afb9eb3488e052ea06be0cff566b908f199e561fde49af19f"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "469778be8f33d54e1bcaab28c281cc472916d2d273f835e55bc487d30503face"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "0e111337b25494a773106695f0e799f642b8567aaacca4f116a74a8177179156"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "e7d4f4fb20358f314210a892ae17351e04993813646f697ec387385ca2a36918"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "6f5828a57223d4cc7f8ea505a2623e7b978b242752c1515e355f46ba2cec1800"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "9d4098846018319cd68e228ee6220361787f73bccbf00237a85e4fc9621b998f"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "268b0ca06759d31ea3ca68dd35f20e877916e927b1c2a835e4592a3c4354b1f9"
+        },
+        {
+          "name": "LICENSE.txt",
+          "sha256": "fbc539f47d0cf83bc61378080fb873d5c14630126cacbfe754035c3926daa5ec"
+        },
+        {
+          "name": "LICENSE",
+          "sha256": "05f3b88351988ecfad10abe92c0c50e5875c6452d5009a0084cc291551ffcca6"
+        },
+        {
+          "name": "LICENSE.md",
+          "sha256": "103166b62b80443afb9eb3488e052ea06be0cff566b908f199e561fde49af19f"
+        }
+      ]
+    },
+    {
+      "name": "lxml",
+      "version": "6.1.3",
+      "license": "BSD-3-Clause",
+      "license_files": [
+        {
+          "name": "LICENSE.txt",
+          "sha256": "8fc2b568133516e46845d2147917adeee1648e70ae9ab5ed6c5417afef4ce855"
+        },
+        {
+          "name": "LICENSES.txt",
+          "sha256": "388fa99f3bde4447cd5a4cbb114037be026854db6cfe89e112691c1d8abdcf3c"
+        }
+      ]
+    },
+    {
+      "name": "ftfy",
+      "version": "6.3.1",
+      "license": "Apache-2.0",
+      "license_files": [
+        {
+          "name": "LICENSE.txt",
+          "sha256": "a0bfc5020bc2e1e820551a0625c70c95faa898c15e737100ff4880aa10197857"
+        }
+      ]
+    },
+    {
+      "name": "mathml2omml",
+      "version": "0.0.2",
+      "license": "UNKNOWN",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "4f72f201e132a8ba734f0d611f675ca6fcadbbacc4166cc32d2969c27c335eb9"
+        }
+      ]
+    },
+    {
+      "name": "pydantic_core",
+      "version": "2.46.5",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "2afdd30d54b4d62b6f488a6bcc1546e84ec5061f13f4209c03d012348783795a"
+        }
+      ]
+    },
+    {
+      "name": "loguru",
+      "version": "0.7.3",
+      "license": "License :: OSI Approved :: MIT License",
+      "license_files": []
+    },
+    {
+      "name": "soupsieve",
+      "version": "2.9.2",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE.md",
+          "sha256": "76a0acdb98c3a63681e20b6f096699ef8cad5fb35d56eef8387e0fa71d797a9a"
+        }
+      ]
+    },
+    {
+      "name": "pydantic",
+      "version": "2.13.5",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3"
+        }
+      ]
+    },
+    {
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "fe1049884b1a0d9342901e88e07f32925d24b3121d9972b6a6805fb9824b095d"
+        }
+      ]
+    },
+    {
+      "name": "pylatexenc",
+      "version": "2.11",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE.txt",
+          "sha256": "90b6f8fc23cb0328a9678562627fb2ebc5f9c871712fad698d781869eb02862c"
+        }
+      ]
+    },
+    {
+      "name": "latex2mathml",
+      "version": "3.81.1",
+      "license": "MIT",
+      "license_files": []
+    },
+    {
+      "name": "nh3",
+      "version": "0.3.7",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "1c5bbd459c8f73e10e39602ac595e8981fb3dd3e895ecfc62e57410f9fbfd47b"
+        }
+      ]
+    },
+    {
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "804b59b25f2c31bd278f9202a19ae49a3945aa2664387e2d0a128c7cacc61ec3"
+        }
+      ]
+    },
+    {
+      "name": "docvortex",
+      "version": "0.4.9",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE.md",
+          "sha256": "ff54576f0fa4b4a677eaf63497a546d78502398d6c9dddb0984cfa02e5294d3b"
+        }
+      ]
+    },
+    {
+      "name": "python-docx",
+      "version": "1.2.0",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "7652f271e46d0d533e9dc463f3b5fcbdcacf4d6a9c8d6b554d15efd0f37f6132"
+        }
+      ]
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "license": "PSF-2.0",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf"
+        }
+      ]
+    },
+    {
+      "name": "beautifulsoup4",
+      "version": "4.15.0",
+      "license": "MIT License",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "55b4d8d4b1e5bc86d10efac91b74c87bcb77526b0f5b9edaf8b9cd2adc7397b2"
+        }
+      ]
+    },
+    {
+      "name": "wcwidth",
+      "version": "0.8.4",
+      "license": "MIT",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "70b98a95a2144eb70af8017fa8c6d95ce247e40867436e8bc649e137fe13d21a"
+        }
+      ]
+    },
+    {
+      "name": "pillow",
+      "version": "12.3.0",
+      "license": "MIT-CMU",
+      "license_files": [
+        {
+          "name": "LICENSE",
+          "sha256": "dda12a98c1979cf3d94df1cff45d27a4cb3f04a60c76f76902ac54cac03ec0ce"
+        }
+      ]
+    }
+  ],
+  "public_api": {
+    "docvortex.content.table": [
+      "build_row_rendered_cell_segments",
+      "build_table_state_from_html",
+      "calculate_row_rendered_segments",
+      "can_merge_by_structure",
+      "detect_table_headers",
+      "expand_header_count_by_rowspan",
+      "merge_table",
+      "merge_table_content"
+    ],
+    "docvortex.postprocess.document": [
+      "model_json_to_middle_json"
+    ],
+    "docvortex.render.contracts": [
+      "AssetResolver",
+      "DocxRenderOptions",
+      "EpubRenderOptions",
+      "HtmlRenderOptions",
+      "ImageRenderer",
+      "LatexRenderOptions",
+      "MarkdownRenderOptions",
+      "PdfRenderOptions",
+      "PdfLayout",
+      "RenderMode",
+      "StructuredContentRenderOptions"
+    ],
+    "docvortex.render.docx": [
+      "DocxRenderError",
+      "render_docx"
+    ],
+    "docvortex.schema": [
+      "AlgorithmBodyBlock",
+      "BBox",
+      "BLOCK_ADAPTER",
+      "BLOCK_TYPES",
+      "Block",
+      "BlockBase",
+      "BlockType",
+      "BlockTypes",
+      "ChartAnnotationBlock",
+      "ChartBlock",
+      "ChartBodyBlock",
+      "ChartChildBlock",
+      "CodeAnnotationBlock",
+      "CodeBlock",
+      "CodeBodyBlock",
+      "CodeChildBlock",
+      "CodeInlineSpan",
+      "ContinuableTextBlockBase",
+      "DocTitleBlock",
+      "DocumentMetadata",
+      "DocumentModel",
+      "DocumentProperties",
+      "EquationBlock",
+      "EquationInlineSpan",
+      "FILE_SUFFIXES",
+      "FileSuffix",
+      "HyperlinkSpan",
+      "INLINE_SPAN_ADAPTER",
+      "INLINE_SPAN_LIST_ADAPTER",
+      "INLINE_STYLE_ORDER",
+      "ImageAnnotationBlock",
+      "ImageBlock",
+      "ImageBodyBlock",
+      "ImageChildBlock",
+      "ImagePayloadBlock",
+      "ImagePayloadContentBlock",
+      "IndexBlock",
+      "IndexChildBlock",
+      "InlineContentBlock",
+      "InlineSpan",
+      "InlineStyle",
+      "IntBBox",
+      "ListBlock",
+      "ListChildBlock",
+      "MERGE_TRANSPARENT_BLOCK_TYPES",
+      "MiddleJson",
+      "ModelJson",
+      "NonLinkInlineSpan",
+      "PAGE_AUXILIARY_BLOCK_TYPES",
+      "PAGE_BLOCK_TYPES",
+      "PageAuxTextBlock",
+      "PageBlock",
+      "PageBlockTypes",
+      "PageFootnoteBlock",
+      "PageInfo",
+      "ParagraphTitleBlock",
+      "Producer",
+      "RAW_ALGORITHM",
+      "RAW_CAPTION",
+      "RAW_FOOTNOTE",
+      "RAW_FORMULA_NUMBER",
+      "RAW_ONLY_BLOCK_TYPES",
+      "RAW_PHONETIC",
+      "RawBlockType",
+      "RefTextBlock",
+      "StringContentBlock",
+      "TableAnnotationBlock",
+      "TableBlock",
+      "TableBodyBlock",
+      "TableChildBlock",
+      "TextBlock",
+      "TextSpan",
+      "TitleBlockBase",
+      "VISUAL_MAIN_TYPES",
+      "VISUAL_RELATION_IGNORED_TYPES",
+      "VISUAL_TYPE_MAPPING",
+      "parse_block",
+      "parse_inline_span",
+      "parse_inline_spans"
+    ]
+  },
+  "installation_scope": "Explicit hashed postprocess/render slice with no dependency expansion; not a full DocVortex SDK install.",
+  "omitted_declared_packages": [
+    "click",
+    "pypdfium2",
+    "pypdf",
+    "metafile-render",
+    "fonttools",
+    "pypptx-with-oxml",
+    "mammoth",
+    "openpyxl",
+    "olefile",
+    "resvg_py",
+    "reportlab",
+    "ziamath",
+    "magika",
+    "opencv-python"
+  ],
+  "model_packages_installed": false,
+  "mineru_inference": "NOT_RUN",
+  "worker_pdfium_loaded": false
+}

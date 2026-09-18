@@ -39,6 +39,8 @@ jobs:
           node-version: '24.18.0'
       - name: Synchronize locked dependencies
         run: uv sync --locked
+      - name: Install the isolated deterministic DocVortex POC runtime
+        run: uv run --locked python scripts/setup_docvortex_runtime.py
       - name: Run the shared offline quality gate
         run: uv run --locked python scripts/quality.py --output-dir tmp/quality/ci
       - name: Upload only sanitized engineering reports

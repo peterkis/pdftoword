@@ -62,6 +62,10 @@ def main() -> int:
     ab.add_argument("--renderer-a", choices=["legacy"], default="legacy")
     ab.add_argument("--renderer-b", choices=["legacy"], default="legacy")
     ab.add_argument("--output-root", type=Path, default=JOBS)
+    poc = sub.add_parser("reuse-poc")
+    poc.add_argument("--source-job", type=Path, required=True)
+    poc.add_argument("--source-seal", type=Path)
+    poc.add_argument("--output-root", type=Path, default=JOBS)
     s = sub.add_parser("serve")
     s.add_argument("--host", choices=["127.0.0.1"], default="127.0.0.1")
     s.add_argument("--port", type=int, default=8765)
@@ -72,6 +76,10 @@ def main() -> int:
             from prototypes.docx_output.server import create_app
 
             uvicorn.run(create_app(args.port), host=args.host, port=args.port, access_log=False)
+        elif args.command == "reuse-poc":
+            from prototypes.docx_output.reuse_poc import run_poc
+
+            print(run_poc(args.source_job, args.output_root, args.source_seal).resolve())
         elif args.command == "compare-renderers":
             from prototypes.docx_output.render_replay import compare_renderers
 

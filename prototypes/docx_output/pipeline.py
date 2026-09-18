@@ -89,6 +89,7 @@ def finish(
                                 "implementation": implementation_identity(
                                     structure_processor, "process")},
         "ir_version": ir["schema_version"], "plan_version": PLAN_VERSION,
+        "effective_renderer": stats.get("effective_renderer", renderer.name),
         "providers": ir.get("model_registry", {}), "model_call_count": 0,
         "provider_revision_if_absent": "unknown",
         "implementation_sha256": {
@@ -118,6 +119,9 @@ def finish(
     for a in ir["assets"]:
         if a["id"] in referenced and a["type"] == "formula_image":
             fallback_boxes.setdefault(a["source_page_index"], []).append(a["source_bbox"])
+    for asset in ir["assets"]:
+        if asset["id"] in stats.get("rendered_fallback_asset_ids", []):
+            fallback_boxes.setdefault(asset["source_page_index"], []).append(asset["source_bbox"])
     total = sum(p["width_pt"] * p["height_pt"] for p in ir["pages"])
     fallback = 0.0
     for p in ir["pages"]:
