@@ -57,6 +57,17 @@ class DocVortexStructureProcessor:
         result = call_worker({"action": "postprocess", "model": value.model})
         middle = result["middle"]
         candidate = copy.deepcopy(selected)
+        prior_links = [
+            r
+            for r in candidate["relations"]
+            if r["type"] == "continuation_of"
+            and r.get("method") == "demo_rule"
+            and r.get("evidence", {}).get("basis") == "docvortex_public_postprocess"
+            and not r.get("evidence", {}).get("manual")
+        ]
+        prior_ids = {r["id"] for r in prior_links}
+        candidate["relations"] = [r for r in candidate["relations"] if r["id"] not in prior_ids]
+        continuations: list[tuple[str, str]] = []
         lookup = {(e["page_index"], e["raw_index"]): e for e in value.ledger["entries"]}
         mapped: dict[str, Json] = {}
         losses: list[Json] = []
@@ -163,17 +174,45 @@ class DocVortexStructureProcessor:
                     {"source_id": bid, "kind": "continues_prev", "adopted": can_continue}
                 )
                 if can_continue:
-                    relation(
-                        candidate,
-                        "continuation_of",
-                        bid,
-                        previous["source_id"],
-                        {
-                            "basis": "docvortex_public_postprocess",
-                            "ledger_sha256": json_hash(value.ledger),
-                        },
-                    )
+                    continuations.append((bid, previous["source_id"]))
             previous = entry
+
+        def exists(origin: str, target: str) -> bool:
+            return any(
+                r["type"] == "continuation_of" and r["from"] == origin and r["to"] == target
+                for r in candidate["relations"]
+            )
+
+        # Reuse stable IDs before allocating new ones, so new edges cannot steal an old ID.
+        for origin, target in continuations:
+            old = next((r for r in prior_links if r["from"] == origin and r["to"] == target), None)
+            if old is not None and not exists(origin, target):
+                restored = copy.deepcopy(old)
+                restored["evidence"]["ledger_sha256"] = json_hash(value.ledger)
+                candidate["relations"].append(restored)
+        for origin, target in continuations:
+            if not exists(origin, target):
+                relation(
+                    candidate,
+                    "continuation_of",
+                    origin,
+                    target,
+                    {
+                        "basis": "docvortex_public_postprocess",
+                        "ledger_sha256": json_hash(value.ledger),
+                    },
+                )
+                added = candidate["relations"][-1]
+                if added["id"] in prior_ids:
+                    reserved = prior_ids | {r["id"] for r in candidate["relations"]}
+                    index = len(reserved)
+                    while f"rel-{index}" in reserved:
+                        index += 1
+                    added["id"] = f"rel-{index}"
+        retired_ids = prior_ids - {r["id"] for r in candidate["relations"]}
+        for page in candidate["pages"]:
+            for block in page["blocks"]:
+                block["relations"] = [rid for rid in block["relations"] if rid not in retired_ids]
         page_by_source = {e["source_id"]: e["page_index"] for e in value.ledger["entries"]}
         for loss in losses:
             if loss["code"] != "TEMP_FIELDS_REMOVED_RETAINED_IN_LEDGER":
@@ -195,6 +234,7 @@ class DocVortexStructureProcessor:
             "source_ledger_sha256": json_hash(value.ledger),
             "model_sha256": json_hash(value.model),
             "middle_sha256": json_hash(middle),
+            "retired_stage_relation_ids": sorted(retired_ids),
             "source_count": len(lookup),
             "mapped_count": len(mapped),
             "model_call_count": 0,

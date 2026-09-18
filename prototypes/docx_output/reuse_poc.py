@@ -9,12 +9,12 @@ from pathlib import Path
 from lxml import etree
 from PIL import Image
 
-from .common import JOBS, DemoError, Json, digest, new_job, save
+from .common import JOBS, DemoError, Json, digest, new_job, read, save
 from .docvortex_runtime import call_worker
 from .render_replay import compare_renderers, inventory
 from .renderers.docvortex import DocVortexRenderer
 from .structure_processors.bridge import inline_text, json_hash
-from .structure_processors.docvortex import DocVortexStructureProcessor, leaves
+from .structure_processors.docvortex import DocVortexStructureProcessor, finalized_hash, leaves
 
 
 def model(blocks: list[Json], pages: list[int] | None = None) -> Json:
@@ -169,6 +169,10 @@ def run_poc(source: Path, output_root: Path = JOBS, source_seal: Path | None = N
     """Keep structure and renderer experiments independent with actual shared-path calls."""
     if output_root.resolve().is_relative_to(source.resolve()):
         raise DemoError("OUTPUT_INSIDE_SOURCE")
+    selected = read(source / "layout.auto.json")
+    stage = selected.get("metadata", {}).get("docvortex_structure", {})
+    if isinstance(stage, dict) and stage.get("finalized_ir_sha256") == finalized_hash(selected):
+        raise DemoError("POC_REQUIRES_PRE_STRUCTURE_IR")
     before = inventory(source)
     root = new_job(output_root)
     renderer_axis = compare_renderers(
@@ -184,8 +188,6 @@ def run_poc(source: Path, output_root: Path = JOBS, source_seal: Path | None = N
     probes = public_probes(probe_job)
     identity = call_worker({"action": "identity"})
     save(root / "runtime-identity.json", identity)
-    from .common import read
-
     renderer_record = read(renderer_axis / "comparison.json")
     shared_record = read(shared_axis / "comparison.json")
     decisions = []

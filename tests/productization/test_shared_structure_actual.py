@@ -196,3 +196,72 @@ def test_structure_loss_uses_actual_nonzero_source_page(case: Path) -> None:
     ]
     assert issues and issues[0]["page_index"] == 5
     assert issues[0]["block_ids"] == ["one"]
+
+
+def continuation_ir(root: Path) -> Json:
+    """Two source pages with explicit lines satisfying the public continuation contract."""
+    ir = text_ir(root, "a paragraph continues")
+    first = ir["pages"][0]
+    first["blocks"][0]["type"] = "paragraph"
+    first["blocks"][0]["bbox"] = [60, 700, 500, 750]
+    second = copy.deepcopy(first)
+    second["page_index"] = 1
+    second["blocks"][0].update(id="two", page_index=1, bbox=[60, 60, 500, 110])
+    second["blocks"][0]["content"]["plain_text"] = "with further words"
+    second["reading_order"] = ["two"]
+    ir["pages"].append(second)
+    ir["source"]["page_count"] = 2
+    ir["metadata"]["structure_evidence"] = {
+        "one": {
+            "coordinate_space": "pdf_points",
+            "lines": [{"bbox": [60, 700, 500, 720]}, {"bbox": [60, 730, 500, 750]}],
+        },
+        "two": {
+            "coordinate_space": "pdf_points",
+            "lines": [{"bbox": [60, 60, 500, 80]}, {"bbox": [60, 90, 400, 110]}],
+        },
+    }
+    return ir
+
+
+def test_reprocessing_updates_owned_continuations_without_duplicates(case: Path) -> None:
+    processor = DocVortexStructureProcessor()
+    result = processor.process(continuation_ir(case)).document
+    assert len(result["relations"]) == 1
+    relation_id = result["relations"][0]["id"]
+    for text in ["with an edit", "with another edit"]:
+        result["pages"][1]["blocks"][0]["content"]["plain_text"] = text
+        result = processor.process(result).document
+        assert len(result["relations"]) == 1
+        assert result["relations"][0]["id"] == relation_id
+    result["pages"][0]["blocks"][0]["content"]["plain_text"] += "."
+    result = processor.process(result).document
+    assert result["relations"] == []
+
+
+def test_reprocessing_retains_manual_continuation(case: Path) -> None:
+    processor = DocVortexStructureProcessor()
+    result = processor.process(continuation_ir(case)).document
+    manual = result["relations"][0]
+    manual["evidence"]["manual"] = True
+    expected = copy.deepcopy(manual)
+    result["pages"][1]["blocks"][0]["content"]["plain_text"] = "with a human edit"
+    result = processor.process(result).document
+    assert result["relations"] == [expected]
+    result["pages"][0]["blocks"][0]["content"]["plain_text"] += "."
+    result = processor.process(result).document
+    assert result["relations"] == [expected]
+
+
+def test_poc_does_not_claim_a_call_for_cached_finalized_structure(case: Path) -> None:
+    from prototypes.docx_output.common import save
+    from prototypes.docx_output.reuse_poc import run_poc
+    from tests.productization.test_renderer_boundary import source_job
+
+    source, ir = source_job(case)
+    ir["metrics"]["model_call_count"] = 0
+    finalized = DocVortexStructureProcessor().process(ir).document
+    save(source / "layout.auto.json", finalized)
+    with pytest.raises(DemoError, match="POC_REQUIRES_PRE_STRUCTURE_IR"):
+        run_poc(source, output_root=case / "new-poc")
+    assert not (case / "new-poc").exists()
