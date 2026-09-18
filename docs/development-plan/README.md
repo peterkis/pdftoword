@@ -1,3 +1,42 @@
+# 当前计划：PDF2Word Reconstruction V2.1
+
+2026-09-18 按用户指令切换到仓库外独立目录
+`~/Plans/PDF2Word_Development_Plan_v2.1_20260917/`，执行入口为 `prompts/R1_FULL.md`。
+S1 **已废弃**；S2-01～06 **继承完成并保留质量发现**。以下旧计划记录仅供历史追溯，
+不再用于调度。原 97 项目录、映射、源码、CI 和历史证据不改写。
+
+本次仅授权 **P2W-R1-01**。初次 `next_task.py` 实测仅推荐 R1-01；本项工程
+验证后建议 R1-05，不自动签署视觉/Word/发布接受，也不执行下一项。
+
+- [R1-01 实施报告](../../tasks/reports/P2W-R1-01_REPORT.md)
+- [六类公共接口与后续任务](r1-reuse-record.json)：计划包提供的源码审查快照，公共调用均 NOT_RUN。
+- 工程实现与工具状态分离：报告在仓库，执行状态只更新新包 `state/progress.json` 的 R1-01。
+
+本机只读计划检查：
+
+```sh
+python3 "$HOME/Plans/PDF2Word_Development_Plan_v2.1_20260917/scripts/validate_package.py"
+python3 "$HOME/Plans/PDF2Word_Development_Plan_v2.1_20260917/scripts/next_task.py"
+```
+
+回放入口（输入作业不变；输出根必须位于当前私有存储目录）：
+
+```sh
+uv run scripts/docx_demo.py compare-renderers --source-job <已有作业目录> --revision auto
+```
+
+旧 PDF 作业缺少 provenance image_sha256 时，显式传入先前可信比较记录
+`--source-seal <已有 comparison.json>`；校验整份旧文件集合/hash 后才回放。
+没有既有封存记录的旧来源图拒绝，不用当前 hash 补写历史。新作业已在来源图生成时记录 hash。
+
+同源 A/B 当前均用 legacy，独立子作业可使用原下载与预览接口；后续 renderer 通过
+`DocxRenderer` 注入，结构候选通过独立 `StructureProcessor` 注入。HTTP 对应
+`POST /api/compare-renderers/{job_id}`，继续使用现有本机会话与 Origin 防护。
+
+---
+
+## 历史接入记录（不再作为当前执行指令）
+
 # 增量产品化计划接入
 
 本入口由 P2W-S1-01 接入，状态为 READY_FOR_REVIEW。完整计划已独立安装于仓库外

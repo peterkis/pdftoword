@@ -16,6 +16,7 @@ from .common import (
     block,
     box_valid,
     crop,
+    digest,
     intersection,
     invalid_xml_text,
     issue,
@@ -118,6 +119,7 @@ def extract(
                     path.chmod(0o600)
                     info = {
                         "image_path": str(path.relative_to(job)),
+                        "image_sha256": digest(path),
                         "pixel_size": [bw, bh],
                         "pixel_to_point": [w / bw, h / bh],
                         "point_to_pixel": [bw / w, bh / h],

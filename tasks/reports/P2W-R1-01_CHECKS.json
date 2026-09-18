@@ -1,0 +1,167 @@
+{
+  "status": "PASS",
+  "comparison_id": "demo-462b392c546c42dda9d50e8e7e70c3cf",
+  "source_job_id": "demo-9032ecb6a45b494eb8cee630d1ef0d3b",
+  "source_file_count": 34,
+  "source_unchanged": true,
+  "source_ir_sha256": "80a51a83ffa77d41f12a8f8db95f9d894b4827bd7287445e38c4d65bf47b09c6",
+  "verified_responses": 4,
+  "historical_request_count": 4,
+  "new_model_requests": 0,
+  "metadata_gets": 0,
+  "network_attempts": 0,
+  "ir_reuse_count": 2,
+  "response_reexecution_count": 0,
+  "outputs": [
+    {
+      "label": "A",
+      "job_id": "demo-50f0e0e50d1c4cacb2d4c18c51e4c7f8",
+      "docx_reopened_python_docx": true,
+      "paragraphs": 15,
+      "word_parts_equal_to_original": true,
+      "source_map_equal_except_valid_docx_sha256": true,
+      "ir_content_relations_assets_locks_equal": true,
+      "artifacts": {
+        "auto.docx": "01a01ff5d912b75d6c25519d73e7d208cc910a164fe31d202937935ef5564007",
+        "layout.auto.json": "8032b1278e444d82133a3096fe9a47921855dd288027370f428812c5066af19d",
+        "render-plan.auto.json": "64830f1038e5fff8871206fe45baa2cb3086e88d79d00fbd978b8aae7458fecb",
+        "source-map.auto.json": "601ea4ff3cb12870c76dcf88864827089d94a60e19ce6dac13b76e2bb150cf6f",
+        "render-manifest.auto.json": "a9746bd25b9e51aa0bfee4aa41b8cbaabdbc67872b1d34cdf0099eb54b5d6856",
+        "mapping-loss-report.auto.json": "151783a5995109ccbd90f721ae4298c702187b2829bce4c7d8f16e24c82f9b66"
+      }
+    },
+    {
+      "label": "B",
+      "job_id": "demo-ef17fbd481cd46648d6d994b96d13b33",
+      "docx_reopened_python_docx": true,
+      "paragraphs": 15,
+      "word_parts_equal_to_original": true,
+      "source_map_equal_except_valid_docx_sha256": true,
+      "ir_content_relations_assets_locks_equal": true,
+      "artifacts": {
+        "auto.docx": "01a01ff5d912b75d6c25519d73e7d208cc910a164fe31d202937935ef5564007",
+        "layout.auto.json": "8032b1278e444d82133a3096fe9a47921855dd288027370f428812c5066af19d",
+        "render-plan.auto.json": "64830f1038e5fff8871206fe45baa2cb3086e88d79d00fbd978b8aae7458fecb",
+        "source-map.auto.json": "601ea4ff3cb12870c76dcf88864827089d94a60e19ce6dac13b76e2bb150cf6f",
+        "render-manifest.auto.json": "a9746bd25b9e51aa0bfee4aa41b8cbaabdbc67872b1d34cdf0099eb54b5d6856",
+        "mapping-loss-report.auto.json": "151783a5995109ccbd90f721ae4298c702187b2829bce4c7d8f16e24c82f9b66"
+      }
+    }
+  ],
+  "visual_acceptance": "NOT_RUN",
+  "microsoft_word": "NOT_RUN",
+  "overlay": "NOT_CREATED",
+  "task": "P2W-R1-01",
+  "engineering_status": "VERIFIED",
+  "acceptance": "PENDING",
+  "head": "6b94819a71ad033e480f3808f2f56f4d364a6453",
+  "branch": "main",
+  "reference": "6c41bd663997095a131643d6a9cb4fbd5bf22648",
+  "reference_code_diff": "AGENTS.md only",
+  "quality": {
+    "exit_code": 1,
+    "steps": [
+      {
+        "name": "pytest",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 31.43
+      },
+      {
+        "name": "ruff",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.041
+      },
+      {
+        "name": "mypy",
+        "status": "FAIL",
+        "returncode": 1,
+        "duration_seconds": 0.348
+      },
+      {
+        "name": "task_catalog",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.039
+      },
+      {
+        "name": "model_baseline",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.041
+      },
+      {
+        "name": "schema_samples",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.077
+      }
+    ],
+    "tests": {
+      "PASS": 1292,
+      "FAIL": 0,
+      "ERROR": 0,
+      "SKIP": 0,
+      "XFAIL": 0,
+      "XPASS": 0
+    },
+    "known_mypy_errors": 19,
+    "known_private_files": 2
+  },
+  "final_checks": {
+    "steps": [
+      {
+        "name": "boundary",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 1.046
+      },
+      {
+        "name": "focused-mypy",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.182
+      },
+      {
+        "name": "ruff",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.041
+      },
+      {
+        "name": "schema-samples",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.131
+      },
+      {
+        "name": "diff-check",
+        "status": "PASS",
+        "returncode": 0,
+        "duration_seconds": 0.011
+      }
+    ],
+    "exit_code": 0
+  },
+  "evidence_root": "tmp/docx-demo/r1-01-evidence",
+  "baseline_docx_sha256": "c4d64308101407da6d4400da238e74bfd78e07f553a02e3c9d806546a6ca2f82",
+  "baseline_request_manifest_sha256": "9dfad997901615dfeb7875af5db5607d06fff72dfe5dfbb28029c9945c24bc26",
+  "initial_next_task": "P2W-R1-01",
+  "recommended_next_task": "P2W-R1-05",
+  "public_upstream_execution": "NOT_RUN",
+  "installed_new_model_packages": false,
+  "source_authentication": "Registered assets/input and 4 raw+stored responses verified against stored hashes; other files have before/after snapshots, not historical seals.",
+  "plan_validation": {
+    "status": "PASS",
+    "exit_code": 0,
+    "initial_ready": [
+      "P2W-R1-01"
+    ],
+    "final_ready": [
+      "P2W-R1-05",
+      "P2W-R1-02"
+    ],
+    "next_task_exit_code": 0
+  }
+}

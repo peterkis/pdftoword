@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from .common import DemoError, Json, candidate, issue, layout, new_job, page, safe_path
+from .common import DemoError, Json, candidate, digest, issue, layout, new_job, page, safe_path
 
 
 def reconstruct_region(job: Path, ir: Json, region: Json, responses: Json, manifest: Json) -> None:
@@ -31,6 +31,7 @@ def reconstruct_region(job: Path, ir: Json, region: Json, responses: Json, manif
     local["provenance"]["pages"] = {
         "0": {
             "image_path": "assets/source-0.png",
+            "image_sha256": digest(work / "assets/source-0.png"),
             "pixel_size": [w, h],
             "pixel_to_point": [1, 1],
             "point_to_pixel": [1, 1],

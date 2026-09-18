@@ -1,0 +1,74 @@
+{
+  "status": "PASS",
+  "comparison_id": "demo-8a5e169ee2ba409887a9d069e691c4cd",
+  "source_job_id": "demo-9032ecb6a45b494eb8cee630d1ef0d3b",
+  "source_file_count": 34,
+  "source_unchanged": true,
+  "source_ir_sha256": "80a51a83ffa77d41f12a8f8db95f9d894b4827bd7287445e38c4d65bf47b09c6",
+  "verified_responses": 4,
+  "historical_request_count": 4,
+  "new_model_requests": 0,
+  "metadata_gets": 0,
+  "network_attempts": 0,
+  "ir_reuse_count": 2,
+  "response_reexecution_count": 0,
+  "outputs": [
+    {
+      "label": "A",
+      "job_id": "demo-291b37bd8d264e6b8a53142e21f3ced9",
+      "docx_reopened_python_docx": true,
+      "paragraphs": 15,
+      "word_parts_equal_to_original": true,
+      "source_map_equal_except_valid_docx_sha256": true,
+      "ir_content_relations_assets_locks_equal": true,
+      "artifacts": {
+        "auto.docx": "de946443e4e65568d65f0e3a71132032fdae9edbd1fcbb6487b43494b858f776",
+        "layout.auto.json": "8032b1278e444d82133a3096fe9a47921855dd288027370f428812c5066af19d",
+        "render-plan.auto.json": "64830f1038e5fff8871206fe45baa2cb3086e88d79d00fbd978b8aae7458fecb",
+        "source-map.auto.json": "8b595119f692c1043e34e6ddd7d9653929f47babd2d9b12c5add3472a0628c82",
+        "render-manifest.auto.json": "a3d6cbfd4d2b46a72d1bf62c8d9889df490f44525610826f590d96fff636ac36",
+        "mapping-loss-report.auto.json": "151783a5995109ccbd90f721ae4298c702187b2829bce4c7d8f16e24c82f9b66"
+      }
+    },
+    {
+      "label": "B",
+      "job_id": "demo-b5230256135e41aca169a146eb74af21",
+      "docx_reopened_python_docx": true,
+      "paragraphs": 15,
+      "word_parts_equal_to_original": true,
+      "source_map_equal_except_valid_docx_sha256": true,
+      "ir_content_relations_assets_locks_equal": true,
+      "artifacts": {
+        "auto.docx": "de946443e4e65568d65f0e3a71132032fdae9edbd1fcbb6487b43494b858f776",
+        "layout.auto.json": "8032b1278e444d82133a3096fe9a47921855dd288027370f428812c5066af19d",
+        "render-plan.auto.json": "64830f1038e5fff8871206fe45baa2cb3086e88d79d00fbd978b8aae7458fecb",
+        "source-map.auto.json": "8b595119f692c1043e34e6ddd7d9653929f47babd2d9b12c5add3472a0628c82",
+        "render-manifest.auto.json": "a3d6cbfd4d2b46a72d1bf62c8d9889df490f44525610826f590d96fff636ac36",
+        "mapping-loss-report.auto.json": "151783a5995109ccbd90f721ae4298c702187b2829bce4c7d8f16e24c82f9b66"
+      }
+    }
+  ],
+  "visual_acceptance": "NOT_RUN",
+  "microsoft_word": "NOT_RUN",
+  "overlay": "NOT_CREATED",
+  "reviewed_head": "240fde668171e8548a87ee8ca6b71ce45aabcf2d",
+  "addressed_comments": [
+    4043277983,
+    4043277989,
+    4043277995
+  ],
+  "red": {
+    "passed": 17,
+    "failed": 3
+  },
+  "green": {
+    "passed": 21,
+    "failed": 0
+  },
+  "full_tests": {
+    "passed": 1303,
+    "failed": 0,
+    "skipped": 0
+  },
+  "full_mypy": "KNOWN_PRIVATE_19_ERRORS"
+}
