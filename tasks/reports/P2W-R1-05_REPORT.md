@@ -203,3 +203,12 @@ Nine actual renderer regressions cover unsupported block kinds. Full quality pr8
 Verified image bytes are no longer sufficient for acceptance: cropped or transformed drawings are rejected. Supported inline images are sized using source-asset width, original pixel aspect ratio and the existing Legacy printable bounds. Regressions verify crop rejection and restoration of a tiny drawing to source dimensions. Table thead/th/tfoot semantics are explicitly unsupported and leave fallback evidence; full table-header support is deferred to P2W-R3-02.
 
 The initial focused image test used bbox aspect ratio rather than pixel aspect ratio and failed; the assertion was corrected to verify preservation of the actual asset pixels. That failed run remains pr8-r11-focused.txt. Final quality pr8-quality-r11: 1365 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 12: image-only formulas and call-count evidence
+
+Formula image-only modes/policies explicitly fail public-renderer capability checks with FORMULA_IMAGE_POLICY_UNSUPPORTED. Unprepared formulaContent also cannot be handled by Legacy; tests verify the explicit audit remains and no successful DOCX is written. This unsupported capability remains with P2W-R3-03 rather than adding formula conversion here. The first two tests attempted an A/B run through unsupported Legacy content and failed; the final regressions directly exercise the renderer rejection and retained audit. Both runs are preserved.
+
+Final quality pr8-quality-r12-final: 1367 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors.
+
+The call-count finding is not reproducible: two extra negative calls are in test_public_probes_six_capabilities_and_negative_outputs, not public_probes. A successful synthetic POC was traced with a forwarding wrapper executing every real worker call (no fake response). It observed postprocess=11, render=11, table=1, identity=1; manifest public_structure_calls=11. Evidence: tmp/docx-demo/r1-05/pr8-call-count-evidence/call-count-verification.json and tmp/docx-demo/r1-05/trace-public-calls.py. The historical count of 11 remains correct. Word/visual acceptance NOT_RUN.

@@ -120,6 +120,7 @@ def test_formula_image_fallback_and_raw_latex_rejection(case: Path) -> None:
     source, ir = source_job(case)
     b = ir["pages"][0]["blocks"][1]
     b["type"] = "formula"
+    b["render_policy"] = "hybrid"
     b["content"] = {
         "kind": "formula",
         "latex": r"\frac{",
@@ -540,3 +541,35 @@ def test_table_header_semantics_explicitly_unsupported(case: Path) -> None:
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"]
     assert any(loss["code"] == "DOCVORTEX_TABLE_HEADER_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize(
+    "policy,mode", [("editable", "image"), ("preserve_image", "omml_with_image_fallback")]
+)
+def test_explicit_formula_image_policy_is_not_overridden(
+    case: Path, policy: str, mode: str
+) -> None:
+    source, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][1]
+    b.update(type="formula", render_policy=policy)
+    b["content"] = {
+        "kind": "formula",
+        "latex": "x^2",
+        "mathml": None,
+        "source_asset_id": ir["assets"][0]["id"],
+        "render_mode": mode,
+        "confidence": 0,
+        "omml_status": "pending",
+    }
+    target = new_job(case / "jobs")
+    for asset in ir["assets"]:
+        destination = target / asset["path"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / asset["path"], destination)
+    # Neither adapter can render this unprepared formula content: preserve explicit failure.
+    with pytest.raises(DemoError, match="UNSUPPORTED_IR_CONTENT"):
+        DocVortexRenderer().render(target, RenderPlan.from_ir(ir), "auto")
+    assert not (target / "auto.docx").exists()
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "FORMULA_IMAGE_POLICY_UNSUPPORTED" for loss in audit["losses"])
