@@ -25,11 +25,6 @@ def locked(block: Json) -> bool:
         block.get("geometry_source") == "manual_correction"
         or block.get("source_type") == "manual_correction"
         or any("lock" in flag for flag in block.get("flags", []))
-        or any(
-            candidate["id"] == block.get("selected_candidate_id")
-            and candidate.get("provider") == "manual_correction"
-            for candidate in block.get("content_candidates", [])
-        )
     )
 
 

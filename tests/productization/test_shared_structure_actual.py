@@ -329,7 +329,7 @@ def test_actual_review_operations_lock_selected_manual_content(
         operation["candidate_id"] = option["id"]
     reviewed = apply_overrides(case, ir, {"operations": [operation]})
     selected = reviewed["pages"][0]["blocks"][0]
-    assert selected["source_type"] != "manual_correction"
+    assert selected["source_type"] == "manual_correction"
     assert selected["geometry_source"] != "manual_correction"
     result = DocVortexStructureProcessor().process(reviewed)
     assert not any(proposal["adopted"] for proposal in result.loss_report["proposals"])

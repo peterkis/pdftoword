@@ -256,3 +256,10 @@ Only omml_with_image_fallback supplies a formula image to the renderer. Source b
 The reported selected_html `<table><tr><td>A</td></tr></table>B` / plain_text AB was executed before any implementation change. The existing full-range text comparison rejected the SDK candidate with DOCVORTEX_OUTPUT_CONTENT_CHANGED and explicitly fell back; the final Legacy paragraph retained AB. Thus the reported silent-loss acceptance is not reproducible. Before-change evidence: tmp/docx-demo/r1-05/table-tail-before.json. Only a regression and this record were added; production behavior was not changed.
 
 Full quality pr8-quality-r20: 1380 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 21: actual review operations already lock content
+
+The finding that apply_overrides leaves source_type unchanged is not reproducible: its common operation tail sets source_type=manual_correction, already recognized by locked(). Four actual text/candidate review regressions verify heading/continuation proposals are not adopted. The initial tests incorrectly assumed source_type remained unchanged and failed (1380 passed/4 failed); the extra predicate committed in 9d9b141 was unnecessary and is removed. The prematurely stated 1384 count in the first review reply is explicitly corrected there. Failed evidence remains pr8-quality-r21/.
+
+Corrected focused tests: 25 passed. Full quality pr8-quality-r21-corrected: 1384 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
