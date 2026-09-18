@@ -131,3 +131,12 @@ MU-HEADING、MU-PARAGRAPH、MU-TABLE、MU-FORMULA、MU-CAPTION 决定为受限 A
 - 共享结构审校问题依据源 ledger 定位 page_index，部分页选择不再误记到第 0 页。
 
 修复前 3 failed / 28 passed，修复后相关 31 passed；全仓 1334 passed。Ruff、定向 mypy 与 diff check 正常，全仓 mypy 仍为既有私有 19 错误。日志 `tmp/docx-demo/r1-05/pr8-{red,green}.txt` 和 `pr8-quality-r1/`。真实两轴重新生成到全新目录，原 34 个文件不变，产物 hash 见 `P2W-R1-05_PR8_FIXES.json`；前期证据不覆盖。远端复审待执行，Word/视觉接受仍 NOT_RUN。
+
+
+## PR #8 review round 2
+
+Commit 8561b87 reconciles stage-owned continuation relations after edits: reuse stable IDs, retire invalid links and block references, and preserve manual relations. Regressions cover repeated edits, retirement and manual ownership. The POC rejects finalized cached structure inputs rather than claiming another public postprocessing call.
+
+Validation: uv sync --locked exit 0. uv run scripts/quality.py --output-dir tmp/docx-demo/r1-05/pr8-quality-continued: 1337 passed, no failures/skips; Ruff/catalog/baseline/schema exit 0. Overall exit 1 due only to the existing 19 mypy errors in two private scripts. Targeted mypy over prototypes/docx_output and tests/productization/test_shared_structure_actual.py: 40 files, exit 0. git diff --check exit 0. Earlier focused log pr8-r2-final.txt records 18 passed.
+
+Existing replay artifacts remain in tmp/docx-demo/r1-05/pr8-poc-r2-final/. Remote re-review pending; Word and visual acceptance NOT_RUN.
