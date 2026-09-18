@@ -62,6 +62,8 @@ def unsupported(plan: RenderPlan) -> list[Json]:
                 findings.append(
                     {"code": "BLOCK_CONTENT_COMBINATION_UNSUPPORTED", "source_id": b["id"]}
                 )
+            if b["content"]["kind"] == "image" and b["content"].get("alt_text") is not None:
+                findings.append({"code": "IMAGE_ALT_TEXT_UNSUPPORTED", "source_id": b["id"]})
             if b["type"] == "heading":
                 findings.append({"code": "PLANNED_HEADING_LEVEL_UNSUPPORTED", "source_id": b["id"]})
             if b.get("style_ref") is not None:

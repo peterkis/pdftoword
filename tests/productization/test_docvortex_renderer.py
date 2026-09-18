@@ -765,3 +765,16 @@ def test_formula_only_page_editability_matches_actual_output(
     assert qa["omml_formula_count"] == int(editable)
     assert qa["formula_image_count"] == int(not editable)
     assert qa["execution_status"] == ("COMPLETE" if editable else "DEMO_OUTPUT_INSUFFICIENT")
+
+
+def test_image_alternative_text_is_explicitly_unsupported(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][1]["content"]["alt_text"] = "Synthetic source description"
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "IMAGE_ALT_TEXT_UNSUPPORTED" for loss in audit["losses"])
