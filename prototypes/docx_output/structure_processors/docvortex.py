@@ -174,6 +174,7 @@ class DocVortexStructureProcessor:
                         },
                     )
             previous = entry
+        page_by_source = {e["source_id"]: e["page_index"] for e in value.ledger["entries"]}
         for loss in losses:
             if loss["code"] != "TEMP_FIELDS_REMOVED_RETAINED_IN_LEDGER":
                 bid = loss.get("source_id")
@@ -182,6 +183,9 @@ class DocVortexStructureProcessor:
                     loss["code"],
                     "共享候选未满足保真约束；保留原内容与来源待复核。",
                     [bid] if bid else [],
+                    page_by_source.get(
+                        bid, loss.get("page_index", selected["pages"][0]["page_index"])
+                    ),
                 )
         report = {
             "status": "GUARDED",

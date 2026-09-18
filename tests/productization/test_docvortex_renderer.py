@@ -234,8 +234,7 @@ def test_editable_table_has_one_verified_source_range(case: Path) -> None:
     ir["metadata"]["structure_evidence"] = {
         "question": {
             "selected_html": (
-                '<table><tr><td rowspan="2">A</td><td>B</td></tr>'
-                '<tr><td>C</td></tr></table>'
+                '<table><tr><td rowspan="2">A</td><td>B</td></tr><tr><td>C</td></tr></table>'
             )
         }
     }
@@ -256,3 +255,41 @@ def test_editable_table_has_one_verified_source_range(case: Path) -> None:
         )[0]
         assert marker.getnext().tag.endswith("}tbl")
         assert marker.getnext().getnext().tag.endswith("}bookmarkEnd")
+
+
+def test_deduplicated_image_paths_keep_distinct_source_boxes(case: Path) -> None:
+    source, ir = source_job(case)
+    first = ir["assets"][0]
+    duplicate = copy.deepcopy(first)
+    duplicate.update(id="second-asset", source_bbox=[110, 150, 200, 200])
+    ir["assets"].append(duplicate)
+    second = copy.deepcopy(ir["pages"][0]["blocks"][1])
+    second["id"] = "second-figure"
+    second["bbox"] = duplicate["source_bbox"]
+    second["content"]["asset_id"] = duplicate["id"]
+    ir["pages"][0]["blocks"].append(second)
+    ir["pages"][0]["reading_order"].append(second["id"])
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    records = read(target / "source-map.auto.json")["blocks"]
+    assert records[2]["images"][0]["bbox"] == duplicate["source_bbox"]
+    assert records[1]["images"][0]["bbox"] == first["source_bbox"]
+
+
+def test_ordinary_html_table_with_void_tag_and_entity(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = "table"
+    ir["pages"][0]["blocks"][0]["content"]["plain_text"] = "A\nB\u00a0C"
+    ir["metadata"]["structure_evidence"] = {
+        "question": {"selected_html": "<table><tr><td>A<br>B&nbsp;C</td></tr></table>"}
+    }
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    assert not read(target / "docvortex-render-audit.auto.json")["fallback"]
+    assert Document(str(target / "auto.docx")).tables[0].cell(0, 0).text == "A\nB\u00a0C"

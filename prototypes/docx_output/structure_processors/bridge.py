@@ -190,10 +190,23 @@ def direct_middle(value: BridgeInput) -> Json:
 
 
 def table_text(markup: str) -> str:
-    """Only used for inventories, never to synthesize source attribution."""
-    from lxml import etree
+    """Read ordinary HTML text once, preserving explicit breaks and decoded entities."""
+    from lxml import etree, html
 
-    root = etree.fromstring(
-        markup.encode(), etree.XMLParser(resolve_entities=False, no_network=True)
-    )
-    return "".join(root.itertext())
+    try:
+        root = html.fragment_fromstring(
+            markup, create_parent="div", parser=html.HTMLParser(no_network=True)
+        )
+    except (etree.ParserError, ValueError):
+        raise DemoError("BRIDGE_TABLE_HTML_INVALID") from None
+
+    def visible(node: etree._Element) -> str:
+        if not isinstance(node.tag, str) or node.tag.lower() in {"script", "style"}:
+            return ""
+        result = node.text or ""
+        for child in node:
+            result += "\n" if child.tag == "br" else visible(child)
+            result += child.tail or ""
+        return result
+
+    return visible(root)

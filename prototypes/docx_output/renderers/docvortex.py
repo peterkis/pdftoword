@@ -37,7 +37,11 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
     for index, (element, entry) in enumerate(zip(elements, entries, strict=True)):
         b, source = entry["block"], entry["raw"]
         root = etree.fromstring(etree.tostring(element))
-        text = "".join(root.xpath(".//w:t/text()", namespaces=ns))
+        text = "".join(
+            n.text or "" if n.tag == qn("w:t") else "\t" if n.tag == qn("w:tab") else "\n"
+            for n in root.iter()
+            if n.tag in {qn("w:t"), qn("w:tab"), qn("w:br"), qn("w:cr")}
+        )
         expected = inline_text(source["content"])
         inline_formulas = []
         if isinstance(source["content"], list):
@@ -69,7 +73,10 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
                 raise DemoError("DOCVORTEX_IMAGE_RANGE_MISMATCH")
             rid = blips[0].get(qn("r:embed"))
             image_hash = hashlib.sha256(doc.part.related_parts[rid].blob).hexdigest()
-            asset = next(a for a in ir["assets"] if a["path"] == source["image_path"])
+            aid = b["content"]["source_asset_id"] if formula_image else b["content"]["asset_id"]
+            asset = next(a for a in ir["assets"] if a["id"] == aid)
+            if asset["path"] != source["image_path"]:
+                raise DemoError("DOCVORTEX_SOURCE_ASSET_MISMATCH")
             if image_hash != asset["sha256"]:
                 raise DemoError("DOCVORTEX_IMAGE_BYTES_CHANGED")
             images.append(

@@ -120,3 +120,14 @@
 实际使用 DocVortex 0.4.9 官方 wheel，与固定参考 commit 的 386 个包内文件匹配。调用 public ModelJson/MiddleJson、model_json_to_middle_json、content.table.build_table_state_from_html、render_docx；完整调用白名单、wheel/依赖/许可证 hash 见运行时记录。
 
 MU-HEADING、MU-PARAGRAPH、MU-TABLE、MU-FORMULA、MU-CAPTION 决定为受限 ADAPT_PUBLIC_API；MU-ORDER 为 REFERENCE_ONLY，不能把输入 index 保序称作学得阅读顺序。逐项证据在最终 `reuse-decisions.json`，精确后续任务映射见 [评估记录](../../docs/decisions/docvortex-renderer-evaluation.md)。MinerU 推理/权重安装未执行，SOURCE_REVIEW 不等于模型调用。
+
+
+## PR #8 第一轮审查修复
+
+对 `6fb443b` 的 3 个 P2 已复现并修复：
+
+- 去重图片依据 ledger 中原始 asset ID 查来源记录，不能按复用路径挑第一项；公式图片同样保留原始 ID。
+- selected_html 用禁网 HTML parser 处理，支持 `<br>`、`&nbsp;` 等普通 HTML；HTML 和 OOXML 文本核验保留显式换行/制表符。
+- 共享结构审校问题依据源 ledger 定位 page_index，部分页选择不再误记到第 0 页。
+
+修复前 3 failed / 28 passed，修复后相关 31 passed；全仓 1334 passed。Ruff、定向 mypy 与 diff check 正常，全仓 mypy 仍为既有私有 19 错误。日志 `tmp/docx-demo/r1-05/pr8-{red,green}.txt` 和 `pr8-quality-r1/`。真实两轴重新生成到全新目录，原 34 个文件不变，产物 hash 见 `P2W-R1-05_PR8_FIXES.json`；前期证据不覆盖。远端复审待执行，Word/视觉接受仍 NOT_RUN。

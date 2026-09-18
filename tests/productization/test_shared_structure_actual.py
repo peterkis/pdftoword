@@ -182,3 +182,17 @@ def test_provider_evidence_is_retained_without_fake_producer(case: Path, provide
     assert value.ledger["entries"][0]["block"]["geometry_source"] == provider
     assert value.model["metadata"]["producer"]["name"] == "pdf2word"
     assert "score" not in value.model["pages"][0][0]
+
+
+def test_structure_loss_uses_actual_nonzero_source_page(case: Path) -> None:
+    ir = text_ir(case, "first\nsecond")
+    ir["source"]["page_count"] = 6
+    page = ir["pages"][0]
+    page["page_index"] = 5
+    page["blocks"][0]["page_index"] = 5
+    candidate = DocVortexStructureProcessor().process(ir)
+    issues = [
+        i for i in candidate.document["issues"] if i["type"] == "SHARED_CONTENT_OR_GEOMETRY_CHANGED"
+    ]
+    assert issues and issues[0]["page_index"] == 5
+    assert issues[0]["block_ids"] == ["one"]
