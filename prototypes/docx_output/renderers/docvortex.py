@@ -19,6 +19,7 @@ from ..structure_processors.bridge import bridge, direct_middle, inline_text, ta
 from ..writer import fonts, inspect_package
 from .capabilities import unsupported
 from .legacy import LegacyRenderer
+from .verification import verify_formula, verify_table
 
 
 def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -> list[Json]:
@@ -54,11 +55,21 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
                 )
                 if len(root.xpath(".//m:oMath", namespaces=ns)) != len(inline_formulas):
                     raise DemoError("DOCVORTEX_INLINE_FORMULA_NOT_OMML")
+                for math, span in zip(
+                    root.xpath(".//m:oMath", namespaces=ns), inline_formulas, strict=True
+                ):
+                    verify_formula(math, inline_text(span.get("content")))
         if source["type"] == "table":
+            verify_table(element, source["content"], doc)
             expected = table_text(source["content"])
         formula_image = False
         if source["type"] == "equation":
-            if not root.xpath(".//m:oMath", namespaces=ns):
+            maths = root.xpath(".//m:oMath", namespaces=ns)
+            if maths:
+                if len(maths) != 1 or text:
+                    raise DemoError("DOCVORTEX_FORMULA_UNVERIFIED")
+                verify_formula(maths[0], expected)
+            else:
                 formula_image = bool(
                     source.get("image_path") and root.xpath(".//a:blip", namespaces=ns)
                 )

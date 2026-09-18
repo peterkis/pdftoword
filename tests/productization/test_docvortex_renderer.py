@@ -8,6 +8,7 @@ import uuid
 import zipfile
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from docx import Document
@@ -293,3 +294,48 @@ def test_ordinary_html_table_with_void_tag_and_entity(case: Path) -> None:
     target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
     assert not read(target / "docvortex-render-audit.auto.json")["fallback"]
     assert Document(str(target / "auto.docx")).tables[0].cell(0, 0).text == "A\nB\u00a0C"
+
+
+@pytest.mark.parametrize("change", ["boundaries", "merge"])
+def test_table_topology_change_rejected_before_source_binding(case: Path, change: str) -> None:
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    doc = Document()
+    table = doc.add_table(rows=1, cols=2)
+    if change == "boundaries":
+        table.cell(0, 0).text, table.cell(0, 1).text = "AB", "C"
+    else:
+        table.cell(0, 0).merge(table.cell(0, 1)).text = "ABC"
+    raw = case / "altered-table.docx"
+    doc.save(str(raw))
+    entry = {
+        "block": ir["pages"][0]["blocks"][0],
+        "raw": {"type": "table", "content": "<table><tr><td>A</td><td>BC</td></tr></table>"},
+    }
+    with pytest.raises(DemoError, match="DOCVORTEX_TABLE_TOPOLOGY"):
+        bind_source_ranges(raw, case / "rejected.docx", ir, [entry])
+    assert not (case / "rejected.docx").exists()
+
+
+@pytest.mark.parametrize("inline", [False, True])
+def test_changed_formula_rejected_before_source_binding(case: Path, inline: bool) -> None:
+    from prototypes.docx_output.formula import to_omml
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    doc = Document()
+    paragraph: Any = doc.add_paragraph()._p
+    paragraph.append(etree.fromstring(to_omml("x^3").encode()))
+    raw = case / "altered-formula.docx"
+    doc.save(str(raw))
+    source = (
+        {"type": "text", "content": [{"type": "equation_inline", "content": "x^2"}]}
+        if inline
+        else {"type": "equation", "content": "x^2"}
+    )
+    with pytest.raises(DemoError, match="DOCVORTEX_FORMULA_UNVERIFIED"):
+        bind_source_ranges(
+            raw, case / "rejected.docx", ir, [{"block": ir["pages"][0]["blocks"][0], "raw": source}]
+        )
+    assert not (case / "rejected.docx").exists()
