@@ -457,3 +457,76 @@ def test_fill_in_blanks_remain_literal_editable_text(case: Path) -> None:
     assert "(1) I like ___ flowers." in actual
     assert "(2) ___ stars are bright." in actual
     assert not any(b["content"]["kind"] == "image" for b in p["blocks"])
+
+
+def test_status_poll_never_reads_partial_state_json(
+    case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+    import threading
+    import time
+    from typing import Any
+
+    from fastapi.testclient import TestClient
+    from prototypes.docx_output.server import create_app
+
+    source = case / "state-race.pdf"
+    mixed_pdf(source)
+    opened, release = threading.Event(), threading.Event()
+    original_open = os.open
+
+    def hold_state_write(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+        descriptor = original_open(path, flags, *args, **kwargs)
+        if "state.json" in Path(path).name and flags & os.O_WRONLY and not opened.is_set():
+            opened.set()
+            assert release.wait(10)
+        return descriptor
+
+    monkeypatch.setattr(os, "open", hold_state_write)
+    with TestClient(
+        create_app(output_root=case / "jobs"), base_url="http://127.0.0.1:8765"
+    ) as client:
+        token = client.get("/api/session").json()["token"]
+        response = client.post(
+            "/api/upload",
+            headers={"Origin": "http://127.0.0.1:8765", "X-Demo-Session": token},
+            files={"file": ("source.pdf", source.read_bytes(), "application/pdf")},
+            data={"mode": "native", "pages": "1"},
+        )
+        assert response.status_code == 200
+        try:
+            assert opened.wait(10)
+            status = client.get("/api/status")
+            assert status.status_code == 200 and status.json()["busy"]
+        finally:
+            release.set()
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                try:
+                    if not client.get("/api/status").json()["busy"]:
+                        break
+                except ValueError:
+                    pass
+                time.sleep(0.01)
+
+
+def test_failed_json_publication_preserves_prior_state(
+    case: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+    from typing import Any
+
+    from prototypes.docx_output.common import save
+
+    target = case / "state.json"
+    save(target, {"state": "old"})
+
+    def denied_replace(*args: Any, **kwargs: Any) -> None:
+        raise OSError("synthetic publication failure")
+
+    monkeypatch.setattr(os, "replace", denied_replace)
+    with pytest.raises(OSError, match="synthetic publication failure"):
+        save(target, {"state": "new"})
+    assert read(target) == {"state": "old"}
+    assert not list(case.glob(".state.json.*.tmp"))
+    assert target.stat().st_mode & 0o777 == 0o600

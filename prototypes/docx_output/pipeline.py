@@ -119,9 +119,15 @@ def finish(
     for a in ir["assets"]:
         if a["id"] in referenced and a["type"] == "formula_image":
             fallback_boxes.setdefault(a["source_page_index"], []).append(a["source_bbox"])
-    for asset in ir["assets"]:
-        if asset["id"] in stats.get("rendered_fallback_asset_ids", []):
-            fallback_boxes.setdefault(asset["source_page_index"], []).append(asset["source_bbox"])
+    if "rendered_fallback_regions" in stats:
+        for region in stats["rendered_fallback_regions"]:
+            fallback_boxes.setdefault(region["page_index"], []).append(region["bbox"])
+    else:
+        for asset in ir["assets"]:
+            if asset["id"] in stats.get("rendered_fallback_asset_ids", []):
+                fallback_boxes.setdefault(asset["source_page_index"], []).append(
+                    asset["source_bbox"]
+                )
     total = sum(p["width_pt"] * p["height_pt"] for p in ir["pages"])
     fallback = 0.0
     for p in ir["pages"]:

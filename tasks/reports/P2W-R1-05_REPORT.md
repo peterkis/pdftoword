@@ -316,3 +316,12 @@ Full quality pr8-quality-r28: 1410 passed, 0 failed/skipped; Ruff/catalog/baseli
 ## PR #8 review round 29: drawing visibility and containers
 
 The reference-free visibility entry point also invokes the existing independent picture-container validator with dimensions decoded from the verified asset bytes. This checks drawing hidden flags plus the existing container/transform constraints before publication. Regressions reject hidden wp:docPr and pic:cNvPr drawings. Focused renderer tests: 81 passed. Full quality pr8-quality-r29: 1412 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 42 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 30: fallback occurrences and status publication race
+
+Fallback area uses verified rendered block occurrences (page/bbox), not unique asset records. A real two-page render reuses one formula asset and verifies both regions are counted, with per-page union retaining overlap semantics.
+
+CI also exposed a second synthetic upload failure. A deterministic actual-upload regression paused state-file writing after truncation and reproduced JSONDecodeError in /api/status. JSON save now writes an owner-only same-directory temporary file and atomically replaces the target; polling sees only complete snapshots. The regression turns green and failed publication retains the previous file and removes temporary output. Both original upload tests pass. Red/green evidence: state-race-red.txt / state-race-green.txt; intermediate full run: pr8-quality-state-race (1414 passed). This proves the state-read race is fixed, but does not assert every historical CI failure shared that cause.
+
+Final quality pr8-quality-r30: 1415 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 42 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

@@ -911,3 +911,38 @@ def test_hidden_drawing_is_rejected_before_publication(case: Path, tag: str) -> 
     with pytest.raises(DemoError, match="DOCVORTEX_VISIBILITY_UNSUPPORTED:HIDDEN_CONTENT"):
         bind_source_ranges(raw, target, ir, [entry])
     assert not target.exists()
+
+
+def test_reused_formula_asset_counts_each_source_region(case: Path) -> None:
+    from prototypes.docx_output.pipeline import finish
+
+    source, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][1]
+    b.update(id="formula-one", type="formula", render_policy="hybrid")
+    b["content"] = {
+        "kind": "formula",
+        "latex": r"\frac{",
+        "mathml": None,
+        "source_asset_id": ir["assets"][0]["id"],
+        "render_mode": "omml_with_image_fallback",
+        "confidence": 0,
+        "omml_status": "pending",
+    }
+    first = ir["pages"][0]
+    first["blocks"], first["reading_order"] = [b], [b["id"]]
+    second = copy.deepcopy(first)
+    second["page_index"] = 1
+    second["blocks"][0].update(id="formula-two", page_index=1, bbox=[110, 50, 200, 100])
+    second["reading_order"] = ["formula-two"]
+    ir["pages"].append(second)
+    ir["source"]["page_count"] = 2
+    ir["provenance"]["pages"]["1"] = copy.deepcopy(ir["provenance"]["pages"]["0"])
+    ir["relations"] = []
+    target = case / "reused-formula-output"
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("*.docx"))
+    qa = finish(target, ir, renderer=DocVortexRenderer())
+    assert qa["formula_image_count"] == 2
+    assert {r["page_index"] for r in qa["rendered_fallback_regions"]} == {0, 1}
+    assert qa["fallback_area_ratio"] == pytest.approx(
+        9000 / (2 * first["width_pt"] * first["height_pt"])
+    )

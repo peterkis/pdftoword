@@ -273,6 +273,15 @@ class DocVortexRenderer:
                         for e, r in zip(value.ledger["entries"], records, strict=True)
                         if r["formula_image"]
                     ],
+                    "rendered_fallback_regions": [
+                        {
+                            "block_id": record["block_id"],
+                            "page_index": record["page"] - 1,
+                            "bbox": record["bbox"],
+                        }
+                        for record in records
+                        if record["fallback"]
+                    ],
                     "editable_formula_block_ids": [
                         e["block"]["id"]
                         for e, r in zip(value.ledger["entries"], records, strict=True)
