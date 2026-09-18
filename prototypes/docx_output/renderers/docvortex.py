@@ -14,7 +14,7 @@ from docx.text.paragraph import Paragraph
 from lxml import etree
 
 from ..common import DemoError, Json, digest, safe_path, save
-from ..docvortex_runtime import call_worker
+from ..docvortex_runtime import call_worker, local_implementation_identity
 from ..planning.render_plan import RenderPlan
 from ..structure_processors.bridge import bridge, direct_middle, inline_text, table_text
 from ..writer import fonts, inspect_package
@@ -161,7 +161,12 @@ class DocVortexRenderer:
             raise DemoError("AUTO_IMMUTABLE")
         findings = unsupported(plan)
         raw = job / f"docvortex.raw.{revision}.docx"
-        audit: Json = {"public_call": "NOT_RUN", "fallback": False, "losses": findings}
+        audit: Json = {
+            "public_call": "NOT_RUN",
+            "fallback": False,
+            "losses": findings,
+            "local_implementation_sha256": local_implementation_identity(),
+        }
         if not findings:
             try:
                 value = bridge(plan.document, for_renderer=True)

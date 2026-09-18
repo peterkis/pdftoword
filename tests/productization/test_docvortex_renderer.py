@@ -437,3 +437,24 @@ def test_poc_rejects_renderer_axis_fallback(case: Path) -> None:
     assert read(rejection)["status"] == "INVALID_FALLBACK"
     assert not list((case / "poc").rglob("poc-manifest.json"))
     assert inventory(source) == before
+
+
+def test_render_audit_fingerprints_local_execution_dependencies(case: Path) -> None:
+    from prototypes.docx_output.common import ROOT
+
+    source, _ = source_job(case)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    for name in [
+        "structure_processors/bridge.py",
+        "renderers/verification.py",
+        "docvortex_runtime.py",
+        "docvortex_worker.py",
+    ]:
+        expected = digest(ROOT / "prototypes/docx_output" / name)
+        assert audit["local_implementation_sha256"][name] == expected
+        assert audit["worker"]["local_implementation_sha256"][name] == expected
+    assert all(not Path(name).is_absolute() for name in audit["local_implementation_sha256"])

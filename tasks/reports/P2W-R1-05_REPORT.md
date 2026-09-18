@@ -182,3 +182,10 @@ Caption/footer paragraphs now explicitly receive the planned Caption style durin
 Inline verification now checks one ordered stream of literal characters and source-equivalent math, rejecting formula displacement relative to prose. Text-backed formula blocks explicitly fall back with FORMULA_STRUCTURE_EVIDENCE_MISSING. POC checks the child effective renderer and audit immediately after the renderer axis; a Legacy fallback leaves an INVALID_FALLBACK rejection record and raises POC_RENDERER_AXIS_FALLBACK without publishing a successful POC manifest.
 
 Three regressions cover these cases, including unchanged source files after rejected POC. Full quality pr8-quality-r8: 1352 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 9 and scope boundary
+
+Worker results and renderer audits now persist relative-path hashes for local implementation dependencies, including bridge, verifier, runtime and worker. The actual-render regression checks hashes against source bytes. Full quality pr8-quality-r9: 1353 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors.
+
+User clarification: issues affecting experimental credibility must be fixed; capability gaps may remain explicitly unsupported with failed/rejected evidence preserved and follow-up tasks assigned. R1-05 does not need to implement every unsupported capability. Heading-level limitations, unsupported math syntax and complex layout remain explicit fallback boundaries for later R1/R2/R3 tasks; no visual or Word acceptance is claimed.

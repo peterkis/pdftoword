@@ -7,7 +7,13 @@ import os
 import subprocess
 from pathlib import Path
 
-from .common import ROOT, DemoError, Json
+from .common import ROOT, DemoError, Json, digest
+
+
+def local_implementation_identity() -> dict[str, str]:
+    """Hash local projection, validation and execution dependencies using relative labels."""
+    package = Path(__file__).parent
+    return {str(path.relative_to(package)): digest(path) for path in sorted(package.rglob("*.py"))}
 
 
 def call_worker(payload: Json) -> Json:
@@ -21,6 +27,7 @@ def call_worker(payload: Json) -> Json:
     )
     if not python.is_file():
         raise DemoError("DOCVORTEX_RUNTIME_NOT_INSTALLED")
+    local_identity = local_implementation_identity()
     try:
         completed = subprocess.run(
             [str(python), "-I", str(Path(__file__).with_name("docvortex_worker.py"))],
@@ -37,4 +44,4 @@ def call_worker(payload: Json) -> Json:
         raise DemoError("DOCVORTEX_PUBLIC_CALL_FAILED:" + str(result.get("error_type", "unknown")))
     if result.get("pdfium_loaded"):
         raise DemoError("DOCVORTEX_PDFIUM_ISOLATION_FAILED")
-    return dict(result)
+    return {**result, "local_implementation_sha256": local_identity}
