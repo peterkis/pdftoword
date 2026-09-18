@@ -297,3 +297,8 @@ Page editability includes supported major_question/subquestion/text_line/text_sp
 Nonzero block rotations explicitly produce BLOCK_ROTATION_UNSUPPORTED before SDK execution; text/image regressions verify rejection evidence. Rotation implementation remains outside the bounded renderer. Full quality pr8-quality-r27: 1404 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors.
 
 The f7cf512 Ubuntu CI again failed only the existing synthetic CLI/API acceptance test; artifact retained in pr8-r26-ubuntu. Added a CI diagnostic classifier for that named synthetic test only: it publishes fixed-category assertion/exception labels, never raw failure text, document content or paths. YAML parsing, embedded Python compilation and synthetic redaction smoke checks passed. No root-cause fix is claimed yet. Word/visual acceptance NOT_RUN.
+
+
+## Synthetic CI failure diagnostic follow-up
+
+The d1379fc Ubuntu artifact classifies the repeated fixture failure as worker_exit / AssertionError (pr8-r27-ubuntu/acceptance-fixture-diagnostic.json). Added bounded numeric return/call counters, cli/api entry and four fixed known worker codes to distinguish counter mismatch from API or startup failure. No raw exception, document text or path is published. YAML parse, embedded Python compilation and synthetic redaction checks pass. This diagnostic-only change does not claim the intermittent failure is fixed; core test evidence remains the preceding 1404-pass run.
