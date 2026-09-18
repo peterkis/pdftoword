@@ -57,6 +57,7 @@ def main() -> int:
         )
     ab = sub.add_parser("compare-renderers")
     ab.add_argument("--source-job", type=Path, required=True)
+    ab.add_argument("--source-seal", type=Path)
     ab.add_argument("--revision", choices=["auto", "reviewed"], default="auto")
     ab.add_argument("--renderer-a", choices=["legacy"], default="legacy")
     ab.add_argument("--renderer-b", choices=["legacy"], default="legacy")
@@ -74,7 +75,8 @@ def main() -> int:
         elif args.command == "compare-renderers":
             from prototypes.docx_output.render_replay import compare_renderers
 
-            print(compare_renderers(args.source_job, args.revision, args.output_root).resolve())
+            print(compare_renderers(args.source_job, args.revision, args.output_root,
+                                    source_seal=args.source_seal).resolve())
         elif args.command == "replay":
             job = replay(
                 args.run_dir,

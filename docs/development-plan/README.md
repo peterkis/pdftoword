@@ -25,6 +25,10 @@ python3 "$HOME/Plans/PDF2Word_Development_Plan_v2.1_20260917/scripts/next_task.p
 uv run scripts/docx_demo.py compare-renderers --source-job <已有作业目录> --revision auto
 ```
 
+旧 PDF 作业缺少 provenance image_sha256 时，显式传入先前可信比较记录
+`--source-seal <已有 comparison.json>`；校验整份旧文件集合/hash 后才回放。
+没有既有封存记录的旧来源图拒绝，不用当前 hash 补写历史。新作业已在来源图生成时记录 hash。
+
 同源 A/B 当前均用 legacy，独立子作业可使用原下载与预览接口；后续 renderer 通过
 `DocxRenderer` 注入，结构候选通过独立 `StructureProcessor` 注入。HTTP 对应
 `POST /api/compare-renderers/{job_id}`，继续使用现有本机会话与 Origin 防护。

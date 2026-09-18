@@ -131,7 +131,7 @@ def test_independent_processor_and_renderer_execute(case: Path) -> None:
     comparison = compare_renderers(source, output_root=case / "jobs", renderer_b=Renderer(),
                                    structure_processor=Processor())
     record = read(comparison / "comparison.json")
-    assert calls == ["structure", "structure", "renderer"]
+    assert calls == ["structure", "renderer"]
     assert read(source / "layout.auto.json") == ir
     b = case / "jobs" / record["outputs"][1]["job_id"]
     assert read(b / "render-manifest.auto.json")["structure_processor"]["name"] == (
@@ -263,3 +263,68 @@ def test_plan_elements_follow_explicit_reading_order(case: Path) -> None:
     for row in read(comparison / "comparison.json")["outputs"]:
         child = case / "jobs" / row["job_id"]
         assert xml_parts(child / "auto.docx") == xml_parts(source / "auto.docx")
+
+
+def test_provenance_image_tampering_without_staged_input(case: Path) -> None:
+    source, ir = source_job(case)
+    image = source / ir["provenance"]["pages"]["0"]["image_path"]
+    image.write_bytes(b"tampered preview image")
+    with pytest.raises(DemoError, match="SOURCE_IMAGE_HASH"):
+        compare_renderers(source, output_root=case / "invalid-jobs")
+    assert not (case / "invalid-jobs").exists()
+
+
+def test_structure_processed_once_for_renderer_comparison(case: Path) -> None:
+    source, _ = source_job(case)
+
+    class Stateful(LegacyStructureProcessor):
+        calls = 0
+
+        def process(self, selected: Json) -> StructureCandidate:
+            self.calls += 1
+            candidate = super().process(selected)
+            candidate.document["pages"][0]["blocks"][0]["content"]["plain_text"] = str(self.calls)
+            return candidate
+
+    processor = Stateful()
+    comparison = compare_renderers(source, output_root=case / "jobs", structure_processor=processor)
+    outputs = read(comparison / "comparison.json")["outputs"]
+    a, b = [case / "jobs" / row["job_id"] for row in outputs]
+    assert processor.calls == 1
+    assert digest(a / "render-plan.auto.json") == digest(b / "render-plan.auto.json")
+    assert xml_parts(a / "auto.docx") == xml_parts(b / "auto.docx")
+
+
+def test_manifest_identifies_concrete_injected_code(case: Path) -> None:
+    source, _ = source_job(case)
+
+    class Alternate(LegacyRenderer):
+        name = "alternate"
+
+        def render(self, job: Path, plan: RenderPlan, revision: str) -> Json:
+            return super().render(job, plan, revision)
+
+    comparison = compare_renderers(source, output_root=case / "jobs", renderer_b=Alternate())
+    outputs = read(comparison / "comparison.json")["outputs"]
+    manifests = [read(case / "jobs" / row["job_id"] / "render-manifest.auto.json")
+                 for row in outputs]
+    assert manifests[0]["renderer"]["implementation"] != manifests[1]["renderer"]["implementation"]
+    source_hashes = manifests[1]["renderer"]["implementation"]["source_sha256"]
+    assert digest(Path(__file__)) in source_hashes.values()
+
+
+def test_old_unsealed_page_requires_explicit_prior_seal(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["provenance"]["pages"]["0"].pop("image_sha256", None)
+    ir["source"]["filename"] = "older.pdf"
+    save(source / "layout.auto.json", ir)
+    seal = case / "prior-comparison.json"
+    save(seal, {"source_job_id": source.name, "source_files": inventory(source)})
+    with pytest.raises(DemoError, match="SOURCE_IMAGE_HASH_UNAVAILABLE"):
+        compare_renderers(source, output_root=case / "invalid-jobs")
+    comparison = compare_renderers(source, output_root=case / "jobs", source_seal=seal)
+    assert read(comparison / "comparison.json")["source_seal_sha256"] == digest(seal)
+    (source / ir["provenance"]["pages"]["0"]["image_path"]).write_bytes(b"tampered")
+    with pytest.raises(DemoError, match="SOURCE_SEAL_MISMATCH"):
+        compare_renderers(source, output_root=case / "invalid-jobs", source_seal=seal)
+    assert not (case / "invalid-jobs").exists()

@@ -116,3 +116,16 @@ Codex 对 `9cfb53a` 提出的 3 个 P2 均有复现与修复：
 `uv run scripts/quality.py --output-dir tmp/docx-demo/r1-01-evidence/review-quality`：1299 passed、无失败/跳过；Ruff/schema/catalog/baseline 正常，全仓 mypy 仍为已知私有 19 错误，整体 exit 1。
 
 真实问题页再次在禁网条件下生成 A/B，34 个旧文件不变，DOCX 内容部件及来源语义与原版一致。新证据在 `tmp/docx-demo/r1-01-review-fixes/`，原证据不覆盖；产物 ID/hash 见 `P2W-R1-01_REVIEW_FIXES.json`。视觉与 Word 接受仍 NOT_RUN。此记录是修复验证，不预先宣称后续远端审查通过。
+
+
+## PR #7 第二轮审查修复（2026-09-18）
+
+Codex 对 `240fde6` 提出的 3 个 P2 已修复：
+
+- 新 raster、native、region 作业记录来源图 image_sha256，回放逐页验证；旧单张 raster 可使用原文件 SHA256。缺少认证的旧 PDF 来源图必须显式传入已有比较清单 `--source-seal <comparison.json>`，完整源文件集合/hash 必须匹配。HTTP 参数 `source_seal_job_id` 仅定位现有输出根内作业。不能临时生成当前 hash 冒充历史封存。
+- A/B 只处理一次 selected evidence，向两组提供独立深拷贝的同一 StructureCandidate，记录 structure_process_count=1。
+- 新 `implementation.py` 记录实际 renderer/processor 类、MRO 来源模块 hash、执行方法代码 hash；不可获得源码时明确 UNAVAILABLE。原 shared/legacy 文件 hash 另行保留。
+
+新增反例修复前 3 failed / 17 passed；最终接缝 21 passed。全仓 quality 1303 passed、无失败/跳过；Ruff/schema/catalog/baseline 正常，mypy 仍为历史私有 19 错误，整体 exit 1。`uv run mypy prototypes/docx_output tests/productization/test_renderer_boundary.py scripts/docx_demo.py`：34 source files，exit 0；diff check exit 0。
+
+日志在 `tmp/docx-demo/r1-01-evidence/review2-*`。真实 2 页回放显式采用第一轮已有比较清单，34 个原文件完整匹配，新增输出保存在 `tmp/docx-demo/r1-01-review2-fixes/`，内容和来源语义不变；hash 见 `P2W-R1-01_REVIEW2_FIXES.json`。所有原作业及前两轮产物保留。远端复审待执行，视觉/Word 仍 NOT_RUN。

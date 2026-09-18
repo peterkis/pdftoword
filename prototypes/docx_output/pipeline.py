@@ -28,12 +28,13 @@ from .common import (
     union_area,
     validate_input,
 )
+from .implementation import implementation_identity
 from .planning.render_plan import PLAN_VERSION, RenderPlan
 from .renderers.base import DocxRenderer
 from .renderers.legacy import LegacyRenderer
 from .replay import DEFAULT_RUN, load
 from .structure import image_content, recover, recover_monkey
-from .structure_processors.base import StructureProcessor
+from .structure_processors.base import StructureCandidate, StructureProcessor
 from .structure_processors.legacy import LegacyStructureProcessor
 
 
@@ -47,6 +48,7 @@ def source_image(job: Path, ir: Json, source: Path, index: int = 0) -> Json:
     p = page(index, 595.28, h * scale, "scanned")
     ir["provenance"].setdefault("pages", {})[str(index)] = {
         "image_path": str(target.relative_to(job)),
+        "image_sha256": digest(target),
         "pixel_size": [w, h],
         "pixel_to_point": [scale, scale],
         "point_to_pixel": [1 / scale, 1 / scale],
@@ -61,6 +63,7 @@ def finish(
     job: Path, ir: Json, revision: str = "auto", *,
     renderer: DocxRenderer | None = None,
     structure_processor: StructureProcessor | None = None,
+    structure_candidate: StructureCandidate | None = None,
 ) -> Json:
     """Export, audit and persist each revision without inference."""
     if revision not in {"auto", "reviewed"}:
@@ -70,7 +73,8 @@ def finish(
     save(job / "state.json", {"state": "导出"})
     renderer = renderer or LegacyRenderer()
     structure_processor = structure_processor or LegacyStructureProcessor()
-    candidate = structure_processor.process(copy.deepcopy(ir))
+    candidate = (copy.deepcopy(structure_candidate) if structure_candidate is not None
+                 else structure_processor.process(copy.deepcopy(ir)))
     ir = candidate.document
     plan = RenderPlan.from_ir(ir)
     stats = renderer.render(job, plan, revision)
@@ -78,9 +82,12 @@ def finish(
     save(job / f"structure-candidate.{revision}.json", candidate.document)
     save(job / f"mapping-loss-report.{revision}.json", candidate.loss_report)
     save(job / f"render-manifest.{revision}.json", {
-        "renderer": {"name": renderer.name, "version": renderer.version},
+        "renderer": {"name": renderer.name, "version": renderer.version,
+                     "implementation": implementation_identity(renderer, "render")},
         "structure_processor": {"name": structure_processor.name,
-                                "version": structure_processor.version},
+                                "version": structure_processor.version,
+                                "implementation": implementation_identity(
+                                    structure_processor, "process")},
         "ir_version": ir["schema_version"], "plan_version": PLAN_VERSION,
         "providers": ir.get("model_registry", {}), "model_call_count": 0,
         "provider_revision_if_absent": "unknown",

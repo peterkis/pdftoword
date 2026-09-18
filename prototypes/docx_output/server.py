@@ -356,7 +356,9 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
             raise HTTPException(409, "JOB_BUSY")
         try:
             comparison = compare_renderers(
-                job_path(job_id, output_root), data.get("revision", "auto"), output_root
+                job_path(job_id, output_root), data.get("revision", "auto"), output_root,
+                source_seal=(job_path(data["source_seal_job_id"], output_root) / "comparison.json"
+                             if data.get("source_seal_job_id") else None),
             )
             return {"comparison_id": comparison.name,
                     "comparison": read(comparison / "comparison.json")}

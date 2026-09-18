@@ -11,6 +11,7 @@ from .pipeline import finish
 from .renderers.base import DocxRenderer
 from .renderers.legacy import LegacyRenderer
 from .structure_processors.base import StructureProcessor
+from .structure_processors.legacy import LegacyStructureProcessor
 
 
 def inventory(root: Path) -> dict[str, str]:
@@ -23,11 +24,25 @@ def inventory(root: Path) -> dict[str, str]:
     return result
 
 
-def verify_source(source: Path, ir: Json, hashes: dict[str, str]) -> Json:
+def verify_source(
+    source: Path, ir: Json, hashes: dict[str, str], sealed_hashes: dict[str, str] | None = None,
+) -> Json:
     """Check registered assets and stored response hashes, never hash a decoded substitute."""
     for asset in ir["assets"]:
         if hashes.get(asset["path"]) != asset["sha256"]:
             raise DemoError("ASSET_HASH_MISMATCH_OR_MISSING")
+    for info in ir["provenance"].get("pages", {}).values():
+        name = info["image_path"]
+        expected = info.get("image_sha256") or (sealed_hashes or {}).get(name)
+        # Older single-raster replay jobs copied the original bytes verbatim.
+        if not expected and Path(ir["source"]["filename"]).suffix.lower() in {
+            ".png", ".jpg", ".jpeg"
+        } and len(ir["pages"]) == 1:
+            expected = ir["source"]["sha256"]
+        if not expected:
+            raise DemoError("SOURCE_IMAGE_HASH_UNAVAILABLE_REQUIRES_SEAL")
+        if hashes.get(name) != expected:
+            raise DemoError("SOURCE_IMAGE_HASH_MISMATCH_OR_MISSING")
     manifest = read(source / "request-manifest.json") if (
         source / "request-manifest.json"
     ).exists() else {}
@@ -70,6 +85,7 @@ def compare_renderers(
     source: Path, revision: str = "auto", output_root: Path = JOBS, *,
     renderer_a: DocxRenderer | None = None, renderer_b: DocxRenderer | None = None,
     structure_processor: StructureProcessor | None = None,
+    source_seal: Path | None = None,
 ) -> Path:
     """Render the same saved IR twice without altering the original job or human revisions."""
     if revision not in {"auto", "reviewed"}:
@@ -82,7 +98,17 @@ def compare_renderers(
     validate(ir)
     if len(ir["pages"]) > 3:
         raise DemoError("PAGE_LIMIT_EXCEEDED")
-    verification = verify_source(source, ir, before)
+    sealed_hashes = None
+    if source_seal is not None:
+        seal = read(source_seal)
+        if seal.get("source_job_id") != source.name or seal.get("source_files") != before:
+            raise DemoError("SOURCE_SEAL_MISMATCH")
+        sealed_hashes = seal["source_files"]
+    verification = verify_source(source, ir, before, sealed_hashes)
+    processor = structure_processor or LegacyStructureProcessor()
+    selected = copy.deepcopy(ir)
+    selected["metrics"]["model_call_count"] = 0
+    frozen_candidate = processor.process(selected)
     comparison = new_job(output_root)
     evidence = comparison / "evidence"
     # Snapshot includes old outputs/overrides/responses, but they never enter the writer.
@@ -119,7 +145,8 @@ def compare_renderers(
             "source_ir_sha256": before[f"layout.{revision}.json"],
             "comparison_id": comparison.name, "revision": revision,
         })
-        finish(child, candidate, renderer=renderer, structure_processor=structure_processor)
+        finish(child, candidate, renderer=renderer, structure_processor=processor,
+               structure_candidate=frozen_candidate)
         outputs.append({"label": label, "job_id": child.name,
                         "renderer": {"name": renderer.name, "version": renderer.version},
                         "files": inventory(child)})
@@ -132,5 +159,7 @@ def compare_renderers(
         "verification": verification, "outputs": outputs,
         "model_call_count": 0, "metadata_get_count": 0,
         "ir_reuse_count": 2, "response_reuse_count": 0,
+        "structure_process_count": 1,
+        "source_seal_sha256": digest(source_seal) if source_seal is not None else None,
     })
     return comparison
