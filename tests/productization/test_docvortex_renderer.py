@@ -975,3 +975,95 @@ def test_child_hierarchy_is_explicitly_unsupported(case: Path) -> None:
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "BLOCK_CHILDREN_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize("wrapper", ["w:sdt", "w:customXml"])
+def test_extra_wrapped_body_payload_is_rejected(case: Path, wrapper: str) -> None:
+    from docx.oxml import OxmlElement
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    doc = Document()
+    doc.add_paragraph(b["content"]["plain_text"])
+    extra = OxmlElement(wrapper)
+    content = OxmlElement("w:sdtContent") if wrapper == "w:sdt" else extra
+    p, r, t = OxmlElement("w:p"), OxmlElement("w:r"), OxmlElement("w:t")
+    t.text = "Unmapped synthetic text"
+    r.append(t)
+    p.append(r)
+    content.append(p)
+    if content is not extra:
+        extra.append(content)
+    doc.element.body.insert(1, extra)
+    raw, target = case / "wrapped.docx", case / "rejected.docx"
+    doc.save(str(raw))
+    with pytest.raises(DemoError, match="DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED"):
+        bind_source_ranges(
+            raw,
+            target,
+            ir,
+            [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}],
+        )
+    assert not target.exists()
+
+
+def test_text_source_cannot_bind_to_table_container(case: Path) -> None:
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    doc = Document()
+    doc.add_table(rows=1, cols=1).cell(0, 0).text = b["content"]["plain_text"]
+    raw, target = case / "wrong-container.docx", case / "rejected.docx"
+    doc.save(str(raw))
+    with pytest.raises(DemoError, match="DOCVORTEX_OUTPUT_CONTAINER_CHANGED"):
+        bind_source_ranges(
+            raw,
+            target,
+            ir,
+            [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}],
+        )
+    assert not target.exists()
+
+
+def test_extra_math_in_plain_text_is_rejected(case: Path) -> None:
+    from prototypes.docx_output.formula import to_omml
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    doc = Document()
+    paragraph: Any = doc.add_paragraph(b["content"]["plain_text"])._p
+    paragraph.append(etree.fromstring(to_omml("x").encode()))
+    raw, target = case / "extra-math.docx", case / "rejected.docx"
+    doc.save(str(raw))
+    with pytest.raises(DemoError, match="DOCVORTEX_UNEXPECTED_FORMULA"):
+        bind_source_ranges(
+            raw,
+            target,
+            ir,
+            [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}],
+        )
+    assert not target.exists()
+
+
+@pytest.mark.parametrize("story", ["header", "footer"])
+def test_unmapped_header_footer_story_is_rejected(case: Path, story: str) -> None:
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    doc = Document()
+    doc.add_paragraph(b["content"]["plain_text"])
+    getattr(doc.sections[0], story).paragraphs[0].text = "Unmapped synthetic story"
+    raw, target = case / "extra-story.docx", case / "rejected.docx"
+    doc.save(str(raw))
+    with pytest.raises(DemoError, match="DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED"):
+        bind_source_ranges(
+            raw,
+            target,
+            ir,
+            [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}],
+        )
+    assert not target.exists()

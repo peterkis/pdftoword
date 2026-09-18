@@ -28,6 +28,24 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
     """Bind only bijective verified OOXML body ranges; never match by nearest text or bbox."""
     doc = Document(str(raw))
     body = doc.element.body
+    if any(element.tag not in {qn("w:p"), qn("w:tbl"), qn("w:sectPr")} for element in body):
+        raise DemoError("DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED")
+    # Only the bounded paragraph/run grammar is source-bound; semantic wrappers are unsupported.
+    for paragraph in body.xpath(".//w:p"):
+        if any(
+            child.tag not in {qn("w:pPr"), qn("w:r"), qn("m:oMath"), qn("m:oMathPara")}
+            for child in paragraph
+        ):
+            raise DemoError("DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED")
+    for run in body.xpath(".//w:r"):
+        if any(
+            child.tag
+            not in {qn("w:rPr"), qn("w:t"), qn("w:tab"), qn("w:br"), qn("w:cr"), qn("w:drawing")}
+            for child in run
+        ):
+            raise DemoError("DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED")
+    if body.xpath(".//w:numPr|.//w:pPr/w:sectPr|.//w:headerReference|.//w:footerReference"):
+        raise DemoError("DOCVORTEX_BODY_PAYLOAD_UNSUPPORTED")
     elements = [e for e in body if e.tag in {qn("w:p"), qn("w:tbl")}]
     if len(elements) != len(entries):
         raise DemoError("DOCVORTEX_OUTPUT_RANGE_COUNT_MISMATCH")
@@ -40,6 +58,8 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
     }
     for index, (element, entry) in enumerate(zip(elements, entries, strict=True)):
         b, source = entry["block"], entry["raw"]
+        if source["type"] != "table" and element.tag != qn("w:p"):
+            raise DemoError("DOCVORTEX_OUTPUT_CONTAINER_CHANGED")
         root = etree.fromstring(etree.tostring(element))
         text = "".join(
             n.text or "" if n.tag == qn("w:t") else "\t" if n.tag == qn("w:tab") else "\n"
@@ -63,6 +83,12 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
                     root.xpath(".//m:oMath", namespaces=ns), inline_formulas, strict=True
                 ):
                     verify_formula(math, inline_text(span.get("content")))
+        if (
+            source["type"] != "equation"
+            and not inline_formulas
+            and root.xpath(".//m:oMath", namespaces=ns)
+        ):
+            raise DemoError("DOCVORTEX_UNEXPECTED_FORMULA")
         if source["type"] == "table":
             verify_table(element, source["content"], doc)
             expected = table_text(source["content"])

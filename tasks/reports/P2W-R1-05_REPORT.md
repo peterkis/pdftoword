@@ -335,3 +335,8 @@ Text content requesting preserve_image and image content requesting editable are
 ## PR #8 review round 32: unsupported child hierarchy
 
 Any nonempty block children list explicitly produces BLOCK_CHILDREN_UNSUPPORTED before SDK rendering. An actual-render regression verifies retained rejection evidence; hierarchy layout is not implemented by this bounded POC. Full quality pr8-quality-r32: 1418 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 33: closed output payload binding
+
+Body-level payloads outside paragraphs/tables/section properties are rejected. Paragraph/run semantic wrappers, numbering/embedded sections and header/footer story references are unsupported; unselected math in plain text is rejected. Non-table sources must bind to paragraphs. Six regressions cover wrapped extra content, a substituted table container, added math and unbound header/footer stories. Full quality pr8-quality-r33-final: 1424 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
