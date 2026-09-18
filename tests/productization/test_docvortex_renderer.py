@@ -369,3 +369,18 @@ def test_heading_preserves_planned_outline_level(case: Path) -> None:
     assert any(loss["code"] == "PLANNED_HEADING_LEVEL_UNSUPPORTED" for loss in audit["losses"])
     style = Document(str(target / "auto.docx")).paragraphs[0].style
     assert style is not None and style.name == "Heading 1"
+
+
+@pytest.mark.parametrize("kind", ["caption", "footer"])
+def test_caption_style_preserved_in_actual_output(case: Path, kind: str) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = kind
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    assert not read(target / "docvortex-render-audit.auto.json")["fallback"]
+    paragraph = Document(str(target / "auto.docx")).paragraphs[0]
+    assert paragraph.style is not None and paragraph.style.name == "Caption"
+    assert paragraph.text == ir["pages"][0]["blocks"][0]["content"]["plain_text"]

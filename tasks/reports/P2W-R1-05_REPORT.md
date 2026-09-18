@@ -170,3 +170,8 @@ The first attempt to project Heading 1 was rejected by the public Middle schema.
 The supported RenderPlan binds headings to Heading 1, while the public schema cannot represent that level. Plans containing headings now explicitly fall back with PLANNED_HEADING_LEVEL_UNSUPPORTED before calling the SDK. The actual DOCX regression verifies Legacy preserves Heading 1 and the fallback is recorded. Final verification is recorded below after execution.
 
 Corrected verification: renderer tests 24 passed; full quality pr8-quality-r6-corrected has 1347 passed, 0 failed/skipped. Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 is solely the existing 19 private-script mypy errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 7
+
+Caption/footer paragraphs now explicitly receive the planned Caption style during source binding, after their content has been verified. Two actual DOCX regressions check both paragraph style and unchanged text. Full quality pr8-quality-r7: 1349 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors. Word/visual acceptance NOT_RUN.

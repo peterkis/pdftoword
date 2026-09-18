@@ -10,6 +10,7 @@ from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
+from docx.text.paragraph import Paragraph
 from lxml import etree
 
 from ..common import DemoError, Json, digest, safe_path, save
@@ -105,6 +106,8 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
         start.set(qn("w:name"), marker)
         end.set(qn("w:id"), str(index))
         if element.tag == qn("w:p"):
+            if b["type"] in {"caption", "footer"}:
+                Paragraph(element, doc).style = "Caption"
             # pPr must remain first; markers surround the actual content runs.
             element.insert(1 if len(element) and element[0].tag == qn("w:pPr") else 0, start)
             element.append(end)
