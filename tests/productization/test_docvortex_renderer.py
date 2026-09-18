@@ -573,3 +573,17 @@ def test_explicit_formula_image_policy_is_not_overridden(
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "FORMULA_IMAGE_POLICY_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize("mode", ["editable_text", "metadata_only"])
+def test_nonvisual_image_mode_is_explicitly_unsupported(case: Path, mode: str) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][1]["content"]["render_mode"] = mode
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "IMAGE_RENDER_MODE_UNSUPPORTED" for loss in audit["losses"])

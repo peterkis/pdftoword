@@ -53,6 +53,11 @@ def unsupported(plan: RenderPlan) -> list[Json]:
                 )
             ):
                 findings.append({"code": "FORMULA_IMAGE_POLICY_UNSUPPORTED", "source_id": b["id"]})
+            if (
+                b["content"]["kind"] == "image"
+                and b["content"].get("render_mode") != "preserve_as_image"
+            ):
+                findings.append({"code": "IMAGE_RENDER_MODE_UNSUPPORTED", "source_id": b["id"]})
             if b["type"] == "heading":
                 findings.append({"code": "PLANNED_HEADING_LEVEL_UNSUPPORTED", "source_id": b["id"]})
             if b["content"].get("runs"):

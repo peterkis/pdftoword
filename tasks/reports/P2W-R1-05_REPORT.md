@@ -212,3 +212,8 @@ Formula image-only modes/policies explicitly fail public-renderer capability che
 Final quality pr8-quality-r12-final: 1367 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors.
 
 The call-count finding is not reproducible: two extra negative calls are in test_public_probes_six_capabilities_and_negative_outputs, not public_probes. A successful synthetic POC was traced with a forwarding wrapper executing every real worker call (no fake response). It observed postprocess=11, render=11, table=1, identity=1; manifest public_structure_calls=11. Evidence: tmp/docx-demo/r1-05/pr8-call-count-evidence/call-count-verification.json and tmp/docx-demo/r1-05/trace-public-calls.py. The historical count of 11 remains correct. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 13: unsupported image modes
+
+Only preserve_as_image is supported for imageContent in the DocVortex renderer. editable_text and metadata_only explicitly fail capability checks with IMAGE_RENDER_MODE_UNSUPPORTED before SDK execution; no new mode implementation was added. Two actual-render regressions verify the fallback audit. Full quality pr8-quality-r13: 1369 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
