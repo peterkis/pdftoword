@@ -265,3 +265,31 @@ def test_poc_does_not_claim_a_call_for_cached_finalized_structure(case: Path) ->
     with pytest.raises(DemoError, match="POC_REQUIRES_PRE_STRUCTURE_IR"):
         run_poc(source, output_root=case / "new-poc")
     assert not (case / "new-poc").exists()
+
+
+def test_reprocessing_reconciles_owned_issues(case: Path) -> None:
+    processor = DocVortexStructureProcessor()
+    result = processor.process(text_ir(case, "first\nsecond")).document
+    original = copy.deepcopy(result["issues"])
+    assert original
+    for text in ["changed\nsecond", "another\nsecond"]:
+        result["pages"][0]["blocks"][0]["content"]["plain_text"] = text
+        result = processor.process(result).document
+        assert result["issues"] == original
+    result["pages"][0]["blocks"][0]["content"]["plain_text"] = "single line"
+    result = processor.process(result).document
+    assert result["issues"] == []
+
+
+def test_reprocessing_preserves_managed_and_unrelated_issues(case: Path) -> None:
+    processor = DocVortexStructureProcessor()
+    result = processor.process(text_ir(case, "first\nsecond")).document
+    result["issues"][0]["status"] = "resolved"
+    unrelated = copy.deepcopy(result["issues"][0])
+    unrelated.update(id="human-warning", status="open", message="Human review note")
+    result["issues"].append(unrelated)
+    expected = copy.deepcopy(result["issues"])
+    for text in ["changed\nsecond", "single line"]:
+        result["pages"][0]["blocks"][0]["content"]["plain_text"] = text
+        result = processor.process(result).document
+        assert result["issues"] == expected

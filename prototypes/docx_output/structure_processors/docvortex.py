@@ -213,6 +213,23 @@ class DocVortexStructureProcessor:
         for page in candidate["pages"]:
             for block in page["blocks"]:
                 block["relations"] = [rid for rid in block["relations"] if rid not in retired_ids]
+        prior_issue_records = (
+            selected.get("metadata", {})
+            .get("docvortex_structure", {})
+            .get("emitted_issue_records", [])
+        )
+        owned_issues = {item["id"]: item for item in prior_issue_records}
+        # Only untouched stage records may be replaced. Human edits and unrelated issues survive.
+        retained_issues = [
+            item for item in candidate["issues"] if item != owned_issues.get(item["id"])
+        ]
+        candidate["issues"] = []
+        emitted_issue_records: list[Json] = []
+        reserved_issue_ids = {item["id"] for item in selected["issues"]}
+
+        def issue_key(item: Json) -> tuple[str, int, tuple[str, ...]]:
+            return item["type"], item["page_index"], tuple(item["block_ids"])
+
         page_by_source = {e["source_id"]: e["page_index"] for e in value.ledger["entries"]}
         for loss in losses:
             if loss["code"] != "TEMP_FIELDS_REMOVED_RETAINED_IN_LEDGER":
@@ -226,6 +243,25 @@ class DocVortexStructureProcessor:
                         bid, loss.get("page_index", selected["pages"][0]["page_index"])
                     ),
                 )
+        fresh_issues = candidate["issues"]
+        candidate["issues"] = retained_issues
+        # Allocate after matching old IDs, reserving all historical IDs for this pass.
+        for fresh in fresh_issues:
+            if any(issue_key(item) == issue_key(fresh) for item in candidate["issues"]):
+                continue
+            old = next(
+                (item for item in prior_issue_records if issue_key(item) == issue_key(fresh)), None
+            )
+            if old is not None:
+                fresh["id"] = old["id"]
+            else:
+                index = len(reserved_issue_ids)
+                while f"issue-{index}" in reserved_issue_ids:
+                    index += 1
+                fresh["id"] = f"issue-{index}"
+            reserved_issue_ids.add(fresh["id"])
+            candidate["issues"].append(fresh)
+            emitted_issue_records.append(copy.deepcopy(fresh))
         report = {
             "status": "GUARDED",
             "losses": losses,
@@ -235,6 +271,7 @@ class DocVortexStructureProcessor:
             "model_sha256": json_hash(value.model),
             "middle_sha256": json_hash(middle),
             "retired_stage_relation_ids": sorted(retired_ids),
+            "emitted_issue_records": emitted_issue_records,
             "source_count": len(lookup),
             "mapped_count": len(mapped),
             "model_call_count": 0,

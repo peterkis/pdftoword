@@ -140,3 +140,10 @@ Commit 8561b87 reconciles stage-owned continuation relations after edits: reuse 
 Validation: uv sync --locked exit 0. uv run scripts/quality.py --output-dir tmp/docx-demo/r1-05/pr8-quality-continued: 1337 passed, no failures/skips; Ruff/catalog/baseline/schema exit 0. Overall exit 1 due only to the existing 19 mypy errors in two private scripts. Targeted mypy over prototypes/docx_output and tests/productization/test_shared_structure_actual.py: 40 files, exit 0. git diff --check exit 0. Earlier focused log pr8-r2-final.txt records 18 passed.
 
 Existing replay artifacts remain in tmp/docx-demo/r1-05/pr8-poc-r2-final/. Remote re-review pending; Word and visual acceptance NOT_RUN.
+
+
+## PR #8 review round 3
+
+Stage-generated issues now retain ownership snapshots in the structure audit. Reprocessing replaces only untouched owned warnings, reuses matching IDs, retires losses that no longer occur, and preserves manually changed or unrelated issues. Records without ownership evidence remain untouched. Two new regressions failed before the change and passed afterward (20 focused tests).
+
+Full quality run tmp/docx-demo/r1-05/pr8-quality-r3: 1339 passed, no failed/skipped tests. Ruff, schema/catalog/baseline and targeted mypy (40 files) pass; overall quality exit 1 remains the existing 19 private-script mypy errors. git diff --check exit 0. No model requests; Word/visual acceptance NOT_RUN.
