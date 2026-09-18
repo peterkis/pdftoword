@@ -39,8 +39,46 @@ jobs:
           node-version: '24.18.0'
       - name: Synchronize locked dependencies
         run: uv sync --locked
+      - name: Install the isolated deterministic DocVortex POC runtime
+        run: uv run --locked python scripts/setup_docvortex_runtime.py
       - name: Run the shared offline quality gate
         run: uv run --locked python scripts/quality.py --output-dir tmp/quality/ci
+      - name: Classify synthetic CLI/API fixture failures safely
+        if: ${{ always() }}
+        run: |
+          uv run --locked python - <<'PYDIAG'
+          import json
+          import re
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          source = Path("tmp/quality/ci/private/junit.xml")
+          if not source.exists():
+              raise SystemExit(0)
+          for case in ET.parse(source).iter("testcase"):
+              if case.get("name") != "test_cli_and_upload_api_run_real_shared_pipeline_once":
+                  continue
+              failure = case.find("failure")
+              if failure is None:
+                  continue
+              detail = failure.text or ""
+              statements = re.findall(r"^>\s+(.+)$", detail, re.MULTILINE)
+              statement = statements[-1] if statements else ""
+              checks = {"assert process.returncode": "worker_exit", "assert result[": "worker_counts", "assert [p[": "source_pages", "assert results[0]": "entry_output_equality"}
+              category = next((value for key, value in checks.items() if statement.startswith(key)), "unknown")
+              classes = re.findall(r"^E\s+(?:[a-zA-Z_][a-zA-Z0-9_]*\.)*(HTTPStatusError|TimeoutExpired|TimeoutError|ValueError|ImportError|ModuleNotFoundError|AssertionError|OSError):", detail, re.MULTILINE)
+              diagnostic = {"fixture": "synthetic_blank_pdf_cli_api", "category": category, "exception_class": classes[-1] if classes else "unknown"}
+              for key, pattern in {"returncode": r"returncode=(-?\d+)", "pipeline_calls": r'"pipeline_calls":\s*(\d+)', "network_attempts": r'"network_attempts":\s*(\d+)'}.items():
+                  matches = re.findall(pattern, detail)
+                  if matches:
+                      diagnostic[key] = int(matches[-1])
+              entries = re.findall(r"'--entry', '(cli|api)'", detail)
+              diagnostic["entry"] = entries[-1] if entries else "unknown"
+              diagnostic["known_codes"] = [code for code in ("ACCEPTANCE_OFFLINE", "UPLOAD_TIMEOUT", "UPLOAD_CONVERSION_FAILED", "DOWNLOAD_HASH_MISMATCH") if code in detail]
+              target = Path("tmp/quality/ci/public/acceptance-fixture-diagnostic.json")
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(json.dumps(diagnostic) + "\n")
+              print(json.dumps(diagnostic))
+          PYDIAG
       - name: Upload only sanitized engineering reports
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -51,5 +89,6 @@ jobs:
             tmp/quality/ci/public/environment.json
             tmp/quality/ci/public/tests.json
             tmp/quality/ci/public/junit.xml
+            tmp/quality/ci/public/acceptance-fixture-diagnostic.json
           if-no-files-found: warn
           retention-days: 7

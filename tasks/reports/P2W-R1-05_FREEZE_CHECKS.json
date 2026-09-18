@@ -1,0 +1,94 @@
+{
+  "scope": "bounded POC with known limitations; no further comprehensive review requests",
+  "precommit_base": "c94b5897900c05ec99583c0d36db063cc146a1b3",
+  "targeted_tests": {
+    "passed": 132,
+    "failed": 0,
+    "warnings": 1,
+    "log": "tmp/docx-demo/r1-05/final-targeted.txt"
+  },
+  "ruff": "PASS",
+  "targeted_mypy": {
+    "status": "PASS",
+    "source_files": 44
+  },
+  "schema_samples": {
+    "status": "PASS",
+    "pairs": 2
+  },
+  "known_local_full_mypy": "19 existing errors in two private scripts; not suppressed",
+  "real_replay": {
+    "source_unchanged": true,
+    "source_file_count": 34,
+    "model_requests": 0,
+    "rows": [
+      {
+        "axis": "renderer",
+        "job": "demo-41d01130170149b0b407ef612fe8f381",
+        "requested_renderer": "legacy",
+        "effective_renderer": "legacy",
+        "fallback": false,
+        "losses": [],
+        "docx_sha256": "82f4f7693ec44bf6b086a21b48bdf53700afda0307d80a0521165302dd65c078",
+        "source_map_sha256": "b9b47ceeadcf0af4fa69b6669eb56afc6a151ed6d06d55b44c90a624c881dd5a",
+        "qa_execution": "PARTIAL"
+      },
+      {
+        "axis": "renderer",
+        "job": "demo-cd63634ed4a043828d4b8c2be354541a",
+        "requested_renderer": "docvortex-public",
+        "effective_renderer": "docvortex-public",
+        "fallback": false,
+        "losses": [],
+        "docx_sha256": "ebfd31c1cdf9174e55ae26af42c82bd3585b71cf0d612328b584651e05c0a6bf",
+        "source_map_sha256": "82eda50243a9df4374405c6a339bc1c2127d52e2a51b7295af3e4715dd38d54f",
+        "qa_execution": "PARTIAL"
+      },
+      {
+        "axis": "structure",
+        "job": "demo-890c0b9198a3463e94ff37c896ccf650",
+        "requested_renderer": "legacy",
+        "effective_renderer": "legacy",
+        "fallback": false,
+        "losses": [],
+        "docx_sha256": "82f4f7693ec44bf6b086a21b48bdf53700afda0307d80a0521165302dd65c078",
+        "source_map_sha256": "b9b47ceeadcf0af4fa69b6669eb56afc6a151ed6d06d55b44c90a624c881dd5a",
+        "qa_execution": "PARTIAL"
+      },
+      {
+        "axis": "structure",
+        "job": "demo-53f564f831dc44339490ffe2eb216ef2",
+        "requested_renderer": "legacy",
+        "effective_renderer": "legacy",
+        "fallback": false,
+        "losses": [],
+        "docx_sha256": "82f4f7693ec44bf6b086a21b48bdf53700afda0307d80a0521165302dd65c078",
+        "source_map_sha256": "b9b47ceeadcf0af4fa69b6669eb56afc6a151ed6d06d55b44c90a624c881dd5a",
+        "qa_execution": "PARTIAL"
+      }
+    ],
+    "structure_loss_codes": [],
+    "structure_proposals": [],
+    "visual_acceptance": "NOT_RUN",
+    "word_acceptance": "NOT_RUN"
+  },
+  "verification_logs_sha256": {
+    "final-targeted.txt": "b97f5a76e7cbfa7439fc5ef7b53d23994ba7f2333fa996146bc401627fdd2fb0",
+    "final-ruff.txt": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "final-mypy.txt": "522d7b3a15704213950b7053c882b6ddd0c41149631300ce6c1933d21b5971c3",
+    "final-schema.txt": "2aae4515c59aa374243dc7f9670a04609043c5c4e6c6696228e42268262e2b5b"
+  },
+  "final_code_sha256": {
+    "prototypes/docx_output/renderers/docvortex.py": "1822c5f8dd8d0cf272a144b87de7408c3a876a84d9033c613a990dab779e1528",
+    "prototypes/docx_output/renderers/verification.py": "25aad2764e2059914e92a2b763bd877838c07200ae1db3fa8724abbd0a86009f",
+    "prototypes/docx_output/renderers/capabilities.py": "b44afa020885be045ab147cb72ef5a289ddc6201811de548a289caa831609154",
+    "prototypes/docx_output/structure_processors/docvortex.py": "ef1b70169dd8150300bebb97dd2a451a2b4163dbde10e997aad2f461ee87b531",
+    "prototypes/docx_output/structure_processors/bridge.py": "bd431f3ea81d092592094b0a6cbf45c74771af4e50cd20d5f0ad156a17d613e9",
+    "prototypes/docx_output/common.py": "a4eb5da59cf5263b777b21a86a815a2d8e8ab8de0d38efb82b47522320bdb72b",
+    "prototypes/docx_output/pipeline.py": "20ce294cba6fc5362f0e14666e78309246cb58cf3c2aba8c4e0be07edbd63240",
+    "scripts/acceptance/docx_reader.py": "7ecc157de16c4372510833cfc386b061a965d485b7937cd19705f5325cb41421"
+  },
+  "visual_acceptance": "NOT_RUN",
+  "word_acceptance": "NOT_RUN",
+  "layout_benefit": "NOT_VERIFIED"
+}

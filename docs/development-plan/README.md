@@ -5,7 +5,7 @@
 S1 **已废弃**；S2-01～06 **继承完成并保留质量发现**。以下旧计划记录仅供历史追溯，
 不再用于调度。原 97 项目录、映射、源码、CI 和历史证据不改写。
 
-本次仅授权 **P2W-R1-01**。初次 `next_task.py` 实测仅推荐 R1-01；本项工程
+R1-01 历史授权记录：当时仅授权 **P2W-R1-01**。初次 `next_task.py` 实测仅推荐 R1-01；本项工程
 验证后建议 R1-05，不自动签署视觉/Word/发布接受，也不执行下一项。
 
 - [R1-01 实施报告](../../tasks/reports/P2W-R1-01_REPORT.md)
@@ -32,6 +32,23 @@ uv run scripts/docx_demo.py compare-renderers --source-job <已有作业目录> 
 同源 A/B 当前均用 legacy，独立子作业可使用原下载与预览接口；后续 renderer 通过
 `DocxRenderer` 注入，结构候选通过独立 `StructureProcessor` 注入。HTTP 对应
 `POST /api/compare-renderers/{job_id}`，继续使用现有本机会话与 Origin 防护。
+
+
+## R1-05 共享结构/输出 POC（2026-09-18）
+
+当前按用户新指令收口为[带已知限制的 POC](../../tasks/reports/P2W-R1-05_FREEZE.md)：停止扩展能力及主动全面复审，最终针对性验证和既有 CI 正常后可工程合并；随后按依赖进入 R1-02 及主线集成，以真实问题页验证收益。继承适配边界和失败案例，不继承“完善的 DocVortex 渲染器”结论。以下“仅执行 R1-05”是初次授权的历史记录。
+
+仅执行 R1-05；工程、视觉、Word 接受分开。实际版本 0.4.9、依赖隔离、六能力决定见
+[评估记录](../decisions/docvortex-renderer-evaluation.md)与[实施报告](../../tasks/reports/P2W-R1-05_REPORT.md)。
+R1-01/PR #7 的保护保持；原计划、S2 和历史状态不倒改。R1-05 工程验证后的下一建议为 R1-02，本次不自动执行。
+
+```sh
+uv run scripts/setup_docvortex_runtime.py
+uv run scripts/docx_demo.py reuse-poc --source-job <已有作业目录> --source-seal <先前可信 comparison.json>
+```
+
+来源图已有 image_sha256 的新作业可以省略 `--source-seal`。两个轴的输出是全新独立作业，
+默认转换、保存和导出继续使用 Legacy。依赖安装是单独的网络步骤，worker 后处理/导出禁网。
 
 ---
 

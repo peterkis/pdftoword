@@ -63,16 +63,21 @@ def private_dir(path: Path) -> None:
 
 
 def save(path: Path, value: Any) -> None:
-    """Write UTF-8 private JSON with owner-only access."""
+    """Atomically publish complete UTF-8 private JSON with owner-only access."""
     private_dir(path.parent)
     safe_path(PRIVATE, str(path.absolute().relative_to(PRIVATE)))
     data = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False).encode(
         "utf-8", errors="backslashreplace"
     )
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "wb") as f:
-        f.write(data)
-    path.chmod(0o600)
+    pending = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    fd = os.open(pending, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as output:
+            output.write(data)
+        pending.chmod(0o600)
+        os.replace(pending, path)
+    finally:
+        pending.unlink(missing_ok=True)
 
 
 def read(path: Path) -> Json:
