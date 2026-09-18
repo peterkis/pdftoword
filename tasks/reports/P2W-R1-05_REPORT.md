@@ -161,3 +161,8 @@ Four regressions reject changed cell boundaries/merges and changed block/inline 
 Text-backed table blocks without nonempty selected HTML now trigger TABLE_STRUCTURE_EVIDENCE_MISSING on the renderer bridge and explicitly use the Legacy fallback. Three regressions cover absent, empty and whitespace-only evidence. Full quality tmp/docx-demo/r1-05/pr8-quality-r5: 1346 passed; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall quality remains exit 1 from the 19 existing private-script mypy errors.
 
 The preceding ad7f69b macOS CI failed one existing CLI/API acceptance test (test_cli_and_upload_api_run_real_shared_pipeline_once); all other tests and checks passed. Its sanitized artifact has no exception detail, so the cause is undetermined. The failure is retained in tmp/docx-demo/r1-05/pr8-r4-macos/ and pr8-r4-ci-failed.txt; this record is not replaced by subsequent CI outcomes.
+
+
+## PR #8 review round 6
+
+Direct Middle projection now uses heading level 1, matching the supported legacy RenderPlan heading style. An actual DOCX regression verifies Heading 1 is retained without fallback. Full quality tmp/docx-demo/r1-05/pr8-quality-r6: 1347 passed; Ruff/catalog/baseline/schema pass. Targeted mypy (41 files) passes; overall quality exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
