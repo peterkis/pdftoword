@@ -178,8 +178,8 @@ def direct_middle(value: BridgeInput) -> Json:
                 if k not in {"lines", "angle", "score", "label"}
             }
             if b["type"] == "paragraph_title":
-                # The supported legacy RenderPlan binds every heading to Heading 1.
-                b["level"] = 1
+                # Public schema supports level >= 2; renderer capabilities reject Heading 1 plans.
+                b["level"] = 2
             if b["type"] in {"image", "table"}:
                 child = {**b, "type": b["type"] + "_body"}
                 b = {"type": b["type"], "index": b["index"], "bbox": b["bbox"], "content": [child]}

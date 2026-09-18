@@ -364,6 +364,8 @@ def test_heading_preserves_planned_outline_level(case: Path) -> None:
         source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
     )
     target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
-    assert not read(target / "docvortex-render-audit.auto.json")["fallback"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "PLANNED_HEADING_LEVEL_UNSUPPORTED" for loss in audit["losses"])
     style = Document(str(target / "auto.docx")).paragraphs[0].style
     assert style is not None and style.name == "Heading 1"

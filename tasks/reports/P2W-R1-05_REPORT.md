@@ -163,6 +163,10 @@ Text-backed table blocks without nonempty selected HTML now trigger TABLE_STRUCT
 The preceding ad7f69b macOS CI failed one existing CLI/API acceptance test (test_cli_and_upload_api_run_real_shared_pipeline_once); all other tests and checks passed. Its sanitized artifact has no exception detail, so the cause is undetermined. The failure is retained in tmp/docx-demo/r1-05/pr8-r4-macos/ and pr8-r4-ci-failed.txt; this record is not replaced by subsequent CI outcomes.
 
 
-## PR #8 review round 6
+## PR #8 review round 6 (corrected evidence)
 
-Direct Middle projection now uses heading level 1, matching the supported legacy RenderPlan heading style. An actual DOCX regression verifies Heading 1 is retained without fallback. Full quality tmp/docx-demo/r1-05/pr8-quality-r6: 1347 passed; Ruff/catalog/baseline/schema pass. Targeted mypy (41 files) passes; overall quality exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+The first attempt to project Heading 1 was rejected by the public Middle schema. The initial quality run actually had 1346 passed / 1 failed (heading regression), not the 1347 passed prematurely recorded in d5c09ef and its review reply. That run is retained at tmp/docx-demo/r1-05/pr8-quality-r6/.
+
+The supported RenderPlan binds headings to Heading 1, while the public schema cannot represent that level. Plans containing headings now explicitly fall back with PLANNED_HEADING_LEVEL_UNSUPPORTED before calling the SDK. The actual DOCX regression verifies Legacy preserves Heading 1 and the fallback is recorded. Final verification is recorded below after execution.
+
+Corrected verification: renderer tests 24 passed; full quality pr8-quality-r6-corrected has 1347 passed, 0 failed/skipped. Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 is solely the existing 19 private-script mypy errors. Word/visual acceptance NOT_RUN.
