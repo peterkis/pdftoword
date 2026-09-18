@@ -73,6 +73,11 @@ def unsupported(plan: RenderPlan) -> list[Json]:
                 findings.append({"code": "IMAGE_PLACEMENT_UNSUPPORTED", "source_id": b["id"]})
             if b.get("rotation") not in {None, 0}:
                 findings.append({"code": "BLOCK_ROTATION_UNSUPPORTED", "source_id": b["id"]})
+            if (b["content"]["kind"], b["render_policy"]) in {
+                ("text", "preserve_image"),
+                ("image", "editable"),
+            }:
+                findings.append({"code": "BLOCK_CONTENT_POLICY_UNSUPPORTED", "source_id": b["id"]})
             if b["type"] == "heading":
                 findings.append({"code": "PLANNED_HEADING_LEVEL_UNSUPPORTED", "source_id": b["id"]})
             if b.get("style_ref") is not None:

@@ -946,3 +946,19 @@ def test_reused_formula_asset_counts_each_source_region(case: Path) -> None:
     assert qa["fallback_area_ratio"] == pytest.approx(
         9000 / (2 * first["width_pt"] * first["height_pt"])
     )
+
+
+@pytest.mark.parametrize("index,policy", [(0, "preserve_image"), (1, "editable")])
+def test_conflicting_content_policy_is_explicitly_unsupported(
+    case: Path, index: int, policy: str
+) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][index]["render_policy"] = policy
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "BLOCK_CONTENT_POLICY_UNSUPPORTED" for loss in audit["losses"])
