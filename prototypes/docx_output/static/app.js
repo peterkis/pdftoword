@@ -81,6 +81,7 @@ $('revision').onchange=()=>{const next=$('revision').value;if(!data?.[next]){$('
 $('zoom').oninput=()=>{$('source-wrap').style.width=$('zoom').value+'%';};
 function syncUploadMode(){
   const form=$('upload'), auto=form.elements.mode.value==='auto';
+  form.elements.auto_profile.disabled=!auto;
   form.elements.content_provider.disabled=auto;
   if(auto)form.elements.content_provider.value='ovis-pp';
   for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey']){
@@ -111,6 +112,11 @@ async function showRoute(){
   $('route-confirm').checked=false;
   $('route-execute').disabled=currentRoute.executed||currentRoute.request_budget===0;
   $('route-regions').replaceChildren();
+  for(const task of currentRoute.layout_requests||[]){
+    const line=document.createElement('p');
+    line.textContent='整页布局发送 · 第 '+(task.page_index+1)+' 页 · 完整可见页面（包括电子正文和插图） · '+task.target+' · '+task.model+' · 服务 revision 未知 · 最大 1 次 · 原因：复杂或栅格页布局 · '+task.status+(task.candidate_count===undefined?'':' · 候选 '+task.candidate_count+' · 未选择');
+    $('route-regions').append(line);
+  }
   for(const p of currentRoute.pages)for(const r of p.regions){
     const button=document.createElement('button');
     button.textContent='第 '+(p.page_index+1)+' 页 · '+r.route+' · '+r.status;

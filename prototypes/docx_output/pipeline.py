@@ -348,12 +348,20 @@ def convert(
     confirm_scan: bool = False,
     synthetic: bool = False,
     content_provider: str = "ovis-pp",
+    auto_profile: str = "legacy_ovis_pp",
 ) -> Path:
     """Convert authorized local input using a finite native or explicit live route."""
     validate_input(source)
     if content_provider not in {"ovis", "ovis-pp", "pp"}:
         raise DemoError("INVALID_CONTENT_PROVIDER")
-    if mode == "auto" and (content_provider != "ovis-pp" or ovis or monkey):
+    from .layout_route import profile_settings
+
+    profile_settings(auto_profile)
+    if mode != "auto" and auto_profile != "legacy_ovis_pp":
+        raise DemoError("AUTO_PROFILE_REQUIRES_AUTO")
+    if mode == "auto" and (content_provider not in {"ovis", "ovis-pp"} or ovis or
+                           (monkey and auto_profile != "reconstruction-v2") or
+                           (content_provider == "ovis" and auto_profile == "legacy_ovis_pp")):
         raise DemoError("AUTO_PROFILE_OVIS_PP_REQUIRED")
     if mode not in {"native", "raster", "auto"}:
         raise DemoError("INVALID_MODE")
@@ -405,7 +413,7 @@ def convert(
         if mode == "auto":
             from .route_plan import prepare_routes
 
-            prepare_routes(job, ir)
+            prepare_routes(job, ir, auto_profile)
         finish(job, ir)
     except Exception as exc:
         save(job / "layout.partial.json", ir)

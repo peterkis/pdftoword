@@ -1,0 +1,9 @@
+{
+  "profile": "reconstruction-v2",
+  "content_provider": "ovis",
+  "region_layout_provider": "pp",
+  "page_layout_provider": "monkey",
+  "page_layout_max_requests": 1,
+  "implicit_retries": 0,
+  "provider_revision": null
+}

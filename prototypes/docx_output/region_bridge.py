@@ -21,22 +21,33 @@ def request_region(job: Path, source: Path, region: Json, provider: str, manifes
     """Send at most one request per authorized region/provider and persist STARTED first."""
     if not manifest.get("authorized") or manifest["model_call_count"] >= manifest["budget"]:
         raise DemoError("REGION_BUDGET_EXCEEDED")
+    if provider not in {"pp", "ovis", "monkey"}:
+        raise DemoError("UNKNOWN_REGION_PROVIDER")
+    if provider == "monkey" and not any(
+        task.get("region_id") == region.get("region_id")
+        and task.get("input_sha256") == digest(source)
+        and task.get("task_type") == "page_layout"
+        and task.get("scope") == "whole_visible_page"
+        for task in manifest.get("layout_permissions", [])
+    ):
+        raise DemoError("PAGE_LAYOUT_AUTHORIZATION_REQUIRED")
     url, model = endpoint(provider)
     encoded = base64.b64encode(source.read_bytes()).decode("ascii")
+    mime = "image/jpeg" if source.suffix.lower() in {".jpg", ".jpeg"} else "image/png"
     payload = (
         {"file": encoded, **PP_PARAMETERS}
         if provider == "pp"
         else {
             "model": model,
-            "max_tokens": 8192,
+            "max_tokens": 2048 if provider == "monkey" else 8192,
             "messages": [
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": PROMPTS["ovis"]},
+                        {"type": "text", "text": PROMPTS[provider]},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{encoded}"},
+                            "image_url": {"url": f"data:{mime};base64,{encoded}"},
                         },
                     ],
                 }
@@ -57,7 +68,16 @@ def request_region(job: Path, source: Path, region: Json, provider: str, manifes
         "page_index": region["page_index"],
         "region_id": region["region_id"],
         "provider": provider,
-        "task_type": "region_layout" if provider == "pp" else "region_content",
+        "task_type": "page_layout"
+        if provider == "monkey"
+        else "region_layout"
+        if provider == "pp"
+        else "region_content",
+        "provider_revision": None,
+        "target_fingerprint": manifest.get("target_fingerprints", {}).get(provider),
+        "prompt_sha256": hashlib.sha256(PROMPTS[provider].encode()).hexdigest()
+        if provider != "pp"
+        else None,
         "input_sha256": digest(source),
         "status": "STARTED",
     }
@@ -83,7 +103,10 @@ def request_region(job: Path, source: Path, region: Json, provider: str, manifes
         if cached:
             path = previous / f"response-{region['region_id']}-{provider}.json"
             stored_hash = digest(path)
-            if cached.get("stored_response_sha256", stored_hash) != stored_hash:
+            if (
+                cached.get("stored_response_sha256", None if provider == "monkey" else stored_hash)
+                != stored_hash
+            ):
                 raise DemoError("CACHED_RESPONSE_CHANGED")
             body = read(path)
             entry.update(
@@ -102,11 +125,17 @@ def request_region(job: Path, source: Path, region: Json, provider: str, manifes
             entry["stored_response_sha256"] = digest(target)
             save(job / "request-manifest.json", manifest)
             return body
+    if manifest.get("replay_only"):
+        entry.update(status="SEALED_RESPONSE_UNAVAILABLE", http_attempted=False)
+        manifest["requests"].append(entry)
+        save(job / "request-manifest.json", manifest)
+        raise DemoError("SEALED_RESPONSE_UNAVAILABLE")
     manifest["requests"].append(entry)
     manifest["model_call_count"] += 1
     save(job / "request-manifest.json", manifest)
     started = time.monotonic()
     try:
+        entry["http_attempted"] = True
         with httpx.Client(
             timeout=httpx.Timeout(600, connect=10), trust_env=False, follow_redirects=False
         ) as client:

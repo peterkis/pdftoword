@@ -34,7 +34,7 @@ def semantic_hash(value: Json) -> str:
     ).hexdigest()
 
 
-def target_fingerprints() -> Json:
+def target_fingerprints(providers: tuple[str, ...] = ("pp", "ovis")) -> Json:
     """Bind configured destinations without sending probes or exposing URLs in UI."""
     return {
         p: semantic_hash(
@@ -42,10 +42,10 @@ def target_fingerprints() -> Json:
                 "target": endpoint(p),
                 "parameters": PP_PARAMETERS
                 if p == "pp"
-                else {"prompt": PROMPTS["ovis"], "max_tokens": 8192},
+                else {"prompt": PROMPTS[p], "max_tokens": 2048 if p == "monkey" else 8192},
             }
         )
-        for p in ("pp", "ovis")
+        for p in providers
     }
 
 
@@ -66,8 +66,11 @@ def input_file(job: Path) -> Path:
     return candidates[0]
 
 
-def prepare_routes(job: Path, ir: Json) -> Json:
+def prepare_routes(job: Path, ir: Json, profile: str = "legacy_ovis_pp") -> Json:
     """Create an immutable local plan and source-preserving provisional DOCX content."""
+    from .layout_route import prepare_layout, profile_settings
+
+    settings = profile_settings(profile)
     pages = []
     for p in ir["pages"]:
         index = p["page_index"]
@@ -99,18 +102,28 @@ def prepare_routes(job: Path, ir: Json) -> Json:
         pages.append(decision)
     deduplicate_asset_bytes(ir)
     total = sum(r["request_budget"] for p in pages for r in p["regions"])
+    layouts = prepare_layout(job, ir, pages, profile)
+    providers = (["pp", "ovis"] if total else []) + (["monkey"] if layouts else [])
+    total += len(layouts)
     plan: Json = {
         "schema_version": "route-plan/1",
         "job_id": job.name,
         "source_sha256": digest(input_file(job)),
         "selected_pages": [p["page_index"] for p in pages],
-        "profile": "mixed-ovis-pp-v1",
+        "profile": "mixed-ovis-pp-v1" if profile == "legacy_ovis_pp" else profile,
+        "profile_settings": settings,
+        "layout_requests": layouts,
         "pages": pages,
         "request_budget": total,
-        "provider_aliases": ["pp", "ovis"] if total else [],
-        "target_fingerprints": target_fingerprints() if total else {},
+        "provider_aliases": providers,
+        "target_fingerprints": target_fingerprints(tuple(providers)) if total else {},
         "expires_at": time.time() + 86400,
         "status": "AWAITING_AUTHORIZATION" if total else "LOCAL_COMPLETE",
+    }
+    ir["metadata"]["content_provider"] = settings["content_provider"]
+    ir["metadata"]["layout_policy"] = {
+        "region_provider": settings["region_layout_provider"],
+        "page_provider": settings["page_layout_provider"],
     }
     ir["metadata"]["auto_route"] = {
         "request_budget": total,
@@ -138,11 +151,22 @@ def validate_plan(job: Path, plan_hash: str, budget: int) -> Json:
         raise DemoError("ROUTE_BUDGET_MISMATCH")
     if digest(input_file(job)) != plan["source_sha256"]:
         raise DemoError("ROUTE_SOURCE_CHANGED")
-    if plan["request_budget"] and target_fingerprints() != plan["target_fingerprints"]:
+    if (
+        plan["request_budget"]
+        and target_fingerprints(tuple(plan["provider_aliases"])) != plan["target_fingerprints"]
+    ):
         raise DemoError("ROUTE_TARGET_CHANGED")
     if digest(job / "layout.prepared.json") != plan["prepared_sha256"]:
         raise DemoError("ROUTE_PREPARED_CHANGED")
+    from .layout_route import profile_settings
+
+    profile = "legacy_ovis_pp" if plan["profile"] == "mixed-ovis-pp-v1" else plan["profile"]
+    if plan.get("profile_settings", profile_settings(profile)) != profile_settings(profile):
+        raise DemoError("ROUTE_PROFILE_CHANGED")
     ir = read(job / "layout.prepared.json")
+    for task in plan.get("layout_requests", []):
+        if digest(safe_path(job, task["image_path"])) != task["input_sha256"]:
+            raise DemoError("ROUTE_LAYOUT_INPUT_CHANGED")
     for page in plan["pages"]:
         for region in page["regions"]:
             asset = next(a for a in ir["assets"] if a["id"] == region["asset_id"])
@@ -152,7 +176,12 @@ def validate_plan(job: Path, plan_hash: str, budget: int) -> Json:
 
 
 def execute_routes(
-    job: Path, plan_hash: str, budget: int, confirm_no_auth: bool, reuse_from: Path | None = None
+    job: Path,
+    plan_hash: str,
+    budget: int,
+    confirm_no_auth: bool,
+    reuse_from: Path | None = None,
+    replay_only: bool = False,
 ) -> Path:
     """Execute once into a new job, never overwriting auto or human-reviewed output."""
     from .mixed_fusion import reconstruct_region
@@ -161,6 +190,8 @@ def execute_routes(
 
     if not confirm_no_auth:
         raise DemoError("EXPLICIT_MODEL_AUTHORIZATION_REQUIRED")
+    if replay_only and reuse_from is None:
+        raise DemoError("REPLAY_SOURCE_REQUIRED")
     plan = validate_plan(job, plan_hash, budget)
     if reuse_from is not None:
         from .common import job_path
@@ -194,6 +225,9 @@ def execute_routes(
         "budget": budget,
         "model_call_count": 0,
         "requests": [],
+        "replay_only": replay_only,
+        "layout_permissions": plan.get("layout_requests", []),
+        "target_fingerprints": plan["target_fingerprints"],
     }
     if reuse_from is not None:
         manifest["reuse_job_id"] = reuse_from.name
@@ -245,6 +279,10 @@ def execute_routes(
                 ir["metrics"]["model_call_count"] = manifest["model_call_count"]
                 save(child / "region-results.json", {"pages": plan["pages"]})
                 save(child / "layout.partial.json", ir)
+    from .layout_route import execute_layout
+
+    execute_layout(job, child, ir, plan.get("layout_requests", []), manifest)
+    save(child / "layout-results.json", {"tasks": plan.get("layout_requests", [])})
     save(child / "region-results.json", {"pages": plan["pages"]})
     ir["metadata"]["auto_route"]["request_budget"] = 0
     ir["metadata"]["auto_route"]["pending_regions"] = sum(

@@ -232,6 +232,7 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                         confirm_no_auth=form.get("confirm_no_auth") == "true",
                         confirm_scan=form.get("confirm_scan") == "true",
                         content_provider=str(form.get("content_provider", "ovis-pp")),
+                        auto_profile=str(form.get("auto_profile", "legacy_ovis_pp")),
                         ovis=form.get("ovis") == "true",
                         monkey=form.get("monkey") == "true",
                     )
@@ -256,6 +257,10 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
             "available": True,
             "plan_hash": plan["plan_hash"],
             "request_budget": plan["request_budget"],
+            "profile": plan["profile"],
+            "layout_requests": (read(job / "layout-results.json")["tasks"]
+                                if (job / "layout-results.json").exists() else
+                                plan.get("layout_requests", [])),
             "provider_aliases": plan["provider_aliases"],
             "status": plan["status"],
             "executed": (job / "route-execution.json").exists() or plan["job_id"] != job.name,

@@ -27,6 +27,9 @@ def main() -> int:
     c = sub.add_parser("convert")
     c.add_argument("--input", type=Path, required=True)
     c.add_argument("--content-provider", choices=["ovis", "ovis-pp", "pp"], default="ovis-pp")
+    c.add_argument(
+        "--auto-profile", choices=["legacy_ovis_pp", "reconstruction-v2"], default="legacy_ovis_pp"
+    )
     c.add_argument("--pages")
     c.add_argument("--mode", choices=["auto", "native", "raster"], default="auto")
     c.add_argument("--output-root", type=Path, default=JOBS)
@@ -36,6 +39,8 @@ def main() -> int:
     execute.add_argument("--plan-hash", required=True)
     execute.add_argument("--budget", type=int, required=True)
     execute.add_argument("--confirm-no-auth", action="store_true")
+    execute.add_argument("--reuse-from", type=Path)
+    execute.add_argument("--replay-only", action="store_true")
     execute.add_argument("--output-root", type=Path, default=JOBS)
     for flag in [
         "allow-model-calls",
@@ -83,8 +88,11 @@ def main() -> int:
         elif args.command == "compare-renderers":
             from prototypes.docx_output.render_replay import compare_renderers
 
-            print(compare_renderers(args.source_job, args.revision, args.output_root,
-                                    source_seal=args.source_seal).resolve())
+            print(
+                compare_renderers(
+                    args.source_job, args.revision, args.output_root, source_seal=args.source_seal
+                ).resolve()
+            )
         elif args.command == "replay":
             job = replay(
                 args.run_dir,
@@ -102,6 +110,8 @@ def main() -> int:
                 args.plan_hash,
                 args.budget,
                 args.confirm_no_auth,
+                reuse_from=args.reuse_from,
+                replay_only=args.replay_only,
             )
             print((job / "auto.docx").resolve())
         elif args.command == "convert":
@@ -119,6 +129,7 @@ def main() -> int:
                 args.confirm_scan,
                 args.synthetic,
                 args.content_provider,
+                auto_profile=args.auto_profile,
             )
             print((job / ("route-plan.json" if args.dry_run_route else "auto.docx")).resolve())
         elif args.command == "render":
