@@ -622,3 +622,29 @@ def test_unverified_inline_semantics_explicitly_unsupported(case: Path, span: di
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "INLINE_SPAN_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize(
+    "cell",
+    [
+        '<td><a href="https://example.invalid/">A</a></td>',
+        "<td><strong>A</strong></td>",
+        "<td><em>A</em></td>",
+        '<td style="color:red">A</td>',
+    ],
+)
+def test_rich_table_cell_markup_is_explicitly_unsupported(case: Path, cell: str) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = "table"
+    ir["pages"][0]["blocks"][0]["content"]["plain_text"] = "A"
+    ir["metadata"]["structure_evidence"] = {
+        "question": {"selected_html": "<table><tr>" + cell + "</tr></table>"}
+    }
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "TABLE_RICH_CONTENT_UNSUPPORTED" for loss in audit["losses"])

@@ -232,3 +232,8 @@ Any non-null block style_ref now triggers BLOCK_SOURCE_STYLE_UNSUPPORTED even wh
 ## PR #8 review round 16: unsupported inline semantics
 
 Renderer inline evidence is limited to plain string text/equation_inline spans containing only type/content. Hyperlinks, additional style attributes and nested semantic content trigger INLINE_SPAN_UNSUPPORTED with explicit fallback evidence. No hyperlink or rich-inline implementation is added; these remain with R3-01/R2-02. Two regressions cover links and extra style attributes. Full quality pr8-quality-r16: 1373 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 17: plain-table markup boundary
+
+Selected table HTML is restricted before SDK rendering to table/tbody/tr/td/br and td rowspan/colspan attributes. Links, emphasis, style attributes and other rich cell semantics produce explicit TABLE_RICH_CONTENT_UNSUPPORTED evidence; header semantics retain their dedicated unsupported code. Four actual-render regressions cover hyperlinks, strong/em and CSS attributes. Rich table content remains with R3-01/R3-02. Full quality pr8-quality-r17: 1377 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

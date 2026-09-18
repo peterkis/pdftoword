@@ -102,6 +102,8 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                 ):
                     raise DemoError("TABLE_STRUCTURE_EVIDENCE_MISSING")
                 if b["type"] == "table" and evidence.get("selected_html"):
+                    if for_renderer:
+                        require_plain_table_markup(evidence["selected_html"])
                     if table_text(evidence["selected_html"]) != content["plain_text"]:
                         raise DemoError("TABLE_EVIDENCE_TEXT_MISMATCH")
                     item.update(type="table", content=evidence["selected_html"])
@@ -230,3 +232,23 @@ def table_text(markup: str) -> str:
         return result
 
     return visible(root)
+
+
+def require_plain_table_markup(markup: str) -> None:
+    """Limit the renderer POC to plain cells, spans and line breaks, preserving refusals."""
+    from lxml import etree, html
+
+    try:
+        root = html.fragment_fromstring(
+            markup, create_parent="div", parser=html.HTMLParser(no_network=True)
+        )
+    except (etree.ParserError, ValueError):
+        raise DemoError("BRIDGE_TABLE_HTML_INVALID") from None
+    if root.xpath(".//thead|.//th|.//tfoot"):
+        raise DemoError("DOCVORTEX_TABLE_HEADER_UNSUPPORTED")
+    if len(root.xpath(".//table")) != 1:
+        raise DemoError("TABLE_MARKUP_UNSUPPORTED")
+    for node in root.iterdescendants():
+        allowed = {"rowspan", "colspan"} if node.tag == "td" else set()
+        if node.tag not in {"table", "tbody", "tr", "td", "br"} or set(node.attrib) - allowed:
+            raise DemoError("TABLE_RICH_CONTENT_UNSUPPORTED")

@@ -10,11 +10,12 @@ from lxml import etree, html
 
 from ..common import DemoError
 from ..formula import to_omml
-from ..structure_processors.bridge import table_text
+from ..structure_processors.bridge import require_plain_table_markup, table_text
 
 
 def verify_table(element: Any, markup: str, parent: Any) -> None:
     """Compare cell text and exact rectangular row/column ownership, including merges."""
+    require_plain_table_markup(markup)
     root = html.fragment_fromstring(
         markup, create_parent="div", parser=html.HTMLParser(no_network=True)
     )
