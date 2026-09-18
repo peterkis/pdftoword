@@ -19,6 +19,31 @@ def unsupported(plan: RenderPlan) -> list[Json]:
             findings.append({"code": "LEGACY_GROUPING_UNSUPPORTED", "field": key})
     for page in ir["pages"]:
         for b in page["blocks"]:
+            if b["type"] not in {
+                "paragraph",
+                "major_question",
+                "question",
+                "subquestion",
+                "option",
+                "text_line",
+                "text_span",
+                "figure",
+                "caption",
+                "table",
+                "formula",
+                "footer",
+                "page_number",
+                "heading",
+            }:
+                findings.append(
+                    {
+                        "code": "BLOCK_TYPE_UNSUPPORTED",
+                        "source_id": b["id"],
+                        "block_type": b["type"],
+                    }
+                )
+            if b["type"] == "figure" and b["content"]["kind"] != "image":
+                findings.append({"code": "FIGURE_CONTENT_UNSUPPORTED", "source_id": b["id"]})
             if b["type"] == "heading":
                 findings.append({"code": "PLANNED_HEADING_LEVEL_UNSUPPORTED", "source_id": b["id"]})
             if b["content"].get("runs"):

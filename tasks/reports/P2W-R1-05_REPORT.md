@@ -189,3 +189,10 @@ Three regressions cover these cases, including unchanged source files after reje
 Worker results and renderer audits now persist relative-path hashes for local implementation dependencies, including bridge, verifier, runtime and worker. The actual-render regression checks hashes against source bytes. Full quality pr8-quality-r9: 1353 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors.
 
 User clarification: issues affecting experimental credibility must be fixed; capability gaps may remain explicitly unsupported with failed/rejected evidence preserved and follow-up tasks assigned. R1-05 does not need to implement every unsupported capability. Heading-level limitations, unsupported math syntax and complex layout remain explicit fallback boundaries for later R1/R2/R3 tasks; no visual or Word acceptance is claimed.
+
+
+## PR #8 review round 10: unsupported block semantics
+
+List/list_item and other unimplemented structural block types now fail the renderer capability allowlist with BLOCK_TYPE_UNSUPPORTED. They leave explicit fallback evidence instead of being silently flattened and accepted. This is a capability boundary, not implementation of list rendering. List boundaries are deferred to P2W-R2-01 and list/heading style support to P2W-R2-02 under the existing plan. Text-backed figures also fail their capability check.
+
+Nine actual renderer regressions cover unsupported block kinds. Full quality pr8-quality-r10: 1362 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script mypy errors. Word/visual acceptance NOT_RUN.

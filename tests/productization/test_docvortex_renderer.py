@@ -458,3 +458,33 @@ def test_render_audit_fingerprints_local_execution_dependencies(case: Path) -> N
         assert audit["local_implementation_sha256"][name] == expected
         assert audit["worker"]["local_implementation_sha256"][name] == expected
     assert all(not Path(name).is_absolute() for name in audit["local_implementation_sha256"])
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "list",
+        "list_item",
+        "section",
+        "table_row",
+        "table_cell",
+        "header",
+        "answer_area",
+        "layout_container",
+        "unknown",
+    ],
+)
+def test_unsupported_block_semantics_are_not_silently_flattened(case: Path, kind: str) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["type"] = kind
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(
+        loss["code"] == "BLOCK_TYPE_UNSUPPORTED" and loss["block_type"] == kind
+        for loss in audit["losses"]
+    )
