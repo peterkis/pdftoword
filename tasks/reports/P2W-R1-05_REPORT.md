@@ -1,5 +1,7 @@
 # P2W-R1-05 实施报告
 
+> 当前结论已冻结，见 [POC 冻结结论](P2W-R1-05_FREEZE.md)。下面初次实施状态及各轮记录属于历史证据，不代表当前能力范围；用户已要求停止扩展 POC 和主动全面复审，按已知限制及最终验证决定工程合并。
+
 - 实际仓库/分支/开始与结束 HEAD：`peterkis/pdftoword` / `main` / `5c176a70294ca6ca4104630110a9b3740e16101e`。
 - 用户授权：仅执行 R1-05；本次未 commit/push/PR/merge，也未执行 R1-02。
 - 工程状态：**VERIFIED（R1-05 POC 范围）**。全仓 quality 仍因既有私有 mypy 缺陷 FAIL，不称整仓全绿。
@@ -345,3 +347,12 @@ Body-level payloads outside paragraphs/tables/section properties are rejected. P
 ## PR #8 review round 34: break semantics
 
 Only absent/textWrapping w:br types are accepted as source newlines; page/column breaks explicitly reject with DOCVORTEX_BREAK_TYPE_UNSUPPORTED. Four regressions preserve ordinary line breaks while rejecting forced pagination/columns. Full quality pr8-quality-r34: 1428 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## Final bounded POC freeze (user-directed stop to comprehensive re-review)
+
+The remaining paragraph/section pagination finding is handled by explicit rejection of direct/default/inherited pageBreakBefore and multicolumn controls. Ordinary disabled page breaks remain accepted. The initial integration namespace mismatch was corrected; focused pagination/renderer checks reached 100 passed.
+
+One final targeted command then ran renderer/structure regressions and the actual-upload state/CLI/API cases: 132 passed; Ruff passes; targeted mypy 44 files passes; schema samples 2 pairs pass; diff check passes. Existing CI will validate the final commit. No further comprehensive review is requested.
+
+Latest sealed real replay: 2 pages, 15 blocks, all 34 source files unchanged, zero model requests. DocVortex actually ran without fallback; shared structure produced no new proposals or losses. QA remains PARTIAL and layout benefit is not verified. Current adoption/unsupported/unverified decisions and mainline handoff are frozen in P2W-R1-05_FREEZE.md; public hashes/statuses are in P2W-R1-05_FREEZE_CHECKS.json.

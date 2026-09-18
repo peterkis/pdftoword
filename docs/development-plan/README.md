@@ -36,6 +36,8 @@ uv run scripts/docx_demo.py compare-renderers --source-job <已有作业目录> 
 
 ## R1-05 共享结构/输出 POC（2026-09-18）
 
+当前按用户新指令收口为[带已知限制的 POC](../../tasks/reports/P2W-R1-05_FREEZE.md)：停止扩展能力及主动全面复审，最终针对性验证和既有 CI 正常后可工程合并；随后按依赖进入 R1-02 及主线集成，以真实问题页验证收益。继承适配边界和失败案例，不继承“完善的 DocVortex 渲染器”结论。以下“仅执行 R1-05”是初次授权的历史记录。
+
 仅执行 R1-05；工程、视觉、Word 接受分开。实际版本 0.4.9、依赖隔离、六能力决定见
 [评估记录](../decisions/docvortex-renderer-evaluation.md)与[实施报告](../../tasks/reports/P2W-R1-05_REPORT.md)。
 R1-01/PR #7 的保护保持；原计划、S2 和历史状态不倒改。R1-05 工程验证后的下一建议为 R1-02，本次不自动执行。

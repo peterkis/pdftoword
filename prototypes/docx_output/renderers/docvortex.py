@@ -21,7 +21,13 @@ from ..structure_processors.bridge import bridge, direct_middle, inline_text, ta
 from ..writer import fonts, inspect_package
 from .capabilities import unsupported
 from .legacy import LegacyRenderer
-from .verification import preserve_image_geometry, verify_formula, verify_inline_order, verify_table
+from .verification import (
+    preserve_image_geometry,
+    verify_formula,
+    verify_inline_order,
+    verify_natural_pagination,
+    verify_table,
+)
 
 
 def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -> list[Json]:
@@ -178,6 +184,7 @@ def bind_source_ranges(raw: Path, target: Path, ir: Json, entries: list[Json]) -
         style.element.get_or_add_rPr().get_or_add_rFonts().set(
             qn("w:eastAsia"), info["east_asia"] or "sans-serif"
         )
+    verify_natural_pagination(doc.element, doc.styles.element)
     from importlib.util import module_from_spec, spec_from_file_location
 
     spec = spec_from_file_location(

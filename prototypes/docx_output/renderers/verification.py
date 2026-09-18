@@ -179,3 +179,41 @@ def preserve_image_geometry(
         return width, height
     except (ValueError, OSError, ZeroDivisionError):
         raise DemoError("DOCVORTEX_IMAGE_GEOMETRY_UNSUPPORTED") from None
+
+
+def verify_natural_pagination(document: Any, styles: Any) -> None:
+    """Reject forced paragraph pagination and columns, including used style ancestry."""
+
+    def page_breaks(node: Any) -> bool:
+        return any(
+            flag.get(qn("w:val"), "true") not in {"0", "false", "off"}
+            for flag in node.iter(qn("w:pageBreakBefore"))
+        )
+
+    if page_breaks(document):
+        raise DemoError("DOCVORTEX_PAGINATION_UNSUPPORTED")
+    for defaults in styles.xpath("./w:docDefaults/w:pPrDefault"):
+        if page_breaks(defaults):
+            raise DemoError("DOCVORTEX_PAGINATION_UNSUPPORTED")
+    catalog = {style.get(qn("w:styleId")): style for style in styles.xpath("./w:style")}
+    defaults = styles.xpath('./w:style[@w:type="paragraph" and @w:default="1"]/@w:styleId')
+    for paragraph in document.xpath(".//w:p"):
+        selected = paragraph.xpath("./w:pPr/w:pStyle/@w:val") or defaults
+        current = selected[0] if selected else None
+        seen = set()
+        while current:
+            if current in seen or current not in catalog:
+                raise DemoError("DOCVORTEX_PARAGRAPH_STYLE_UNSUPPORTED")
+            seen.add(current)
+            style = catalog[current]
+            if page_breaks(style):
+                raise DemoError("DOCVORTEX_PAGINATION_UNSUPPORTED")
+            bases = style.xpath("./w:basedOn/@w:val")
+            current = bases[0] if bases else None
+    for columns in document.xpath(".//w:sectPr/w:cols"):
+        if (
+            columns.get(qn("w:num"), "1") != "1"
+            or len(columns)
+            or columns.get(qn("w:equalWidth")) in {"0", "false", "off"}
+        ):
+            raise DemoError("DOCVORTEX_COLUMNS_UNSUPPORTED")

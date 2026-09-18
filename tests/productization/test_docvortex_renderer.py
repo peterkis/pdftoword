@@ -1091,3 +1091,40 @@ def test_only_text_wrapping_breaks_match_source_newlines(case: Path, kind: str |
     else:
         bind_source_ranges(raw, target, ir, entries)
         assert Document(str(target)).paragraphs[0].text == "A\nB"
+
+
+@pytest.mark.parametrize("mode", ["direct", "inherited", "columns", "explicit_columns", "disabled"])
+def test_pagination_controls_are_explicitly_guarded(case: Path, mode: str) -> None:
+    from docx.enum.style import WD_STYLE_TYPE
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from prototypes.docx_output.renderers.docvortex import bind_source_ranges
+
+    _, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    doc = Document()
+    paragraph = doc.add_paragraph(b["content"]["plain_text"])
+    if mode in {"direct", "disabled"}:
+        paragraph.paragraph_format.page_break_before = mode == "direct"
+    elif mode == "inherited":
+        parent = doc.styles.add_style("ForcePage", WD_STYLE_TYPE.PARAGRAPH)
+        parent.paragraph_format.page_break_before = True
+        child = doc.styles.add_style("ChildPage", WD_STYLE_TYPE.PARAGRAPH)
+        child.base_style = parent
+        paragraph.style = child
+    else:
+        columns = doc.sections[0]._sectPr.xpath("./w:cols")[0]
+        if mode == "columns":
+            columns.set(qn("w:num"), "2")
+        else:
+            columns.append(OxmlElement("w:col"))
+    raw, target = case / "pagination.docx", case / "bound.docx"
+    doc.save(str(raw))
+    entries = [{"block": b, "raw": {"type": "text", "content": b["content"]["plain_text"]}}]
+    if mode == "disabled":
+        bind_source_ranges(raw, target, ir, entries)
+        assert target.exists()
+    else:
+        with pytest.raises(DemoError, match=r"DOCVORTEX_(PAGINATION|COLUMNS)_UNSUPPORTED"):
+            bind_source_ranges(raw, target, ir, entries)
+        assert not target.exists()
