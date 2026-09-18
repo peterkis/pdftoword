@@ -222,3 +222,8 @@ Only preserve_as_image is supported for imageContent in the DocVortex renderer. 
 ## PR #8 review round 14: manually reassociated warning IDs
 
 A recurring stage warning now reuses its previous ID only when no retained/manual warning occupies it; otherwise it allocates a reserved fresh ID. The regression changes manual block association and processes two subsequent edits, verifying both records survive with unique IDs. Full quality pr8-quality-r14: 1370 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 15: unsupported block source styles
+
+Any non-null block style_ref now triggers BLOCK_SOURCE_STYLE_UNSUPPORTED even when the document style map is empty. The actual-render regression verifies explicit fallback; style resolution remains deferred to R2-02. Full quality pr8-quality-r15: 1371 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

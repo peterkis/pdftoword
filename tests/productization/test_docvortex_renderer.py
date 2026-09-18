@@ -587,3 +587,17 @@ def test_nonvisual_image_mode_is_explicitly_unsupported(case: Path, mode: str) -
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "IMAGE_RENDER_MODE_UNSUPPORTED" for loss in audit["losses"])
+
+
+def test_source_style_reference_explicitly_unsupported(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["style_ref"] = "source-style"
+    assert ir["styles"] == {}
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "BLOCK_SOURCE_STYLE_UNSUPPORTED" for loss in audit["losses"])
