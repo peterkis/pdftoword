@@ -330,3 +330,8 @@ Final quality pr8-quality-r30: 1415 passed, 0 failed/skipped; Ruff/catalog/basel
 ## PR #8 review round 31: conflicting content/render policies
 
 Text content requesting preserve_image and image content requesting editable are explicitly unsupported, recorded as BLOCK_CONTENT_POLICY_UNSUPPORTED before SDK execution. Two regressions verify the policy boundary without adding conversion capability. Full quality pr8-quality-r31: 1417 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 32: unsupported child hierarchy
+
+Any nonempty block children list explicitly produces BLOCK_CHILDREN_UNSUPPORTED before SDK rendering. An actual-render regression verifies retained rejection evidence; hierarchy layout is not implemented by this bounded POC. Full quality pr8-quality-r32: 1418 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

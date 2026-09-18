@@ -962,3 +962,16 @@ def test_conflicting_content_policy_is_explicitly_unsupported(
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "BLOCK_CONTENT_POLICY_UNSUPPORTED" for loss in audit["losses"])
+
+
+def test_child_hierarchy_is_explicitly_unsupported(case: Path) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["children"] = ["figure"]
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "BLOCK_CHILDREN_UNSUPPORTED" for loss in audit["losses"])

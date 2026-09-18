@@ -78,6 +78,8 @@ def unsupported(plan: RenderPlan) -> list[Json]:
                 ("image", "editable"),
             }:
                 findings.append({"code": "BLOCK_CONTENT_POLICY_UNSUPPORTED", "source_id": b["id"]})
+            if b.get("children"):
+                findings.append({"code": "BLOCK_CHILDREN_UNSUPPORTED", "source_id": b["id"]})
             if b["type"] == "heading":
                 findings.append({"code": "PLANNED_HEADING_LEVEL_UNSUPPORTED", "source_id": b["id"]})
             if b.get("style_ref") is not None:
