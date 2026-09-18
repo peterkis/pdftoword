@@ -343,6 +343,26 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         job = job_path(job_id, output_root)
         return FileResponse(safe_path(job, revision + ".docx"), filename=revision + ".docx")
 
+    @app.post("/api/compare-renderers/{job_id}")
+    async def compare_job(job_id: str, request: Request) -> Json:
+        from .render_replay import compare_renderers
+
+        data = await request.json()
+        if data.get("renderer_a", "legacy") != "legacy" or (
+            data.get("renderer_b", "legacy") != "legacy"
+        ):
+            raise DemoError("UNKNOWN_RENDERER")
+        if not lock.acquire(blocking=False):
+            raise HTTPException(409, "JOB_BUSY")
+        try:
+            comparison = compare_renderers(
+                job_path(job_id, output_root), data.get("revision", "auto"), output_root
+            )
+            return {"comparison_id": comparison.name,
+                    "comparison": read(comparison / "comparison.json")}
+        finally:
+            lock.release()
+
     @app.post("/api/preview/{job_id}")
     async def preview_job(job_id: str, request: Request) -> Json:
         job = job_path(job_id, output_root)

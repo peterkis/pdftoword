@@ -1,0 +1,216 @@
+{
+  "task": "P2W-R1-01",
+  "status": "SOURCE_MANIFEST_READ_ONLY",
+  "public_calls": "NOT_RUN",
+  "package_install": "NOT_RUN",
+  "mineru_reference_release": "mineru-4.0.1-released",
+  "mineru_reference_commit": "23caf85a1b788e56f3f81b587022a740ce2cd6ae",
+  "docvortex_reference_commit": "e5b4b206a1cf62ac2b08247d7f42c1d0672487bf",
+  "installed_version": "NOT_INSTALLED_BY_THIS_TASK",
+  "artifact_sha256": null,
+  "source_manifest_sha256": "e14343272d765708c13a65fd35f8ff9ba135968890bde9409ca0cd69a9b0ae9c",
+  "reuse_matrix_sha256": "c6b146fda63e82fb5e904093009609a2e080389f7b7d09c07c60eb8cc44df7dc",
+  "capabilities": [
+    {
+      "reuse_id": "MU-HEADING",
+      "capability": "标题识别与层级",
+      "required_task_ids": [
+        "P2W-R1-05",
+        "P2W-R2-02",
+        "P2W-R2-07"
+      ],
+      "source_ids": [
+        "SRC-DV-03",
+        "SRC-MU-02"
+      ],
+      "public_entrypoints": [
+        "docvortex.postprocess.document.model_json_to_middle_json"
+      ],
+      "proposed_strategy": "ADAPT_PUBLIC_API",
+      "adoption_status": "PLANNED_NOT_EXECUTED",
+      "reuse_scope": "复用标题类型/默认level；明确编号与同级模式约束，章节层级只补项目差异。",
+      "project_guards": "标题默认level不是检测；MinerU精细分级是可选LLM。题号不等于标题，不增加隐式请求。",
+      "inference_required_by_default": false,
+      "implementation_evidence": [],
+      "execution_status": "NOT_RUN",
+      "loss_report": "NOT_RUN",
+      "next_poc": "P2W-R1-05"
+    },
+    {
+      "reuse_id": "MU-PARAGRAPH",
+      "capability": "段落与续接",
+      "required_task_ids": [
+        "P2W-R1-05",
+        "P2W-R1-06",
+        "P2W-R2-01",
+        "P2W-R3-04"
+      ],
+      "source_ids": [
+        "SRC-DV-02",
+        "SRC-DV-04"
+      ],
+      "public_entrypoints": [
+        "docvortex.postprocess.document.model_json_to_middle_json"
+      ],
+      "proposed_strategy": "ADAPT_PUBLIC_API",
+      "adoption_status": "PLANNED_NOT_EXECUTED",
+      "reuse_scope": "优先复用continues_prev和行/边界逻辑，源line证据留ledger。",
+      "project_guards": "不跨列/题/选项/人工锁/非连续源页；不复制通用段落合并器，不制造行框。",
+      "inference_required_by_default": false,
+      "implementation_evidence": [],
+      "execution_status": "NOT_RUN",
+      "loss_report": "NOT_RUN",
+      "next_poc": "P2W-R1-05"
+    },
+    {
+      "reuse_id": "MU-TABLE",
+      "capability": "表格与续表",
+      "required_task_ids": [
+        "P2W-R1-05",
+        "P2W-R3-02",
+        "P2W-R3-04",
+        "P2W-R3-07"
+      ],
+      "source_ids": [
+        "SRC-DV-06",
+        "SRC-DV-07"
+      ],
+      "public_entrypoints": [
+        "docvortex.content.table.build_table_state_from_html",
+        "docvortex.content.table.detect_table_headers",
+        "docvortex.content.table.expand_header_count_by_rowspan",
+        "docvortex.content.table.merge_table",
+        "docvortex.render.docx.render_docx"
+      ],
+      "proposed_strategy": "ADAPT_PUBLIC_API",
+      "adoption_status": "PLANNED_NOT_EXECUTED",
+      "reuse_scope": "复用HTML格拓扑、重复表头、rowspan覆盖和公共DOCX写出。",
+      "project_guards": "same cols≠same table；源页/表号/宽度/脚注/锁定另行校验，源cell证据不删除。",
+      "inference_required_by_default": false,
+      "implementation_evidence": [],
+      "execution_status": "NOT_RUN",
+      "loss_report": "NOT_RUN",
+      "next_poc": "P2W-R1-05"
+    },
+    {
+      "reuse_id": "MU-FORMULA",
+      "capability": "公式与编号",
+      "required_task_ids": [
+        "P2W-R1-05",
+        "P2W-R3-03",
+        "P2W-R3-05",
+        "P2W-R3-07"
+      ],
+      "source_ids": [
+        "SRC-DV-08",
+        "SRC-DV-09"
+      ],
+      "public_entrypoints": [
+        "docvortex.render.docx.render_docx"
+      ],
+      "proposed_strategy": "ADAPT_PUBLIC_API",
+      "adoption_status": "PLANNED_NOT_EXECUTED",
+      "reuse_scope": "通过公共renderer复用公式转换链；转换子函数仅是私有实现参考。",
+      "project_guards": "识别与OMML成功分开；裸LaTeX不是成功，关键符号冲突保留原图；不import_internal。",
+      "inference_required_by_default": false,
+      "implementation_evidence": [],
+      "execution_status": "NOT_RUN",
+      "loss_report": "NOT_RUN",
+      "next_poc": "P2W-R1-05"
+    },
+    {
+      "reuse_id": "MU-CAPTION",
+      "capability": "图片说明/图注/脚注",
+      "required_task_ids": [
+        "P2W-R1-05",
+        "P2W-R2-04",
+        "P2W-R2-05",
+        "P2W-R2-07"
+      ],
+      "source_ids": [
+        "SRC-DV-03",
+        "SRC-DV-05"
+      ],
+      "public_entrypoints": [
+        "docvortex.postprocess.document.model_json_to_middle_json"
+      ],
+      "proposed_strategy": "ADAPT_PUBLIC_API",
+      "adoption_status": "PLANNED_NOT_EXECUTED",
+      "reuse_scope": "复用body/caption/footnote分组，项目只补题图/共享图关系。",
+      "project_guards": "source caption≠generated description≠question ownership；不按最近框硬配。",
+      "inference_required_by_default": false,
+      "implementation_evidence": [],
+      "execution_status": "NOT_RUN",
+      "loss_report": "NOT_RUN",
+      "next_poc": "P2W-R1-05"
+    },
+    {
+      "reuse_id": "MU-ORDER",
+      "capability": "阅读顺序",
+      "required_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-04",
+        "P2W-R1-05",
+        "P2W-R2-03",
+        "P2W-R2-07"
+      ],
+      "source_ids": [
+        "SRC-MU-03",
+        "SRC-MU-04",
+        "SRC-DV-02"
+      ],
+      "public_entrypoints": [],
+      "proposed_strategy": "REFERENCE_ONLY",
+      "adoption_status": "PLANNED_NOT_EXECUTED",
+      "reuse_scope": "借鉴模型order/index与后处理保序分工；选现有provider顺序，补项目约束。",
+      "project_guards": "学得order keys来自模型，现有bbox不能凭空生成；DocVortex index排序不是阅读顺序预测。",
+      "inference_required_by_default": false,
+      "implementation_evidence": [],
+      "execution_status": "NOT_RUN",
+      "loss_report": "NOT_RUN",
+      "next_poc": "P2W-R1-05"
+    }
+  ],
+  "public_interfaces": [
+    {
+      "id": "SRC-DV-01",
+      "repository": "myhloli/DocVortex",
+      "commit": "e5b4b206a1cf62ac2b08247d7f42c1d0672487bf",
+      "path": "src/docvortex/postprocess/document.py",
+      "access": "public_api",
+      "public_entrypoints": [
+        "docvortex.postprocess.document.model_json_to_middle_json"
+      ]
+    },
+    {
+      "id": "SRC-DV-06",
+      "repository": "myhloli/DocVortex",
+      "commit": "e5b4b206a1cf62ac2b08247d7f42c1d0672487bf",
+      "path": "src/docvortex/content/table/__init__.py",
+      "access": "public_api",
+      "public_entrypoints": [
+        "docvortex.content.table.build_table_state_from_html",
+        "docvortex.content.table.detect_table_headers",
+        "docvortex.content.table.can_merge_by_structure",
+        "docvortex.content.table.expand_header_count_by_rowspan",
+        "docvortex.content.table.merge_table",
+        "docvortex.content.table.merge_table_content"
+      ]
+    },
+    {
+      "id": "SRC-DV-09",
+      "repository": "myhloli/DocVortex",
+      "commit": "e5b4b206a1cf62ac2b08247d7f42c1d0672487bf",
+      "path": "src/docvortex/render/docx.py",
+      "access": "public_api",
+      "public_entrypoints": [
+        "docvortex.render.docx.render_docx"
+      ]
+    }
+  ],
+  "constraints": [
+    "No internal module imports; no generic structure engine in R1-01.",
+    "License and dependency acceptance deferred to actual pinned artifacts in R1-05.",
+    "Unknown model revisions remain unknown; no inference or font distribution."
+  ]
+}

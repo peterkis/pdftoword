@@ -55,6 +55,12 @@ def main() -> int:
             choices=["auto", "reviewed"],
             default="auto" if command == "render" else "reviewed",
         )
+    ab = sub.add_parser("compare-renderers")
+    ab.add_argument("--source-job", type=Path, required=True)
+    ab.add_argument("--revision", choices=["auto", "reviewed"], default="auto")
+    ab.add_argument("--renderer-a", choices=["legacy"], default="legacy")
+    ab.add_argument("--renderer-b", choices=["legacy"], default="legacy")
+    ab.add_argument("--output-root", type=Path, default=JOBS)
     s = sub.add_parser("serve")
     s.add_argument("--host", choices=["127.0.0.1"], default="127.0.0.1")
     s.add_argument("--port", type=int, default=8765)
@@ -65,6 +71,10 @@ def main() -> int:
             from prototypes.docx_output.server import create_app
 
             uvicorn.run(create_app(args.port), host=args.host, port=args.port, access_log=False)
+        elif args.command == "compare-renderers":
+            from prototypes.docx_output.render_replay import compare_renderers
+
+            print(compare_renderers(args.source_job, args.revision, args.output_root).resolve())
         elif args.command == "replay":
             job = replay(
                 args.run_dir,
