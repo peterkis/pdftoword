@@ -601,3 +601,24 @@ def test_source_style_reference_explicitly_unsupported(case: Path) -> None:
     audit = read(target / "docvortex-render-audit.auto.json")
     assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
     assert any(loss["code"] == "BLOCK_SOURCE_STYLE_UNSUPPORTED" for loss in audit["losses"])
+
+
+@pytest.mark.parametrize(
+    "span",
+    [
+        {"type": "hyperlink", "content": "Link", "url": "https://example.invalid/"},
+        {"type": "text", "content": "Link", "bold": True},
+    ],
+)
+def test_unverified_inline_semantics_explicitly_unsupported(case: Path, span: dict) -> None:
+    source, ir = source_job(case)
+    ir["pages"][0]["blocks"][0]["content"]["plain_text"] = "Link"
+    ir["metadata"]["structure_evidence"] = {"question": {"inline_spans": [span]}}
+    save(source / "layout.auto.json", ir)
+    comparison = compare_renderers(
+        source, output_root=case / "jobs", renderer_b=DocVortexRenderer()
+    )
+    target = case / "jobs" / read(comparison / "comparison.json")["outputs"][1]["job_id"]
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "INLINE_SPAN_UNSUPPORTED" for loss in audit["losses"])

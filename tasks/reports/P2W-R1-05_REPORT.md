@@ -227,3 +227,8 @@ A recurring stage warning now reuses its previous ID only when no retained/manua
 ## PR #8 review round 15: unsupported block source styles
 
 Any non-null block style_ref now triggers BLOCK_SOURCE_STYLE_UNSUPPORTED even when the document style map is empty. The actual-render regression verifies explicit fallback; style resolution remains deferred to R2-02. Full quality pr8-quality-r15: 1371 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 16: unsupported inline semantics
+
+Renderer inline evidence is limited to plain string text/equation_inline spans containing only type/content. Hyperlinks, additional style attributes and nested semantic content trigger INLINE_SPAN_UNSUPPORTED with explicit fallback evidence. No hyperlink or rich-inline implementation is added; these remain with R3-01/R2-02. Two regressions cover links and extra style attributes. Full quality pr8-quality-r16: 1373 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

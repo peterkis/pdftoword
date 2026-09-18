@@ -92,9 +92,13 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     if content["plain_text"]
                     else [],
                 )
-                if for_renderer and b["type"] == "table" and not (
-                    isinstance(evidence.get("selected_html"), str)
-                    and evidence["selected_html"].strip()
+                if (
+                    for_renderer
+                    and b["type"] == "table"
+                    and not (
+                        isinstance(evidence.get("selected_html"), str)
+                        and evidence["selected_html"].strip()
+                    )
                 ):
                     raise DemoError("TABLE_STRUCTURE_EVIDENCE_MISSING")
                 if b["type"] == "table" and evidence.get("selected_html"):
@@ -105,6 +109,14 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     # Public default render skips auxiliary blocks; preserve source explicitly.
                     item["type"] = "text"
                 if evidence.get("inline_spans"):
+                    if for_renderer and any(
+                        not isinstance(span, dict)
+                        or set(span) != {"type", "content"}
+                        or span["type"] not in {"text", "equation_inline"}
+                        or not isinstance(span["content"], str)
+                        for span in evidence["inline_spans"]
+                    ):
+                        raise DemoError("INLINE_SPAN_UNSUPPORTED")
                     if inline_text(evidence["inline_spans"]) != content["plain_text"]:
                         raise DemoError("INLINE_EVIDENCE_TEXT_MISMATCH")
                     item["content"] = copy.deepcopy(evidence["inline_spans"])
