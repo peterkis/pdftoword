@@ -263,3 +263,10 @@ Full quality pr8-quality-r20: 1380 passed, 0 failed/skipped; Ruff/catalog/baseli
 The finding that apply_overrides leaves source_type unchanged is not reproducible: its common operation tail sets source_type=manual_correction, already recognized by locked(). Four actual text/candidate review regressions verify heading/continuation proposals are not adopted. The initial tests incorrectly assumed source_type remained unchanged and failed (1380 passed/4 failed); the extra predicate committed in 9d9b141 was unnecessary and is removed. The prematurely stated 1384 count in the first review reply is explicitly corrected there. Failed evidence remains pr8-quality-r21/.
 
 Corrected focused tests: 25 passed. Full quality pr8-quality-r21-corrected: 1384 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 41 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.
+
+
+## PR #8 review round 22: content/type consistency and caption-owner fidelity
+
+Formula content on non-formula blocks is explicitly unsupported, preventing tables/paragraphs being reported as accepted equations. Caption grouping is evaluated after all shared leaves are mapped and requires both caption and owner to remain preserved and unlocked, including duplicate-source detection. Five regressions cover two rejected content/type combinations and actual SDK output with owner-changed/missing/duplicate failure injection at the worker boundary. The first focused test fixture used an invalid null asset ID and was corrected before final verification; its failed run remains retained.
+
+Full quality pr8-quality-r22: 1389 passed, 0 failed/skipped; Ruff/catalog/baseline/schema pass; targeted mypy 42 files passes. Overall exit 1 remains the 19 existing private-script errors. Word/visual acceptance NOT_RUN.

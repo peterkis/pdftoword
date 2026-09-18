@@ -335,3 +335,40 @@ def test_actual_review_operations_lock_selected_manual_content(
     assert not any(proposal["adopted"] for proposal in result.loss_report["proposals"])
     assert not result.document["relations"]
     assert result.document["pages"][0]["blocks"][0]["content"]["plain_text"] == text
+
+
+@pytest.mark.parametrize("fault", ["changed", "missing", "duplicate"])
+def test_caption_group_requires_preserved_owner(
+    case: Path, monkeypatch: pytest.MonkeyPatch, fault: str
+) -> None:
+    from prototypes.docx_output.common import relation
+    from prototypes.docx_output.structure_processors import docvortex as adapter
+    from tests.productization.test_renderer_boundary import source_job
+
+    _, ir = source_job(case)
+    page = ir["pages"][0]
+    caption = page["blocks"][0]
+    caption.update(type="caption", bbox=[10, 101, 100, 115])
+    caption["content"]["plain_text"] = "Figure 1. Synthetic image"
+    page["reading_order"] = ["figure", "question"]
+    relation(ir, "caption_of", "question", "figure", {"basis": "synthetic"})
+    real_call = adapter.call_worker
+
+    def damaged_response(payload: Json) -> Json:
+        result = real_call(payload)
+        parent = next(b for b in result["middle"]["pages"][0]["blocks"] if b["type"] == "image")
+        body = next(b for b in parent["content"] if b["type"] == "image_body")
+        assert any(b["type"] == "image_caption" for b in parent["content"])
+        if fault == "changed":
+            body["bbox"][0] += 0.01
+        elif fault == "missing":
+            parent["content"].remove(body)
+        else:
+            parent["content"].append(copy.deepcopy(body))
+        return result
+
+    monkeypatch.setattr(adapter, "call_worker", damaged_response)
+    result = DocVortexStructureProcessor().process(ir)
+    groups = [p for p in result.loss_report["proposals"] if p["kind"] == "caption_group"]
+    assert groups and all(not p["adopted"] for p in groups)
+    assert any(loss.get("source_id") == "figure" for loss in result.loss_report["losses"])

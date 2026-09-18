@@ -72,6 +72,7 @@ class DocVortexStructureProcessor:
         mapped: dict[str, Json] = {}
         losses: list[Json] = []
         proposals: list[Json] = []
+        caption_groups: list[tuple[str, Json, Json | None, int]] = []
         for page in middle["pages"]:
             for parent in page["blocks"]:
                 for leaf in leaves(parent):
@@ -112,32 +113,33 @@ class DocVortexStructureProcessor:
                         )
                     if parent["type"] in {"image", "table"} and leaf["type"].endswith("caption"):
                         owner = lookup.get((page["page_idx"], parent["index"]))
-                        confirmed = bool(
-                            preserved
-                            and owner
-                            and not locked(entry["block"])
-                            and any(
-                                r["type"] == "caption_of"
-                                and r["from"] == bid
-                                and r["to"] == owner["source_id"]
-                                for r in selected["relations"]
-                            )
-                        )
-                        proposals.append(
-                            {
-                                "source_id": bid,
-                                "kind": "caption_group",
-                                "parent_index": parent["index"],
-                                "adopted": confirmed,
-                                "reason": "existing_explicit_ownership"
-                                if confirmed
-                                else "ownership_requires_review",
-                            }
-                        )
-                        if not confirmed:
-                            losses.append(
-                                {"code": "SHARED_CAPTION_OWNERSHIP_UNCONFIRMED", "source_id": bid}
-                            )
+                        caption_groups.append((bid, entry, owner, parent["index"]))
+        # Group adoption needs the final fidelity state of both members, including duplicates.
+        for bid, entry, owner, parent_index in caption_groups:
+            confirmed = bool(
+                mapped.get(bid, {}).get("preserved")
+                and owner
+                and mapped.get(owner["source_id"], {}).get("preserved")
+                and not locked(entry["block"])
+                and not locked(owner["block"])
+                and any(
+                    r["type"] == "caption_of" and r["from"] == bid and r["to"] == owner["source_id"]
+                    for r in selected["relations"]
+                )
+            )
+            proposals.append(
+                {
+                    "source_id": bid,
+                    "kind": "caption_group",
+                    "parent_index": parent_index,
+                    "adopted": confirmed,
+                    "reason": "existing_explicit_ownership"
+                    if confirmed
+                    else "ownership_requires_review",
+                }
+            )
+            if not confirmed:
+                losses.append({"code": "SHARED_CAPTION_OWNERSHIP_UNCONFIRMED", "source_id": bid})
         for entry in value.ledger["entries"]:
             bid = entry["source_id"]
             if bid not in mapped:

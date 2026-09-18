@@ -709,3 +709,29 @@ def test_text_outside_table_cells_cannot_be_silently_lost(case: Path) -> None:
     assert audit["fallback"]
     assert any(loss["code"] == "DOCVORTEX_OUTPUT_CONTENT_CHANGED" for loss in audit["losses"])
     assert Document(str(target / "auto.docx")).paragraphs[0].text == "AB"
+
+
+@pytest.mark.parametrize("kind", ["table", "paragraph"])
+def test_formula_content_with_other_block_type_rejects(case: Path, kind: str) -> None:
+    source, ir = source_job(case)
+    b = ir["pages"][0]["blocks"][0]
+    b["type"] = kind
+    b["content"] = {
+        "kind": "formula",
+        "latex": "x^2",
+        "mathml": None,
+        "source_asset_id": ir["assets"][0]["id"],
+        "render_mode": "omml",
+        "confidence": 0,
+        "omml_status": "pending",
+    }
+    target = new_job(case / "jobs")
+    for asset in ir["assets"]:
+        destination = target / asset["path"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / asset["path"], destination)
+    with pytest.raises(DemoError, match="UNSUPPORTED_IR_CONTENT"):
+        DocVortexRenderer().render(target, RenderPlan.from_ir(ir), "auto")
+    audit = read(target / "docvortex-render-audit.auto.json")
+    assert audit["fallback"] and audit["public_call"] == "NOT_RUN"
+    assert any(loss["code"] == "BLOCK_CONTENT_COMBINATION_UNSUPPORTED" for loss in audit["losses"])
