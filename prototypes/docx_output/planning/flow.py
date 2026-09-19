@@ -14,6 +14,7 @@ from ..structure_processors.bridge import json_hash
 from ..structure_processors.conservation import continuation_rejection
 from ..structure_processors.docvortex import locked
 from .render_plan import RenderPlan
+from .style_profile import style_profile, weighted_sizes
 from .styles import local_families, run_styles, styles
 
 
@@ -83,6 +84,7 @@ def plan_flow(
         "east_asia_font",
         "margins_pt",
         "page_size_pt",
+        "editable_styles",
     }:
         raise DemoError("UNKNOWN_FLOW_PROFILE_FIELD")
     families = local_families() if families is None else families
@@ -90,6 +92,17 @@ def plan_flow(
     document = copy.deepcopy(source)
     document["schema_version"] = "layout-ir/1.2"
     document["output_styles"] = style_map
+    document["metadata"]["style_profile"] = style_profile(source, style_map, families, profile)
+    heading_levels = {
+        c["source_id"]: c["level"]
+        for c in document["metadata"]["style_profile"]["heading_candidates"]
+    }
+    clusters = weighted_sizes(source, {"paragraph", "question", "option", "text_line"})
+    size_scale = (
+        style_map["body"]["font_size_pt"] / clusters[0]["size_pt"]
+        if clusters and "body_size_pt" in profile
+        else 1.0
+    )
     document["planning"] = {
         "profile": "flow-v1",
         "source_ir_sha256": json_hash(source),
@@ -206,6 +219,7 @@ def plan_flow(
                 "id": "flow-" + bid,
                 "source_ids": [bid],
                 "style_id": role,
+                "heading_level": heading_levels.get(bid),
                 "width_pt": width - indent,
                 "alignment": alignment,
                 "indent_pt": indent,
@@ -218,7 +232,12 @@ def plan_flow(
                 "widow_control": True,
                 "runs": {
                     bid: run_styles(
-                        block, style, families, east_asia_override="east_asia_font" in profile
+                        block,
+                        style,
+                        families,
+                        east_asia_override="east_asia_font" in profile,
+                        size_scale=1.0 if locked(block) else size_scale,
+                        editable_styles=profile.get("editable_styles", False) and not locked(block),
                     )
                 },
                 "joiners": {},
@@ -274,6 +293,18 @@ def plan_flow(
             else:
                 section["nodes"].append(node)
                 last_node = node
+    document["metadata"]["style_profile"]["output_sections"] = [
+        {
+            **{
+                k: section[k]
+                for k in ("source_pages", "page_size_pt", "margins_pt", "margin_basis")
+            },
+            "content_width_pt": section["page_size_pt"][0]
+            - section["margins_pt"][0]
+            - section["margins_pt"][2],
+        }
+        for section in output["sections"]
+    ]
     keep_confirmed_captions(source, output)
     plan = FlowPlan(document, output)
     validate(document)

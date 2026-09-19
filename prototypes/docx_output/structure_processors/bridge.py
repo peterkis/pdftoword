@@ -87,7 +87,9 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     "footer": "footer",
                 }
                 item.update(
-                    type=types.get(b["type"], "text"),
+                    type="doc_title"
+                    if b["type"] == "heading" and evidence.get("heading_role") == "document_title"
+                    else types.get(b["type"], "text"),
                     content=[{"type": "text", "content": content["plain_text"]}]
                     if content["plain_text"]
                     else [],

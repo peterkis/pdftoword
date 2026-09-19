@@ -1,0 +1,7 @@
+{
+  "version": "font-mapping/1",
+  "latin": ["Arial", "Liberation Sans", "DejaVu Sans"],
+  "east_asia": ["Arial Unicode MS", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "SimSun"],
+  "aliases": {"SimSun": ["Songti SC", "Noto Serif CJK SC"], "Microsoft YaHei": ["PingFang SC", "Noto Sans CJK SC"]},
+  "policy": "Installed-family verification is host-local; no font distribution or remote OS verification."
+}

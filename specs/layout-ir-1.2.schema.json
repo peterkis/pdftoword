@@ -197,6 +197,9 @@
                 "type": "number",
                 "exclusiveMinimum": 0
               }
+            },
+            "editable_styles": {
+              "type": "boolean"
             }
           }
         }

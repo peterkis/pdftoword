@@ -160,6 +160,14 @@
           "minItems": 1,
           "uniqueItems": true
         },
+        "heading_level": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 9
+        },
         "style_id": {
           "enum": [
             "body",
@@ -184,7 +192,9 @@
           "type": "number",
           "minimum": 0
         },
-        "first_line_indent_pt": {"type": "number"},
+        "first_line_indent_pt": {
+          "type": "number"
+        },
         "right_indent_pt": {
           "type": "number",
           "minimum": 0
@@ -266,6 +276,10 @@
                     "null"
                   ]
                 },
+                "inherit_fonts": {"type": "boolean"},
+                "inherit_base": {
+                  "type": "boolean"
+                },
                 "source_font": {
                   "type": [
                     "string",
@@ -275,7 +289,10 @@
                 "font_mapping_basis": {
                   "enum": [
                     "source_family_available",
-                    "explicit_output_fallback"
+                    "explicit_output_fallback",
+                    "verified_local_source_family",
+                    "configured_local_substitution_reflow_risk",
+                    "missing_or_opaque_source_family_reflow_risk"
                   ]
                 }
               }
@@ -538,6 +555,9 @@
                     "type": "number",
                     "exclusiveMinimum": 0
                   }
+                },
+                "editable_styles": {
+                  "type": "boolean"
                 }
               }
             }

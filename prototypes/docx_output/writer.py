@@ -12,6 +12,7 @@ from typing import Any
 
 from docx import Document
 from docx.enum.section import WD_ORIENT, WD_SECTION_START
+from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -151,9 +152,26 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             rf = style.element.get_or_add_rPr().get_or_add_rFonts()
             rf.set(qn("w:ascii"), font_info["latin"])
             rf.set(qn("w:hAnsi"), font_info["latin"])
+            rf.set(qn("w:cs"), font_info["latin"])
         if spatial and not flow:
             style.paragraph_format.space_before = Pt(0)
             style.paragraph_format.line_spacing = 1.05
+    if flow:
+        for level in range(1, 10):
+            hs = doc.styles[f"Heading {level}"]
+            hs.font.size = Pt(ir["output_styles"]["heading"]["font_size_pt"])
+            hs.font.color.rgb = RGBColor(0, 0, 0)
+            rf = hs.element.get_or_add_rPr().get_or_add_rFonts()
+            for attribute in list(rf.attrib):
+                if "Theme" in attribute:
+                    del rf.attrib[attribute]
+            for key in ("ascii", "hAnsi", "cs"):
+                rf.set(qn("w:" + key), font_info["latin"])
+            rf.set(qn("w:eastAsia"), font_info["east_asia"])
+        unknown = doc.styles.add_style("P2W Heading Unknown", WD_STYLE_TYPE.PARAGRAPH)
+        unknown.base_style = doc.styles["Normal"]
+        unknown.font.bold = True
+        unknown.font.size = Pt(ir["output_styles"]["heading"]["font_size_pt"])
     assets = {a["id"]: a for a in ir["assets"]}
     parts = ir["metadata"].get("inline_parts", {})
     counts = {
@@ -232,7 +250,13 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
         rf = run._r.get_or_add_rPr().get_or_add_rFonts()
         for key in ("ascii", "hAnsi", "eastAsia"):
             rf.set(qn("w:" + key), spec[key])
+        rf.set(qn("w:cs"), spec["ascii"])
         run.font.size = Pt(spec["font_size_pt"])
+        if spec.get("inherit_base"):
+            run.font.size = None
+            # Base family is in the paragraph style; retain explicit source emphasis only.
+            if spec.get("inherit_fonts", False):
+                run._r.get_or_add_rPr().remove(rf)
         run.bold, run.italic, run.underline = (
             spec.get("bold", False),
             spec.get("italic", False),
@@ -242,6 +266,8 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             spec.get("superscript", False),
             spec.get("subscript", False),
         )
+        if spec.get("inherit_base"):
+            run.bold = run.italic = run.underline = None
         if spec.get("color"):
             run.font.color.rgb = RGBColor.from_string(spec["color"].lstrip("#"))
 
@@ -256,6 +282,9 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             else "Normal"
         )
         node = flow_nodes.get(b["id"]) if flow else None
+        if node and b["type"] == "heading":
+            level = node.get("heading_level")
+            style = f"Heading {level}" if level else "P2W Heading Unknown"
         reused = bool(node and node["id"] in paragraph_cache and existing is None)
         cached = paragraph_cache.get(node["id"]) if node is not None else None
         para = (
@@ -358,6 +387,11 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                         "hAnsi": planned_style["latin_font"],
                         "eastAsia": planned_style["east_asia_font"],
                         "font_size_pt": planned_style["font_size_pt"],
+                        "inherit_base": ir.get("planning", {})
+                        .get("profile_settings", {})
+                        .get("editable_styles", False)
+                        and not any("lock" in f for f in b["flags"]),
+                        "inherit_fonts": True,
                     },
                 )
         counts["editable_text_char_count"] += len(text.strip())
