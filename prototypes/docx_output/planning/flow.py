@@ -270,7 +270,41 @@ def plan_flow(
             else:
                 section["nodes"].append(node)
                 last_node = node
+    keep_confirmed_captions(source, output)
     plan = FlowPlan(document, output)
     validate(document)
     plan.as_dict()
     return plan
+
+
+def keep_confirmed_captions(source: Json, output: Json) -> None:
+    """Keep explicit adjacent manual caption ranges with their figure; never infer ownership."""
+    page_of = {b["id"]: p["page_index"] for p in source["pages"] for b in p["blocks"]}
+    owners: dict[str, list[str]] = {}
+    for edge in source["relations"]:
+        if edge["type"] == "caption_of" and edge.get("evidence", {}).get("manual") is True:
+            owners.setdefault(edge["to"], []).append(edge["from"])
+    for owner, captions in owners.items():
+        members = {owner, *captions}
+        adopted = False
+        for section in output["sections"]:
+            nodes = section["nodes"]
+            indices = [i for i, node in enumerate(nodes) if set(node["source_ids"]) & members]
+            if not indices:
+                continue
+            selected = [nodes[i] for i in indices]
+            if (
+                indices != list(range(indices[0], indices[-1] + 1))
+                or {bid for node in selected for bid in node["source_ids"]} != members
+                or any(node["kind"] not in {"Figure", "Paragraph"} for node in selected)
+                or len({page_of[bid] for node in selected for bid in node["source_ids"]}) != 1
+            ):
+                continue
+            for node in selected[:-1]:
+                node["keep_with_next"] = True
+            selected[-1]["keep_with_next"] = False
+            adopted = True
+        if not adopted:
+            output["issues"].append(
+                {"code": "CONFIRMED_CAPTION_GROUP_NOT_CONTIGUOUS", "source_ids": sorted(members)}
+            )

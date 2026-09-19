@@ -145,3 +145,11 @@ R1-04/R1-06 已提交 `4e2c952`。R1-07 已接通逐页仲裁→共享结构→F
 并生成零请求四组消融；见[实施报告](../../tasks/reports/P2W-R1-07_REPORT.md)与
 [profile 决定](../decisions/reconstruction-v2-profile.md)。真实 Monkey 采用仍 NOT_VERIFIED，
 Word/题图归属接受缺口及一次未查明的 LibreOffice 中文渲染不稳定仍保留；不签完整产品接受。
+
+## R1-08 Word 实物核验收口（2026-09-19）
+
+用户安装 Word 后，已在 Word 16.113.1 对 8 个真实来源页的 11 份独立文档完成打开与实际 PDF 渲染，
+并完成问题页编辑、保存、关闭重开及来源书签定位。R1-08 核验执行记录为 VERIFIED，
+整体产品视觉/发布接受仍未授予；原生列表、自动图注和真实几何正向采用缺口保留。
+见[R1 Gate](../../tasks/reports/P2W-R1_GATE.md)及[R2 backlog](../../tasks/reports/P2W-R1_R2_BACKLOG.md)。
+未自动进入 R2，未提交/推送 R1-07/R1-08 工作区改动。
