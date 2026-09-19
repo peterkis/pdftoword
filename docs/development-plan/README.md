@@ -138,3 +138,10 @@ NOT_VERIFIED。建议按已知限制冻结工程结果，不调整门槛或重�
 R1-06 已实现 Flow Planner v1、IR 1.2 与独立 RenderPlan，生成同源 Legacy/Flow
 真实 DOCX 和 LibreOffice 预览，见[实施报告](../../tasks/reports/P2W-R1-06_REPORT.md)。
 新增模型请求为 0；第 46 页内容回退、R1-04 真实采用缺口及 Word 人工接受继续独立保留。
+
+## R1-07 共用导出链（2026-09-19）
+
+R1-04/R1-06 已提交 `4e2c952`。R1-07 已接通逐页仲裁→共享结构→Flow→实际来源范围，
+并生成零请求四组消融；见[实施报告](../../tasks/reports/P2W-R1-07_REPORT.md)与
+[profile 决定](../decisions/reconstruction-v2-profile.md)。真实 Monkey 采用仍 NOT_VERIFIED，
+Word/题图归属接受缺口及一次未查明的 LibreOffice 中文渲染不稳定仍保留；不签完整产品接受。

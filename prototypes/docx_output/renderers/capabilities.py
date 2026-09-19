@@ -87,3 +87,15 @@ def unsupported(plan: RenderPlan) -> list[Json]:
             if b["content"].get("runs"):
                 findings.append({"code": "EXPLICIT_RUN_STYLES_UNSUPPORTED", "source_id": b["id"]})
     return findings
+
+
+PLAN_CAPABILITIES = {
+    "legacy": {"legacy_flow"},
+    "docvortex": {"legacy_flow"},
+    "flow": {"flow_v1"},
+}
+
+
+def supports_mode(renderer: str, mode: str) -> bool:
+    """Fail closed for undeclared renderer modes; content gates still apply separately."""
+    return mode in PLAN_CAPABILITIES.get(renderer, set())

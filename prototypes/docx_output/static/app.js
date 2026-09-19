@@ -46,7 +46,8 @@ function show(){
   $('alternatives').textContent=JSON.stringify({monkey:layout.provenance.monkey_geometry?.[pageIndex],ovis:layout.provenance.ovis_content?.[pageIndex]},null,2);
   $('operations').textContent=JSON.stringify(operations,null,2);
   const qa=revision==='reviewed'?data.qa_reviewed:data.qa;
-  $('qa').textContent=qa?`主识别 ${layout.metadata.content_provider||layout.provenance.replay?.content_provider||"既有路径"} · 模型请求 ${qa.model_call_count} · 可编辑字符 ${qa.editable_text_char_count} · 图域 ${qa.placed_figure_count} · 原生公式 ${qa.omml_formula_count} · 公式图片 ${qa.formula_image_count} · ${qa.render_status} · 内容待人工审阅`: '待保存的人工修正预览';
+  const outcome=qa?.pages?.find(x=>x.page_index===pageIndex);
+  $('qa').textContent=qa?`主识别 ${layout.metadata.content_provider||layout.provenance.replay?.content_provider||"既有路径"} · 模型请求 ${qa.model_call_count} · 可编辑字符 ${qa.editable_text_char_count} · 图域 ${qa.placed_figure_count} · 原生公式 ${qa.omml_formula_count} · 公式图片 ${qa.formula_image_count} · ${qa.render_status} · 内容待人工审阅${outcome?` · 本页几何 ${outcome.selected_geometry_provider||"保留原有几何"} · 布局 ${outcome.layout_status} · 输出 ${outcome.renderer} · 人工 ${outcome.human_acceptance} · 问题 ${outcome.issue_codes.join(", ")||"无新增"}${outcome.renderer_fallback?" · 输出器已按能力回退":""}`:""}`: '待保存的人工修正预览';
 }
 function choose(b){
   selected=b;$('selected').textContent=b.id+' · 选中块的坐标来自 '+b.geometry_source+(b.flags.includes('text_geometry_unknown_full_page_reference')?' · 文字精确坐标未知，橙框仅表示整页来源':'');

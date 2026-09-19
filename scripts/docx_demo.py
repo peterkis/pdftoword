@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from prototypes.docx_output.common import JOBS, DemoError, job_path
+from prototypes.docx_output.common import JOBS, DemoError, job_path, read
 from prototypes.docx_output.pipeline import convert, export, replay
 from prototypes.docx_output.render import render
 from prototypes.docx_output.replay import DEFAULT_RUN
@@ -60,6 +61,9 @@ def main() -> int:
             choices=["auto", "reviewed"],
             default="auto" if command == "render" else "reviewed",
         )
+    status = sub.add_parser("status")
+    status.add_argument("--job-id", required=True)
+    status.add_argument("--output-root", type=Path, default=JOBS)
     ab = sub.add_parser("compare-renderers")
     ab.add_argument("--source-job", type=Path, required=True)
     ab.add_argument("--source-seal", type=Path)
@@ -81,6 +85,28 @@ def main() -> int:
             from prototypes.docx_output.server import create_app
 
             uvicorn.run(create_app(args.port), host=args.host, port=args.port, access_log=False)
+        elif args.command == "status":
+            job = job_path(args.job_id, args.output_root)
+            revision = "reviewed" if (job / "qa.reviewed.json").is_file() else "auto"
+            qa = read(job / ("qa.reviewed.json" if revision == "reviewed" else "qa.json"))
+            print(
+                json.dumps(
+                    {
+                        "revision": revision,
+                        **{
+                            key: qa.get(key)
+                            for key in (
+                                "execution_status",
+                                "layout_validation",
+                                "visual_review_status",
+                                "model_call_count",
+                                "pages",
+                            )
+                        },
+                    },
+                    ensure_ascii=False,
+                )
+            )
         elif args.command == "reuse-poc":
             from prototypes.docx_output.reuse_poc import run_poc
 

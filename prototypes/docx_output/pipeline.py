@@ -60,7 +60,10 @@ def source_image(job: Path, ir: Json, source: Path, index: int = 0) -> Json:
 
 
 def finish(
-    job: Path, ir: Json, revision: str = "auto", *,
+    job: Path,
+    ir: Json,
+    revision: str = "auto",
+    *,
     renderer: DocxRenderer | None = None,
     structure_processor: StructureProcessor | None = None,
     structure_candidate: StructureCandidate | None = None,
@@ -72,6 +75,23 @@ def finish(
     if revision == "auto" and (job / "auto.docx").exists():
         raise DemoError("AUTO_IMMUTABLE")
     save(job / "state.json", {"state": "导出"})
+    from .reconstruction import enabled, page_status, prepare
+
+    if render_plan is None and structure_candidate is None and enabled(job, ir):
+        render_plan, structure_candidate, structure_processor, _ = prepare(job, ir, revision)
+        ir = render_plan.document
+        from .renderers.capabilities import supports_mode
+
+        if renderer is not None and not supports_mode(renderer.name, "flow_v1"):
+            # Explicit capability fallback; no lossy Flow-to-Middle-to-IR conversion.
+            ir["metadata"]["reconstruction"]["renderer_fallback"] = {
+                "requested": renderer.name,
+                "effective": "flow",
+                "reason": "SECTION_STYLE_PLAN_REQUIRES_FLOW",
+            }
+            from .renderers.flow import FlowRenderer
+
+            renderer = FlowRenderer()
     if renderer is None and (
         (render_plan is not None and render_plan.output_layout.get("mode") == "flow_v1")
         or ir["schema_version"] == "layout-ir/1.2"
@@ -81,8 +101,11 @@ def finish(
         renderer = FlowRenderer()
     renderer = renderer or LegacyRenderer()
     structure_processor = structure_processor or LegacyStructureProcessor()
-    candidate = (copy.deepcopy(structure_candidate) if structure_candidate is not None
-                 else structure_processor.process(copy.deepcopy(ir)))
+    candidate = (
+        copy.deepcopy(structure_candidate)
+        if structure_candidate is not None
+        else structure_processor.process(copy.deepcopy(ir))
+    )
     ir = candidate.document
     if render_plan is not None:
         plan = render_plan
@@ -100,25 +123,46 @@ def finish(
     save(job / f"render-plan.{revision}.json", plan.as_dict())
     save(job / f"structure-candidate.{revision}.json", candidate.document)
     save(job / f"mapping-loss-report.{revision}.json", candidate.loss_report)
-    save(job / f"render-manifest.{revision}.json", {
-        "renderer": {"name": renderer.name, "version": renderer.version,
-                     "implementation": implementation_identity(renderer, "render")},
-        "structure_processor": {"name": structure_processor.name,
-                                "version": structure_processor.version,
-                                "implementation": implementation_identity(
-                                    structure_processor, "process")},
-        "ir_version": ir["schema_version"], "plan_version": plan.as_dict()["schema_version"],
-        "effective_renderer": stats.get("effective_renderer", renderer.name),
-        "providers": ir.get("model_registry", {}), "model_call_count": 0,
-        "provider_revision_if_absent": "unknown",
-        "implementation_sha256": {
-            name: digest(Path(__file__).parent / name) for name in (
-                "pipeline.py", "writer.py", "planning/render_plan.py",
-                "renderers/base.py", "renderers/legacy.py",
-                "structure_processors/base.py", "structure_processors/legacy.py",
-            )
+    save(
+        job / f"render-manifest.{revision}.json",
+        {
+            "renderer": {
+                "name": renderer.name,
+                "version": renderer.version,
+                "implementation": implementation_identity(renderer, "render"),
+            },
+            "structure_processor": {
+                "name": structure_processor.name,
+                "version": structure_processor.version,
+                "implementation": implementation_identity(structure_processor, "process"),
+            },
+            "ir_version": ir["schema_version"],
+            "plan_version": plan.as_dict()["schema_version"],
+            "effective_renderer": stats.get("effective_renderer", renderer.name),
+            "page_selection": page_status(ir, stats.get("effective_renderer", renderer.name)),
+            "structure_execution": ir["metadata"]
+            .get("reconstruction", {})
+            .get(
+                "structure_status",
+                "PROVIDED_FROZEN" if structure_candidate is not None else "PROCESS_CALLED",
+            ),
+            "providers": ir.get("model_registry", {}),
+            "model_call_count": 0,
+            "provider_revision_if_absent": "unknown",
+            "implementation_sha256": {
+                name: digest(Path(__file__).parent / name)
+                for name in (
+                    "pipeline.py",
+                    "writer.py",
+                    "planning/render_plan.py",
+                    "renderers/base.py",
+                    "renderers/legacy.py",
+                    "structure_processors/base.py",
+                    "structure_processors/legacy.py",
+                )
+            },
         },
-    })
+    )
     fallback_boxes: dict[int, list[list[float]]] = {}
     referenced = set()
     figure_assets = set()
@@ -164,9 +208,18 @@ def finish(
                 (b["content"]["kind"] == "formula" and b["id"] in editable_formula_ids)
                 or (
                     b["content"]["kind"] == "text"
-                    and b["type"] in {
-                        "paragraph", "heading", "question", "option", "formula", "table",
-                        "major_question", "subquestion", "text_line", "text_span"
+                    and b["type"]
+                    in {
+                        "paragraph",
+                        "heading",
+                        "question",
+                        "option",
+                        "formula",
+                        "table",
+                        "major_question",
+                        "subquestion",
+                        "text_line",
+                        "text_span",
                     }
                     and not re.fullmatch(
                         r"[A-D][.．、]?", b["content"].get("plain_text", "").strip()
@@ -190,6 +243,7 @@ def finish(
             else "DEMO_OUTPUT_INSUFFICIENT"
         ),
         page_editable_content=page_editable_content,
+        pages=page_status(ir, stats.get("effective_renderer", renderer.name)),
         content_review_status="REVIEW_REQUIRED",
         layout_validation=ir["metadata"].get("layout_validation", {"status": "NOT_APPLICABLE"}),
         structure_review_status="REVIEW_REQUIRED",
@@ -378,9 +432,12 @@ def convert(
     profile_settings(auto_profile)
     if mode != "auto" and auto_profile != "legacy_ovis_pp":
         raise DemoError("AUTO_PROFILE_REQUIRES_AUTO")
-    if mode == "auto" and (content_provider not in {"ovis", "ovis-pp"} or ovis or
-                           (monkey and auto_profile != "reconstruction-v2") or
-                           (content_provider == "ovis" and auto_profile == "legacy_ovis_pp")):
+    if mode == "auto" and (
+        content_provider not in {"ovis", "ovis-pp"}
+        or ovis
+        or (monkey and auto_profile != "reconstruction-v2")
+        or (content_provider == "ovis" and auto_profile == "legacy_ovis_pp")
+    ):
         raise DemoError("AUTO_PROFILE_OVIS_PP_REQUIRED")
     if mode not in {"native", "raster", "auto"}:
         raise DemoError("INVALID_MODE")

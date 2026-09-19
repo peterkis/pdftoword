@@ -165,6 +165,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
     }
 
     source_blocks: list[Json] = []
+    marker_ends: dict[str, tuple[Any, Any]] = {}
 
     def asset_source(aid: str) -> Path:
         if aid not in assets:
@@ -183,7 +184,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
         start.set(qn("w:name"), marker)
         end.set(qn("w:id"), number)
         paragraph._p.append(start)
-        paragraph._p.append(end)
+        marker_ends[marker] = (paragraph._p, end)
         record = {
             "marker": marker,
             "block_id": b["id"],
@@ -195,6 +196,11 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
         }
         source_blocks.append(record)
         return record
+
+    def close_marker(record: Json) -> None:
+        """Close the source range after its actual text, math or drawing content."""
+        paragraph, end = marker_ends.pop(record["marker"])
+        paragraph.append(end)
 
     def picture(
         paragraph: Any, aid: str, width: float, formula: bool = False, *, owner: Json
@@ -300,6 +306,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                 counts["placed_figure_count"] += 1
             else:
                 counts["fallback_region_count"] += 1
+            close_marker(source_record)
             return
         if b["id"] in parts:
             for item in parts[b["id"]]:
@@ -322,6 +329,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                         raise DemoError("UNRENDERED_MATH_REQUIRES_REVIEW")
                     para.add_run(item["text"])
                     counts["editable_text_char_count"] += len(item["text"].strip())
+            close_marker(source_record)
             return
         if content["kind"] != "text":
             raise DemoError("UNSUPPORTED_IR_CONTENT")
@@ -352,6 +360,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                     },
                 )
         counts["editable_text_char_count"] += len(text.strip())
+        close_marker(source_record)
 
     for p in ir["pages"]:
         if flow:
@@ -447,10 +456,12 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                 if g.get("inline_labels"):
                     label = by_id[pair["label"]]
                     para = cell.paragraphs[0]
-                    source_marker(para, label)
-                    figure_source = source_marker(para, by_id[pair["figure"]])
+                    label_source = source_marker(para, label)
                     text = label["content"]["plain_text"]
-                    para.add_run(text + " ")
+                    para.add_run(text)
+                    close_marker(label_source)
+                    para.add_run(" ")
+                    figure_source = source_marker(para, by_id[pair["figure"]])
                     counts["editable_text_char_count"] += len(text.strip())
                     picture(
                         para,
@@ -458,6 +469,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                         available / cols - 30,
                         owner=figure_source,
                     )
+                    close_marker(figure_source)
                     counts["placed_figure_count"] += 1
                     para.paragraph_format.space_after = Pt(6)
                 else:
@@ -474,6 +486,8 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                     cell.paragraphs[-2].paragraph_format.keep_with_next = True
                     cell.paragraphs[-1].paragraph_format.keep_with_next = False
                 done.update(pair.values())
+    if marker_ends:
+        raise DemoError("SOURCE_RANGE_NOT_CLOSED")
     doc.save(str(path))
     path.chmod(0o600)
     save(
