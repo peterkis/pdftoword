@@ -194,6 +194,9 @@ def plan_flow(
             indent = 0.0
             if block["geometry_source"] in {"native_pdf", "pp_structure"} and bid not in grouped:
                 indent = max(0.0, min(width * 0.25, block["bbox"][0] - margins[0]))
+            native_hint = source["metadata"].get("native_paragraph_layout", {}).get(bid, {})
+            if native_hint:
+                indent = max(0.0, min(width * 0.25, native_hint["body_left_pt"] - margins[0]))
             node: Json = {
                 "kind": "Table"
                 if block["type"] == "table"
@@ -207,6 +210,7 @@ def plan_flow(
                 "alignment": alignment,
                 "indent_pt": indent,
                 "right_indent_pt": 0.0,
+                "first_line_indent_pt": native_hint.get("first_line_indent_pt", 0.0),
                 "space_before_pt": style["space_before_pt"],
                 "space_after_pt": style["space_after_pt"],
                 "line_spacing": style["line_spacing"],

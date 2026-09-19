@@ -293,6 +293,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             }[node["alignment"]]
             fmt = para.paragraph_format
             fmt.left_indent, fmt.right_indent = Pt(node["indent_pt"]), Pt(node["right_indent_pt"])
+            fmt.first_line_indent = Pt(node.get("first_line_indent_pt", 0.0))
             fmt.space_before, fmt.space_after = (
                 Pt(node["space_before_pt"]),
                 Pt(node["space_after_pt"]),

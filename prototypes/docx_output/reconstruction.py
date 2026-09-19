@@ -8,6 +8,7 @@ from pathlib import Path
 from .common import DemoError, Json, issue, read, save
 from .geometry_arbitration import arbitrate_document
 from .planning.flow import FlowPlan, plan_flow
+from .planning.paragraphs import build_native_paragraphs, verify_native_transition
 from .structure_processors.base import StructureCandidate
 from .structure_processors.bridge import json_hash
 from .structure_processors.docvortex import DocVortexStructureProcessor
@@ -42,6 +43,13 @@ def prepare(
         )
         decisions = arbitrate_document(job, selected, job, manifest.get("requests", []))
         execution["geometry_pages"] = decisions
+        native_source = selected
+        selected = build_native_paragraphs(native_source)
+        execution["native_transition"] = verify_native_transition(native_source, selected)
+        save(
+            job / f"native-paragraph-ledger.{revision}.json",
+            selected["metadata"]["native_paragraphs"],
+        )
         try:
             candidate = processor.process(selected)
             execution["structure_status"] = (

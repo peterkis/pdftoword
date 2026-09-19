@@ -137,6 +137,8 @@ def bridge(selected: Json, *, for_renderer: bool = False) -> BridgeInput:
                     {**copy.deepcopy(line), "bbox": normalized(line["bbox"], page)}
                     for line in evidence["lines"]
                 ]
+            if evidence.get("_paragraph_boundary") is True:
+                item["_paragraph_boundary"] = True
             if "angle" in evidence:
                 item["angle"] = evidence["angle"]
             if b.get("engine_confidence") is not None:

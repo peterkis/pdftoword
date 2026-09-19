@@ -184,6 +184,7 @@
           "type": "number",
           "minimum": 0
         },
+        "first_line_indent_pt": {"type": "number"},
         "right_indent_pt": {
           "type": "number",
           "minimum": 0
