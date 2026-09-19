@@ -47,6 +47,8 @@ class DocVortexStructureProcessor:
 
     def process(self, selected: Json) -> StructureCandidate:
         """Call real ModelJson→MiddleJson once, retaining ambiguity rather than guessing IDs."""
+        from .conservation import continuation_rejection, verify_shared
+
         validate(selected)
         stage = selected["metadata"].get("docvortex_structure", {})
         if isinstance(stage, dict) and stage.get("finalized_ir_sha256") == finalized_hash(selected):
@@ -172,9 +174,26 @@ class DocVortexStructureProcessor:
                     and previous["raw"].get("lines")
                     and mapped.get(previous["source_id"], {}).get("preserved")
                 )
-                proposals.append(
-                    {"source_id": bid, "kind": "continues_prev", "adopted": can_continue}
+                rejection = (
+                    continuation_rejection(selected, bid, previous["source_id"])
+                    if previous
+                    else "RELATION_SOURCE_UNKNOWN"
                 )
+                can_continue = can_continue and rejection is None
+                proposals.append(
+                    {
+                        "source_id": bid,
+                        "kind": "continues_prev",
+                        "adopted": can_continue,
+                        "reason": rejection
+                        if rejection
+                        else "source_bound_continuation"
+                        if can_continue
+                        else "shared_fidelity_unproven",
+                    }
+                )
+                if rejection:
+                    losses.append({"code": rejection, "source_id": bid})
                 if can_continue:
                     continuations.append((bid, previous["source_id"]))
             previous = entry
@@ -264,8 +283,10 @@ class DocVortexStructureProcessor:
             reserved_issue_ids.add(fresh["id"])
             candidate["issues"].append(fresh)
             emitted_issue_records.append(copy.deepcopy(fresh))
+        conservation = verify_shared(selected, candidate)
         report = {
             "status": "GUARDED",
+            "conservation": conservation,
             "losses": losses,
             "proposals": proposals,
             "input_ir_sha256": json_hash(selected),

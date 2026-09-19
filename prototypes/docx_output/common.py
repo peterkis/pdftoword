@@ -343,8 +343,13 @@ def relation(ir: Json, kind: str, origin: str, target: str, evidence: Json) -> N
 
 
 def validate(ir: Json) -> None:
-    """Validate every exported IR against the unchanged public schema."""
-    Draft202012Validator(read(ROOT / "specs/layout-ir.schema.json")).validate(ir)
+    """Validate exported IR against its declared public schema version."""
+    schema = (
+        "layout-ir-1.2.schema.json"
+        if ir.get("schema_version") == "layout-ir/1.2"
+        else "layout-ir.schema.json"
+    )
+    Draft202012Validator(read(ROOT / "specs" / schema)).validate(ir)
 
 
 def crop(

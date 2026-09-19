@@ -29,7 +29,7 @@ from .common import (
     validate_input,
 )
 from .implementation import implementation_identity
-from .planning.render_plan import PLAN_VERSION, RenderPlan
+from .planning.render_plan import RenderPlan
 from .renderers.base import DocxRenderer
 from .renderers.legacy import LegacyRenderer
 from .replay import DEFAULT_RUN, load
@@ -64,6 +64,7 @@ def finish(
     renderer: DocxRenderer | None = None,
     structure_processor: StructureProcessor | None = None,
     structure_candidate: StructureCandidate | None = None,
+    render_plan: RenderPlan | None = None,
 ) -> Json:
     """Export, audit and persist each revision without inference."""
     if revision not in {"auto", "reviewed"}:
@@ -71,12 +72,30 @@ def finish(
     if revision == "auto" and (job / "auto.docx").exists():
         raise DemoError("AUTO_IMMUTABLE")
     save(job / "state.json", {"state": "导出"})
+    if renderer is None and (
+        (render_plan is not None and render_plan.output_layout.get("mode") == "flow_v1")
+        or ir["schema_version"] == "layout-ir/1.2"
+    ):
+        from .renderers.flow import FlowRenderer
+
+        renderer = FlowRenderer()
     renderer = renderer or LegacyRenderer()
     structure_processor = structure_processor or LegacyStructureProcessor()
     candidate = (copy.deepcopy(structure_candidate) if structure_candidate is not None
                  else structure_processor.process(copy.deepcopy(ir)))
     ir = candidate.document
-    plan = RenderPlan.from_ir(ir)
+    if render_plan is not None:
+        plan = render_plan
+        if plan.document != ir:
+            raise DemoError("FLOW_PLAN_DOCUMENT_MISMATCH")
+    elif ir["schema_version"] == "layout-ir/1.2":
+        from .planning.flow import plan_flow
+
+        plan = plan_flow(ir)
+        ir = plan.document
+        candidate.document = ir
+    else:
+        plan = RenderPlan.from_ir(ir)
     stats = renderer.render(job, plan, revision)
     save(job / f"render-plan.{revision}.json", plan.as_dict())
     save(job / f"structure-candidate.{revision}.json", candidate.document)
@@ -88,7 +107,7 @@ def finish(
                                 "version": structure_processor.version,
                                 "implementation": implementation_identity(
                                     structure_processor, "process")},
-        "ir_version": ir["schema_version"], "plan_version": PLAN_VERSION,
+        "ir_version": ir["schema_version"], "plan_version": plan.as_dict()["schema_version"],
         "effective_renderer": stats.get("effective_renderer", renderer.name),
         "providers": ir.get("model_registry", {}), "model_call_count": 0,
         "provider_revision_if_absent": "unknown",

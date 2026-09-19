@@ -38,13 +38,14 @@ class LayoutRules:
 RULES = LayoutRules()
 
 
-def preflight(raw: Json, p: Json, info: Json) -> None:
+def preflight(raw: Json, p: Json, info: Json, *, allow_columns: bool = False) -> bool:
     """Reject malformed, out-of-page, duplicate and multi-column geometry."""
     if [raw["width"], raw["height"]] != info["pixel_size"]:
         raise DemoError("COORDINATE_MAPPING_UNRESOLVED")
     sx, sy = info["pixel_to_point"]
     regions = raw["parsing_res_list"]
     boxes = []
+    multicolumn = False
     for r in regions:
         b = transform(r["block_bbox"], sx, sy)
         if not (0 <= b[0] < b[2] <= p["width_pt"] and 0 <= b[1] < b[3] <= p["height_pt"]):
@@ -59,20 +60,69 @@ def preflight(raw: Json, p: Json, info: Json) -> None:
                 vertical = (min(a[3], b[3]) - max(a[1], b[1])) / min(a[3] - a[1], b[3] - b[1])
                 gap = max(a[0], b[0]) - min(a[2], b[2])
                 if vertical > 0.5 and gap > p["width_pt"] * 0.02:
-                    raise DemoError("MULTICOLUMN_LAYOUT_REVIEW")
+                    multicolumn = True
+                    if not allow_columns:
+                        raise DemoError("MULTICOLUMN_LAYOUT_REVIEW")
     ocr = raw.get("overall_ocr_res", {})
     angles = ocr.get("textline_orientation_angles", [])
     disabled = ocr.get("model_settings", {}).get("use_textline_orientation") is False
     # Frozen PP responses use -1 when the orientation module is disabled.
     if any(angle not in (None, 0) and not (disabled and angle == -1) for angle in angles):
         raise DemoError("ROTATED_TEXT_LAYOUT_REVIEW")
+    return multicolumn
 
 
 def accept_candidate(original: Json, candidate: Json, p: Json) -> None:
     """Prove preservation and check the display plan before committing geometry."""
     original_page = next(pg for pg in original["pages"] if pg["page_index"] == p["page_index"])
-    if p["reading_order"] != original_page["reading_order"]:
-        raise DemoError("READING_ORDER_CHANGED")
+    from .geometry.binding import validate_bound_projection
+    from .geometry.order import verify_order
+    from .structure_processors.docvortex import locked
+
+    span_projection = str(p["page_index"]) in candidate["metadata"].get("source_bindings", {})
+    if span_projection:
+        binding_proof = validate_bound_projection(original, candidate, p)
+        candidate["metadata"].setdefault("binding_validation", {})[str(p["page_index"])] = (
+            binding_proof
+        )
+    order_proof = candidate["metadata"].get("column_order", {}).get(str(p["page_index"]))
+    if p["reading_order"] != original_page["reading_order"] and not span_projection:
+        if order_proof is None:
+            raise DemoError("READING_ORDER_CHANGED")
+        verify_order(original_page, p, order_proof)
+        membership = order_proof["membership"]
+        old_positions = {bid: i for i, bid in enumerate(original_page["reading_order"])}
+        new_positions = {bid: i for i, bid in enumerate(p["reading_order"])}
+        for edge in original["relations"]:
+            if edge["type"] not in {"caption_of", "label_of", "anchored_to", "contains"}:
+                continue
+            a, b = edge["from"], edge["to"]
+            if a in membership and b in membership and membership[a] != membership[b]:
+                raise DemoError("RELATION_CROSSES_PROVEN_COLUMNS")
+            if (
+                a in old_positions
+                and b in old_positions
+                and abs(old_positions[a] - old_positions[b]) == 1
+                and abs(new_positions[a] - new_positions[b]) != 1
+            ):
+                raise DemoError("RELATION_ADJACENCY_CHANGED")
+    original_blocks = {b["id"]: b for b in original_page["blocks"]}
+    for b in p["blocks"]:
+        old = original_blocks.get(b["id"])
+        if old is None:
+            if span_projection:
+                continue
+            raise DemoError("UNPROVEN_SOURCE_BINDING")
+        if locked(old) and b != old:
+            raise DemoError("MANUAL_LOCK_CHANGED")
+        if old["geometry_source"] == "native_pdf" and b["bbox"] != old["bbox"]:
+            raise DemoError("NATIVE_MEASUREMENT_CHANGED")
+        if old["content"]["kind"] != "image" and b["content"] != old["content"]:
+            raise DemoError("CONTENT_PRESERVATION_FAILED")
+    if candidate.get("styles") != original.get("styles"):
+        raise DemoError("SOURCE_STYLES_CHANGED")
+    if candidate["relations"] != original["relations"]:
+        raise DemoError("UNPROVEN_RELATION_DELTA")
     before = [
         (b["id"], b["content"], b["content_candidates"])
         for b in original_page["blocks"]
@@ -83,7 +133,10 @@ def accept_candidate(original: Json, candidate: Json, p: Json) -> None:
         for b in p["blocks"]
         if b["content"]["kind"] == "text"
     ]
-    if before != after or original["metadata"].get("inline_parts", {}) != candidate["metadata"].get(
+    if (
+        not span_projection
+        and sorted(before, key=lambda row: row[0]) != sorted(after, key=lambda row: row[0])
+    ) or original["metadata"].get("inline_parts", {}) != candidate["metadata"].get(
         "inline_parts", {}
     ):
         raise DemoError("CONTENT_PRESERVATION_FAILED")
@@ -94,11 +147,17 @@ def accept_candidate(original: Json, candidate: Json, p: Json) -> None:
     fatal = {"LAYOUT_ALIGNMENT_REVIEW", "OPTION_LAYOUT_REVIEW", "FIGURE_GEOMETRY_ALIGNMENT_REVIEW"}
     if any(i["type"] in fatal and i["page_index"] == p["page_index"] for i in candidate["issues"]):
         raise DemoError("AMBIGUOUS_LAYOUT_MAPPING")
-    if any(b["geometry_source"] != "pp_structure" for b in p["blocks"]):
+    if any(
+        b["geometry_source"] != "pp_structure"
+        and not locked(b)
+        and b["geometry_source"] != "native_pdf"
+        and not (span_projection and b["geometry_source"] == "fused")
+        for b in p["blocks"]
+    ):
         raise DemoError("INCOMPLETE_LAYOUT_MAPPING")
     questions = [b for b in p["blocks"] if b["type"] == "question"]
     for first, second in itertools.pairwise(questions):
-        if first["bbox"][1] >= second["bbox"][1]:
+        if order_proof is None and first["bbox"][1] >= second["bbox"][1]:
             raise DemoError("NONMONOTONIC_QUESTION_MAPPING")
     by_id = {b["id"]: b for b in p["blocks"]}
     if len(by_id) != len(p["blocks"]) or set(p["reading_order"]) != set(by_id):

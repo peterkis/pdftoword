@@ -59,7 +59,44 @@ def _apply_pp_layout(job: Path, ir: Json, p: Json, body: Json, request_id: str) 
         "use_doc_preprocessor"
     ):
         raise DemoError("COORDINATE_MAPPING_UNRESOLVED")
-    preflight(raw, p, info)
+    if preflight(raw, p, info, allow_columns=True):
+        from .geometry.arbitrator import GeometryArbitrator
+        from .geometry.candidate import attach, full_page
+        from .geometry.order import column_order
+        from .geometry.pp_adapter import adapt
+        from .geometry.support import binding_ledger, content_support
+
+        chain = full_page(p, info)
+        supports = content_support(p, chain, body)
+        ir["metadata"].setdefault("source_binding_ledger", {})[str(p["page_index"])] = (
+            binding_ledger(p, supports)
+        )
+        proof = column_order(p, supports)
+        if proof["status"] != "PROVEN":
+            raise DemoError("MULTICOLUMN_LAYOUT_REVIEW")
+        original_page = copy.deepcopy(p)
+        attach(p, adapt(body, p["page_index"], chain, {"request_id": request_id}))
+        projected, decision = GeometryArbitrator().propose(p, supports)
+        if decision["status"] != "SELECTED" or decision["selected_provider"] != "pp":
+            raise DemoError("MULTICOLUMN_BINDING_UNPROVEN")
+        # Bind proof to the pre-projection page, not the candidate-enriched copy.
+        ir["metadata"].setdefault("column_order", {})[str(p["page_index"])] = proof
+        ir["metadata"].setdefault("geometry_support", {})[str(p["page_index"])] = supports
+        ir["metadata"].setdefault("geometry_binding", {})[str(p["page_index"])] = decision
+        originals = {b["id"]: b for b in original_page["blocks"]}
+        for b in projected["blocks"]:
+            if b.get("selected_geometry_id") and b["geometry_source"] == "fused":
+                b["geometry_source"] = "pp_structure"
+                if b["content"]["kind"] == "image" and b["bbox"] != originals[b["id"]]["bbox"]:
+                    b["content"]["asset_id"] = crop(
+                        job, ir, projected, b["bbox"], b["id"] + "-column"
+                    )
+        p.clear()
+        p.update(projected)
+        ir["metadata"]["layout_policy"] = RULES.effective([s["bbox_pt"] for s in supports.values()])
+        ir["metadata"]["content_left_pt"] = min(s["bbox_pt"][0] for s in supports.values())
+        p["routing_decision"] = "PROVEN_PP_COLUMN_ORDER"
+        return
     sx, sy = info["pixel_to_point"]
     regions = [
         {

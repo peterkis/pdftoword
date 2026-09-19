@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.enum.section import WD_ORIENT, WD_SECTION_START
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -55,7 +56,7 @@ def fonts() -> Json:
 
 
 def text_column_widths(
-    rows: list[list[str]], blocks: Json, width: float, parts: Json
+    rows: list[list[str]], blocks: Json, width: float, parts: Json, font_size: float = 11
 ) -> list[float]:
     """Allocate display widths for plain-text cells; never manufacture source bboxes."""
     count = max(len(row) for row in rows)
@@ -67,7 +68,7 @@ def text_column_widths(
         for column, bid in enumerate(row):
             text = blocks[bid]["content"].get("plain_text", "")
             units = sum(1.0 if unicodedata.east_asian_width(c) in {"W", "F"} else 0.5 for c in text)
-            minimum[column] = max(minimum[column], units * 11 + 12)
+            minimum[column] = max(minimum[column], units * font_size + 12)
     if sum(minimum) >= width:
         return [equal] * count  # Keep natural wrapping; never shrink the text.
     widths = [max(equal, m) for m in minimum]
@@ -78,7 +79,7 @@ def text_column_widths(
     ]
 
 
-def build(job: Path, ir: Json, revision: str) -> Json:
+def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None) -> Json:
     """Consume validated IR only; never query a model or overwrite auto output."""
     validate(ir)
     if revision not in {"auto", "reviewed"}:
@@ -94,19 +95,63 @@ def build(job: Path, ir: Json, revision: str) -> Json:
     section.left_margin = section.right_margin = Pt(45)
     section.top_margin = section.bottom_margin = Pt(40)
     available = 505.28
+    flow = output_plan is not None
+    flow_nodes: Json = {}
+    flow_sections: Json = {}
+    paragraph_cache: Json = {}
+    current_section_id = None
+    if output_plan is not None:
+        for planned in output_plan["sections"]:
+            for source_page in planned["source_pages"]:
+                flow_sections[source_page] = planned
+            for node in planned["nodes"]:
+                for leaf in node.get("children", [node]):
+                    for source_id in leaf["source_ids"]:
+                        flow_nodes[source_id] = leaf
+
+    def configure_section(target: Any, planned: Json) -> None:
+        width, height = planned["page_size_pt"]
+        left, top, right, bottom = planned["margins_pt"]
+        target.page_width, target.page_height = Pt(width), Pt(height)
+        target.orientation = WD_ORIENT.LANDSCAPE if width > height else WD_ORIENT.PORTRAIT
+        target.left_margin, target.top_margin = Pt(left), Pt(top)
+        target.right_margin, target.bottom_margin = Pt(right), Pt(bottom)
+
     spatial = ir["metadata"].get("layout_profile") == "pp_geometry_flow"
     content_left = ir["metadata"].get("content_left_pt", 0)
     font_info = fonts()
+    if flow:
+        assert output_plan is not None
+        body_style = ir["output_styles"]["body"]
+        font_info = {
+            "latin": body_style["latin_font"],
+            "east_asia": body_style["east_asia_font"],
+            "missing": bool(output_plan["issues"]),
+            "raster_style": body_style["basis"],
+        }
     for name, size in [("Normal", 11), ("Title", 16), ("Heading 1", 13), ("Caption", 10)]:
         style: Any = doc.styles[name]
         style.font.name = font_info["latin"] or "Arial"
+        if flow:
+            role = (
+                "heading"
+                if name in {"Title", "Heading 1"}
+                else "caption"
+                if name == "Caption"
+                else "body"
+            )
+            size = ir["output_styles"][role]["font_size_pt"]
         style.font.size = Pt(size)
         style.font.color.rgb = RGBColor(0, 0, 0)
         style.element.get_or_add_rPr().get_or_add_rFonts().set(
             qn("w:eastAsia"), font_info["east_asia"] or "sans-serif"
         )
         style.paragraph_format.space_after = Pt(5)
-        if spatial:
+        if flow:
+            rf = style.element.get_or_add_rPr().get_or_add_rFonts()
+            rf.set(qn("w:ascii"), font_info["latin"])
+            rf.set(qn("w:hAnsi"), font_info["latin"])
+        if spatial and not flow:
             style.paragraph_format.space_before = Pt(0)
             style.paragraph_format.line_spacing = 1.05
     assets = {a["id"]: a for a in ir["assets"]}
@@ -123,30 +168,37 @@ def build(job: Path, ir: Json, revision: str) -> Json:
 
     def asset_source(aid: str) -> Path:
         if aid not in assets:
-            raise DemoError('ASSET_MISSING')
-        source = safe_path(job, assets[aid]['path'])
+            raise DemoError("ASSET_MISSING")
+        source = safe_path(job, assets[aid]["path"])
         if not source.is_file():
-            raise DemoError('ASSET_MISSING')
+            raise DemoError("ASSET_MISSING")
         return source
 
     def source_marker(paragraph: Any, b: Json) -> Json:
         # Provenance only: no reference annotations or expected text enter the writer.
-        marker = 'p2w_' + hashlib.sha256(b['id'].encode()).hexdigest()[:32]
+        marker = "p2w_" + hashlib.sha256(b["id"].encode()).hexdigest()[:32]
         number = str(len(source_blocks))
-        start, end = OxmlElement('w:bookmarkStart'), OxmlElement('w:bookmarkEnd')
-        start.set(qn('w:id'), number)
-        start.set(qn('w:name'), marker)
-        end.set(qn('w:id'), number)
+        start, end = OxmlElement("w:bookmarkStart"), OxmlElement("w:bookmarkEnd")
+        start.set(qn("w:id"), number)
+        start.set(qn("w:name"), marker)
+        end.set(qn("w:id"), number)
         paragraph._p.append(start)
         paragraph._p.append(end)
-        record = {'marker': marker, 'block_id': b['id'], 'images': [],
-                  'page': b['page_index'] + 1, 'bbox': b['bbox'], 'kind': b['type'],
-                  'fallback': b['content']['kind'] == 'image' and b['type'] != 'figure'}
+        record = {
+            "marker": marker,
+            "block_id": b["id"],
+            "images": [],
+            "page": b["page_index"] + 1,
+            "bbox": b["bbox"],
+            "kind": b["type"],
+            "fallback": b["content"]["kind"] == "image" and b["type"] != "figure",
+        }
         source_blocks.append(record)
         return record
 
-    def picture(paragraph: Any, aid: str, width: float, formula: bool = False,
-                *, owner: Json) -> None:
+    def picture(
+        paragraph: Any, aid: str, width: float, formula: bool = False, *, owner: Json
+    ) -> None:
         source = asset_source(aid)
         a = assets[aid]
         try:
@@ -154,19 +206,42 @@ def build(job: Path, ir: Json, revision: str) -> Json:
             with Image.open(io.BytesIO(image_bytes)) as im:
                 w, h = im.size
         except OSError as exc:
-            raise DemoError('ASSET_UNREADABLE') from exc
+            raise DemoError("ASSET_UNREADABLE") from exc
         natural = max(1.0, a["source_bbox"][2] - a["source_bbox"][0])
         actual = min(width, natural)
         # Preserve source aspect ratio; bound tall images to printable page height.
-        actual = min(actual, 650 * w / h)
+        height_limit = flow_nodes[owner["block_id"]]["height_limit_pt"] if flow else 650
+        actual = min(actual, height_limit * w / h)
+        if flow:
+            actual = min(actual, flow_nodes[owner["block_id"]]["width_pt"])
         image_hash = hashlib.sha256(image_bytes).hexdigest()
         paragraph.add_run().add_picture(io.BytesIO(image_bytes), width=Pt(actual))
-        owner['images'].append({'sha256': image_hash, 'bbox': a['source_bbox'],
-                                'fallback': owner['kind'] != 'figure'})
+        owner["images"].append(
+            {"sha256": image_hash, "bbox": a["source_bbox"], "fallback": owner["kind"] != "figure"}
+        )
         if formula:
             counts["formula_image_count"] += 1
 
-    def write_block(parent: Any, b: Json, width: float = available, existing: Any = None) -> None:
+    def set_run_style(run: Any, spec: Json) -> None:
+        rf = run._r.get_or_add_rPr().get_or_add_rFonts()
+        for key in ("ascii", "hAnsi", "eastAsia"):
+            rf.set(qn("w:" + key), spec[key])
+        run.font.size = Pt(spec["font_size_pt"])
+        run.bold, run.italic, run.underline = (
+            spec.get("bold", False),
+            spec.get("italic", False),
+            spec.get("underline", False),
+        )
+        run.font.superscript, run.font.subscript = (
+            spec.get("superscript", False),
+            spec.get("subscript", False),
+        )
+        if spec.get("color"):
+            run.font.color.rgb = RGBColor.from_string(spec["color"].lstrip("#"))
+
+    def write_block(parent: Any, b: Json, width: float | None = None, existing: Any = None) -> None:
+        if width is None:
+            width = available
         style = (
             "Heading 1"
             if b["type"] == "heading"
@@ -174,13 +249,28 @@ def build(job: Path, ir: Json, revision: str) -> Json:
             if b["type"] in {"caption", "footer"}
             else "Normal"
         )
-        para = existing if existing is not None else parent.add_paragraph(style=style)
+        node = flow_nodes.get(b["id"]) if flow else None
+        reused = bool(node and node["id"] in paragraph_cache and existing is None)
+        cached = paragraph_cache.get(node["id"]) if node is not None else None
+        para = (
+            existing
+            if existing is not None
+            else cached
+            if reused
+            else parent.add_paragraph(style=style)
+        )
+        assert para is not None
+        if node and existing is None:
+            paragraph_cache[node["id"]] = para
+        if reused and node is not None and b["id"] in node["joiners"]:
+            para.add_run(node["joiners"][b["id"]])
         para.style = style
         source_record = source_marker(para, b)
-        if spatial and b["type"] in {"heading", "footer"}:
+        if spatial and not flow and b["type"] in {"heading", "footer"}:
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         if (
             spatial
+            and not flow
             and b["type"] == "paragraph"
             and b["geometry_source"] == "pp_structure"
             and b["bbox"][0] > content_left + 60
@@ -188,6 +278,21 @@ def build(job: Path, ir: Json, revision: str) -> Json:
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         para.paragraph_format.keep_with_next = b["type"] in {"heading", "caption", "question"}
         para.paragraph_format.widow_control = True
+        if node:
+            para.alignment = {
+                "left": WD_ALIGN_PARAGRAPH.LEFT,
+                "center": WD_ALIGN_PARAGRAPH.CENTER,
+                "right": WD_ALIGN_PARAGRAPH.RIGHT,
+                "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
+            }[node["alignment"]]
+            fmt = para.paragraph_format
+            fmt.left_indent, fmt.right_indent = Pt(node["indent_pt"]), Pt(node["right_indent_pt"])
+            fmt.space_before, fmt.space_after = (
+                Pt(node["space_before_pt"]),
+                Pt(node["space_after_pt"]),
+            )
+            fmt.line_spacing = node["line_spacing"]
+            fmt.keep_with_next, fmt.widow_control = node["keep_with_next"], node["widow_control"]
         content = b["content"]
         if content["kind"] == "image":
             picture(para, content["asset_id"], width, owner=source_record)
@@ -224,18 +329,41 @@ def build(job: Path, ir: Json, revision: str) -> Json:
         if unrendered_math(text):
             raise DemoError("UNRENDERED_MATH_REQUIRES_REVIEW")
         if content["runs"]:
-            for r in content["runs"]:
+            for run_index, r in enumerate(content["runs"]):
                 run = para.add_run(r["text"])
                 run.bold, run.italic = r["bold"], r["italic"]
                 if r["font_size_pt"]:
                     run.font.size = Pt(r["font_size_pt"])
                 if r["font_family"]:
                     run.font.name = r["font_family"]
+                if node:
+                    set_run_style(run, node["runs"][b["id"]][run_index])
         else:
-            para.add_run(text)
+            run = para.add_run(text)
+            if node:
+                planned_style = ir["output_styles"][node["style_id"]]
+                set_run_style(
+                    run,
+                    {
+                        "ascii": planned_style["latin_font"],
+                        "hAnsi": planned_style["latin_font"],
+                        "eastAsia": planned_style["east_asia_font"],
+                        "font_size_pt": planned_style["font_size_pt"],
+                    },
+                )
         counts["editable_text_char_count"] += len(text.strip())
 
     for p in ir["pages"]:
+        if flow:
+            planned = flow_sections[p["page_index"]]
+            if planned["id"] != current_section_id:
+                if current_section_id is not None:
+                    section = doc.add_section(WD_SECTION_START.NEW_PAGE)
+                configure_section(section, planned)
+                current_section_id = planned["id"]
+            available = (
+                planned["page_size_pt"][0] - planned["margins_pt"][0] - planned["margins_pt"][2]
+            )
         decision = ir["metadata"].get("layout_by_page", {}).get(str(p["page_index"]))
         content_left = (
             decision.get("content_left_pt", 0)
@@ -267,7 +395,13 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                 width = available - indent
                 table = doc.add_table(rows=len(g["rows"]), cols=g["columns"])
                 table.autofit = False
-                widths = text_column_widths(g["rows"], by_id, width, parts)
+                widths = text_column_widths(
+                    g["rows"],
+                    by_id,
+                    width,
+                    parts,
+                    ir["output_styles"]["body"]["font_size_pt"] if flow else 11,
+                )
                 for column, cell_width in zip(table.columns, widths, strict=True):
                     column.width = Pt(cell_width)
                 borders = OxmlElement("w:tblBorders")
@@ -319,8 +453,10 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                     para.add_run(text + " ")
                     counts["editable_text_char_count"] += len(text.strip())
                     picture(
-                        para, by_id[pair["figure"]]["content"]["asset_id"], available / cols - 30,
-                        owner=figure_source
+                        para,
+                        by_id[pair["figure"]]["content"]["asset_id"],
+                        available / cols - 30,
+                        owner=figure_source,
                     )
                     counts["placed_figure_count"] += 1
                     para.paragraph_format.space_after = Pt(6)
@@ -340,15 +476,21 @@ def build(job: Path, ir: Json, revision: str) -> Json:
                 done.update(pair.values())
     doc.save(str(path))
     path.chmod(0o600)
-    save(job / f'source-map.{revision}.json', {
-        'schema_version': 'docx-source-map/1.0',
-        'docx_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
-        'pages': [{'page': p['page_index'] + 1, 'width': p['width_pt'], 'height': p['height_pt']}
-                  for p in ir['pages']],
-        'blocks': source_blocks,
-        'relations': [{'from': r['from'], 'to': r['to'], 'type': r['type']}
-                      for r in ir['relations']],
-    })
+    save(
+        job / f"source-map.{revision}.json",
+        {
+            "schema_version": "docx-source-map/1.0",
+            "docx_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "pages": [
+                {"page": p["page_index"] + 1, "width": p["width_pt"], "height": p["height_pt"]}
+                for p in ir["pages"]
+            ],
+            "blocks": source_blocks,
+            "relations": [
+                {"from": r["from"], "to": r["to"], "type": r["type"]} for r in ir["relations"]
+            ],
+        },
+    )
     return {**counts, "fonts": font_info, **inspect_package(path)}
 
 
