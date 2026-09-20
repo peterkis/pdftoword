@@ -13,6 +13,7 @@ from ..common import ROOT, DemoError, Json, read, validate
 from ..structure_processors.bridge import json_hash
 from ..structure_processors.conservation import continuation_rejection
 from ..structure_processors.docvortex import locked
+from .columns import column_sections
 from .render_plan import RenderPlan
 from .style_profile import style_profile, weighted_sizes
 from .styles import local_families, run_styles, styles
@@ -35,6 +36,17 @@ class FlowPlan(RenderPlan):
         expected = [bid for page in self.document["pages"] for bid in page["reading_order"]]
         actual = []
         for section in self.output_layout["sections"]:
+            widths = section.get("column_widths_pt")
+            if widths:
+                gaps = section.get("column_gaps_pt", [])
+                available = (
+                    section["page_size_pt"][0] - section["margins_pt"][0] - section["margins_pt"][2]
+                )
+                if len(gaps) != len(widths) - 1 or abs(sum(widths) + sum(gaps) - available) > 0.05:
+                    raise DemoError("COLUMN_SECTION_WIDTH_INVALID")
+                for node in section["nodes"]:
+                    if node.get("column_index", 0) >= len(widths):
+                        raise DemoError("COLUMN_NODE_INDEX_INVALID")
             for node in section["nodes"]:
                 leaves = node.get("children", [node])
                 members = [bid for leaf in leaves for bid in leaf["source_ids"]]
@@ -305,6 +317,7 @@ def plan_flow(
         }
         for section in output["sections"]
     ]
+    column_sections(document, output)
     keep_confirmed_captions(source, output)
     plan = FlowPlan(document, output)
     validate(document)

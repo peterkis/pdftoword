@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .common import DemoError, Json, issue, read, save
 from .geometry_arbitration import arbitrate_document
+from .planning.columns import select_columns, verify_selected_order
 from .planning.flow import FlowPlan, plan_flow
 from .planning.paragraphs import build_native_paragraphs, verify_native_transition
 from .structure_processors.base import StructureCandidate
@@ -50,8 +51,11 @@ def prepare(
             job / f"native-paragraph-ledger.{revision}.json",
             selected["metadata"]["native_paragraphs"],
         )
+        selected = select_columns(selected)
+        save(job / f"column-layout.{revision}.json", selected["metadata"]["column_layout"])
         try:
             candidate = processor.process(selected)
+            verify_selected_order(selected, candidate.document)
             execution["structure_status"] = (
                 "REUSED_FINALIZED"
                 if candidate.loss_report.get("status") == "ALREADY_FINALIZED"

@@ -72,6 +72,16 @@ def continuation_rejection(ir: Json, origin: str, target: str) -> str | None:
     order = [bid for p in ir["pages"] for bid in p["reading_order"]]
     if order.index(origin) != order.index(target) + 1:
         return "RELATION_NONADJACENT_SOURCE"
+    selected_columns = {}
+    for report in ir["metadata"].get("column_layout", {}).values():
+        if report["status"] == "APPLIED":
+            for band in report["bands"]:
+                for col in band["columns"]:
+                    selected_columns.update(dict.fromkeys(col["source_ids"], col["id"]))
+    if (origin in selected_columns or target in selected_columns) and selected_columns.get(
+        origin
+    ) != selected_columns.get(target):
+        return "RELATION_CROSS_SELECTED_COLUMN_OR_BAND"
     column = {}
     for p in ir["pages"]:
         support = ir.get("metadata", {}).get("geometry_support", {}).get(str(p["page_index"]), {})

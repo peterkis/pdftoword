@@ -102,6 +102,39 @@
                     }
                   ]
                 }
+              },
+              "band_id": {
+                "type": "string"
+              },
+              "break_type": {
+                "enum": [
+                  "continuous",
+                  "next_page"
+                ]
+              },
+              "column_widths_pt": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "column_gaps_pt": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "source_band_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
               }
             }
           }
@@ -276,7 +309,9 @@
                     "null"
                   ]
                 },
-                "inherit_fonts": {"type": "boolean"},
+                "inherit_fonts": {
+                  "type": "boolean"
+                },
                 "inherit_base": {
                   "type": "boolean"
                 },
@@ -311,6 +346,17 @@
         "height_limit_pt": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "column_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "column_break_before": {
+          "type": "boolean"
+        },
+        "band_id": {
+          "type": "string"
         }
       }
     },

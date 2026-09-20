@@ -13,7 +13,7 @@ from typing import Any
 from docx import Document
 from docx.enum.section import WD_ORIENT, WD_SECTION_START
 from docx.enum.style import WD_STYLE_TYPE
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
@@ -99,6 +99,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
     flow = output_plan is not None
     flow_nodes: Json = {}
     flow_sections: Json = {}
+    flow_block_sections: Json = {}
     paragraph_cache: Json = {}
     current_section_id = None
     if output_plan is not None:
@@ -109,6 +110,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                 for leaf in node.get("children", [node]):
                     for source_id in leaf["source_ids"]:
                         flow_nodes[source_id] = leaf
+                        flow_block_sections[source_id] = planned
 
     def configure_section(target: Any, planned: Json) -> None:
         width, height = planned["page_size_pt"]
@@ -117,6 +119,22 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
         target.orientation = WD_ORIENT.LANDSCAPE if width > height else WD_ORIENT.PORTRAIT
         target.left_margin, target.top_margin = Pt(left), Pt(top)
         target.right_margin, target.bottom_margin = Pt(right), Pt(bottom)
+        cols = target._sectPr.find(qn("w:cols"))
+        if cols is None:
+            cols = OxmlElement("w:cols")
+            target._sectPr.append(cols)
+        cols.clear()
+        widths = planned.get("column_widths_pt", [width - left - right])
+        gaps = planned.get("column_gaps_pt", [])
+        cols.set(qn("w:num"), str(len(widths)))
+        cols.set(qn("w:equalWidth"), "0" if len(widths) > 1 else "1")
+        cols.set(qn("w:space"), "0")
+        if len(widths) > 1:
+            for i, value in enumerate(widths):
+                col = OxmlElement("w:col")
+                col.set(qn("w:w"), str(round(value * 20)))
+                col.set(qn("w:space"), str(round(gaps[i] * 20)) if i < len(gaps) else "0")
+                cols.append(col)
 
     spatial = ir["metadata"].get("layout_profile") == "pp_geometry_flow"
     content_left = ir["metadata"].get("content_left_pt", 0)
@@ -300,6 +318,8 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
         if reused and node is not None and b["id"] in node["joiners"]:
             para.add_run(node["joiners"][b["id"]])
         para.style = style
+        if node and node.get("column_break_before") and not reused:
+            para.add_run().add_break(WD_BREAK.COLUMN)
         source_record = source_marker(para, b)
         if spatial and not flow and b["type"] in {"heading", "footer"}:
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -400,11 +420,6 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
     for p in ir["pages"]:
         if flow:
             planned = flow_sections[p["page_index"]]
-            if planned["id"] != current_section_id:
-                if current_section_id is not None:
-                    section = doc.add_section(WD_SECTION_START.NEW_PAGE)
-                configure_section(section, planned)
-                current_section_id = planned["id"]
             available = (
                 planned["page_size_pt"][0] - planned["margins_pt"][0] - planned["margins_pt"][2]
             )
@@ -433,6 +448,25 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
         for bid in p["reading_order"]:
             if bid in done:
                 continue
+            if flow:
+                planned = flow_block_sections[bid]
+                if planned["id"] != current_section_id:
+                    if current_section_id is not None:
+                        section = doc.add_section(
+                            WD_SECTION_START.CONTINUOUS
+                            if planned.get("break_type") == "continuous"
+                            else WD_SECTION_START.NEW_PAGE
+                        )
+                    configure_section(section, planned)
+                    current_section_id = planned["id"]
+                widths = planned.get("column_widths_pt")
+                available = (
+                    widths[flow_nodes[bid].get("column_index", 0)]
+                    if widths
+                    else planned["page_size_pt"][0]
+                    - planned["margins_pt"][0]
+                    - planned["margins_pt"][2]
+                )
             if bid in text_map:
                 g = text_map[bid]
                 indent = min(g.get("indent_pt", 0), 36)
