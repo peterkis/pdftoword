@@ -32,6 +32,7 @@ def main() -> int:
         "--auto-profile", choices=["legacy_ovis_pp", "reconstruction-v2"], default="legacy_ovis_pp"
     )
     c.add_argument("--pages")
+    c.add_argument("--page-limit", type=int, default=3)
     c.add_argument("--mode", choices=["auto", "native", "raster"], default="auto")
     c.add_argument("--output-root", type=Path, default=JOBS)
     c.add_argument("--dry-run-route", action="store_true")
@@ -156,6 +157,7 @@ def main() -> int:
                 args.synthetic,
                 args.content_provider,
                 auto_profile=args.auto_profile,
+                page_limit=args.page_limit,
             )
             print((job / ("route-plan.json" if args.dry_run_route else "auto.docx")).resolve())
         elif args.command == "render":

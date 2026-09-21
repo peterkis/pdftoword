@@ -1,0 +1,2278 @@
+{
+  "scope": "Adopt plan mappings as responsibility references only; no historical task status changed",
+  "v2_1_tasks": [
+    {
+      "old_id": "P2W-S2-01",
+      "old_title": "拆分只读PDF预检、页面几何与原生提取边界",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-02"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-S2-02",
+      "old_title": "多证据页面分类与原生文字质量判断",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-02"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-S2-03",
+      "old_title": "区域分区、普通配图保护与来源覆盖账本",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-02",
+        "P2W-U3-02"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-S2-04",
+      "old_title": "增加自动入口、dry-run与分阶段发送授权",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-01",
+        "P2W-U4-04"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-S2-05",
+      "old_title": "局部裁剪、区域模型调用与坐标回映射",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-02"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-S2-06",
+      "old_title": "原生与隐藏OCR层去重及混合内容融合",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-02"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-01",
+      "old_title": "承接已完成 S2，建立可执行的重排与双渲染入口",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-01",
+        "P2W-U2-03"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-02",
+      "old_title": "统一 Monkey、PP、Native 的几何候选与变换合同",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-03",
+        "P2W-U2-02"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-03",
+      "old_title": "让 auto 可以授权调用 Monkey 布局，而不改正文来源",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-04",
+        "P2W-U2-01"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-04",
+      "old_title": "实现几何选择、内容绑定和安全阅读顺序修正",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-03",
+        "P2W-U2-02"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-05",
+      "old_title": "前置 MinerU 共享结构层与 DocVortex 输出层双轴复用 POC",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-01",
+        "P2W-U2-03"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-06",
+      "old_title": "最小 Flow Layout Planner 与立即可见的排版修复",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-03",
+        "P2W-U3-01"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-07",
+      "old_title": "接通 Monkey→布局计划→选定 Renderer 的完整链",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-03"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R1-08",
+      "old_title": "首轮实物验收：当前差页必须看到改善",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-02",
+        "P2W-U3-06"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R2-01",
+      "old_title": "复用共享段落续接：原生行到段落，避免串栏与跨题",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U2-02",
+        "P2W-U3-05"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R2-02",
+      "old_title": "复用标题语义与文档级样式：层级、字体及源页面规格",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U3-01"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R2-03",
+      "old_title": "分栏、跨栏标题与阅读顺序 DAG",
+      "disposition": "INHERIT_NO_REDO",
+      "new_task_ids": [
+        "P2W-U1-03",
+        "P2W-U3-01"
+      ],
+      "inherits_existing_work": true,
+      "acceptance_changed": false,
+      "note": "已存在的实现/测试/报告保留；新任务只处理新接入差异，不重复运行原任务。"
+    },
+    {
+      "old_id": "P2W-R2-04",
+      "old_title": "复用视觉主体/图注分组，补齐题图与共享图关系",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U3-02"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "不重写通用caption解析；上游满足即跳过，仅补显式题号/共享图/跨页归属的差异。"
+    },
+    {
+      "old_id": "P2W-R2-05",
+      "old_title": "完整图形资产、分辨率与图内文字显示归属",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U3-02"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "继承原图保护等既有代码；整项完成未知，剩余资产缺口按U3 relations激活，不回头补一套形式验收。"
+    },
+    {
+      "old_id": "P2W-R2-06",
+      "old_title": "审校锁定、来源映射与计划重排的一致性",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U2-04"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "接入新的统一人工修正入口；不为每种后端独立建审校系统。"
+    },
+    {
+      "old_id": "P2W-R2-07",
+      "old_title": "结构排版阶段验收与完整修改闭环",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U3-06"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R3-01",
+      "old_title": "结构化内容解析：安全 HTML/Markdown/数学节点",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "停止默认从零写完整HTML/Markdown/数学AST；优先严格上游结构；必要的安全验证不删除。"
+    },
+    {
+      "old_id": "P2W-R3-02",
+      "old_title": "普通表格：单元格合同、合并关系与 Word 写出",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U2-03",
+        "P2W-U3-03"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "通用表格能力优先复用；桥接或检查器不支持先定位，不冒充上游不支持。"
+    },
+    {
+      "old_id": "P2W-R3-03",
+      "old_title": "常见公式、矩阵、分段函数与文本化学式",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U2-03",
+        "P2W-U3-04"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "通用公式转换优先复用；文本化学式忠实保留，不默认扩展自有LaTeX语法。"
+    },
+    {
+      "old_id": "P2W-R3-04",
+      "old_title": "无线表、跨页续表与文档级连续结构",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U3-05"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "跨页续表/续段仅在真实缺口激活；保留所有分片和可靠来源，不只按相似文字合并。"
+    },
+    {
+      "old_id": "P2W-R3-05",
+      "old_title": "节点级降级、方向/倾斜与不确定区域处理",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U2-03",
+        "P2W-U3-05"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "保留显式局部回退和安全边界，避免回退统计冒充可编辑成功。"
+    },
+    {
+      "old_id": "P2W-R3-06",
+      "old_title": "统一 profile、风险复核与可选挑战者接缝",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U1-04",
+        "P2W-U2-01"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "选一个主profile；旧模型只按实证价值保留，不无差别三模型并跑。"
+    },
+    {
+      "old_id": "P2W-R3-07",
+      "old_title": "专项与结构质量验收：具备产品 Beta 内容能力",
+      "disposition": "GAP_DRIVEN_REUSE",
+      "new_task_ids": [
+        "P2W-U3-06"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-01",
+      "old_title": "提炼稳定运行接口与发布依赖",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U4-01"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-02",
+      "old_title": "版本化结果缓存与候选复用",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U4-02"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-03",
+      "old_title": "可取消、可恢复的逐页作业与明确重试",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U4-02"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-04",
+      "old_title": "长文档页级流式处理与资源优化",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U4-03"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-05",
+      "old_title": "实现统一8100网关与Provider适配迁移",
+      "disposition": "REPLACE_GATEWAY_REQUIREMENT",
+      "new_task_ids": [
+        "P2W-U2-01"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "不把完整8100平台作为必要前置；保留Core/Adapter隔离，接V1即能完成需求；真正多消费者鉴权治理需要时另立网关任务。"
+    },
+    {
+      "old_id": "P2W-R4-06",
+      "old_title": "隐私、输入安全、缓存清理与权限加固",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U4-04",
+        "P2W-U5-03"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-07",
+      "old_title": "面向用户的批量审阅与故障恢复体验",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U2-04",
+        "P2W-U4-04"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-08",
+      "old_title": "Windows Microsoft Word 实际打开、编辑和回渲染验收",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U5-01"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "Mac开发不替代Windows目标平台；保持Windows11与真实Word验收。"
+    },
+    {
+      "old_id": "P2W-R4-09",
+      "old_title": "可安装CLI与本机服务包",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U4-01",
+        "P2W-U4-05"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-R4-10",
+      "old_title": "正式桌面壳与原设计交付方式落实",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U5-02"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "正式Tauri/React桌面目标保留；先收口可用内核，再开发薄壳。"
+    },
+    {
+      "old_id": "P2W-R4-11",
+      "old_title": "受控发布试用、长文档性能与质量资格验证",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U4-03",
+        "P2W-U4-05",
+        "P2W-U5-03"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "小规模选型不冒充发布资格；广泛发布保留原30文档60页要求，或由用户明确批准缩小支持范围。"
+    },
+    {
+      "old_id": "P2W-R4-12",
+      "old_title": "版本发布、供应链清单、升级与运维收尾",
+      "disposition": "REPLAN_DELIVERY",
+      "new_task_ids": [
+        "P2W-U5-03"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "沿用原目标，调整依赖和实现范围；不因计划映射自动完成。"
+    },
+    {
+      "old_id": "P2W-E1-01",
+      "old_title": "可选：PaddleOCR-VL 系列受控挑战实验",
+      "disposition": "SUSPEND_OPTIONAL_RESEARCH",
+      "new_task_ids": [],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "暂停PaddleOCR-VL挑战；只有选定路径仍有不可解决的关键缺陷且获新预算才恢复。"
+    },
+    {
+      "old_id": "P2W-E2-01",
+      "old_title": "可选：按残余失败类型挑选一个专项挑战者",
+      "disposition": "PROMOTE_MINERU_ONLY",
+      "new_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-02",
+        "P2W-U1-04"
+      ],
+      "inherits_existing_work": false,
+      "acceptance_changed": false,
+      "note": "其中MinerU完整解析从可选挑战者提升为U1立即验证；GLM/dots等其他挑战仍暂停。"
+    }
+  ],
+  "legacy_tickets": [
+    {
+      "legacy_id": "T0001",
+      "legacy_title": "初始化 Monorepo 与工具链",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-10"
+      ],
+      "v3_task_ids": [
+        "P2W-U5-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0002",
+      "legacy_title": "建立 CI 与质量门禁",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0003",
+      "legacy_title": "配置与秘密管理",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0004",
+      "legacy_title": "作业状态机",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-01",
+        "P2W-R4-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-01",
+        "P2W-U4-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0005",
+      "legacy_title": "作业目录与资产存储",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-01",
+        "P2W-R4-02",
+        "P2W-R4-03",
+        "P2W-R4-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-01",
+        "P2W-U4-02",
+        "P2W-U4-04",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0006",
+      "legacy_title": "定义引擎 Adapter 协议",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-S2-01",
+        "P2W-R4-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02",
+        "P2W-U4-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0007",
+      "legacy_title": "实现 Layout IR 1.1 域模型",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R1-01",
+        "P2W-R1-02",
+        "P2W-R1-05",
+        "P2W-R1-06",
+        "P2W-R3-01",
+        "P2W-R4-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U4-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0008",
+      "legacy_title": "候选、来源与证据模型",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-S2-03",
+        "P2W-S2-06",
+        "P2W-R1-01",
+        "P2W-R1-02",
+        "P2W-R1-05",
+        "P2W-R1-06",
+        "P2W-R3-01",
+        "P2W-R4-02"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-02",
+        "P2W-U4-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0009",
+      "legacy_title": "错误码与 Issue 分类",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-S2-02",
+        "P2W-R4-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02",
+        "P2W-U4-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0010",
+      "legacy_title": "模型网关客户端骨架",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0011",
+      "legacy_title": "CLI 与本地 API 骨架",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-S2-04",
+        "P2W-R4-01",
+        "P2W-R4-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U4-01",
+        "P2W-U4-02",
+        "P2W-U4-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0012",
+      "legacy_title": "黄金测试框架",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-01",
+        "P2W-R1-08",
+        "P2W-R3-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U3-06",
+        "P2W-U4-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0013",
+      "legacy_title": "日志与指标基础",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R4-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0014",
+      "legacy_title": "模型部署基线与架构文档对齐",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [],
+      "v3_task_ids": [],
+      "status_change": false,
+      "disposition": "PRESERVE_OR_SUSPEND_NO_AUTO_REOPEN",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0015",
+      "legacy_title": "服务契约发现",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [],
+      "v3_task_ids": [],
+      "status_change": false,
+      "disposition": "PRESERVE_OR_SUSPEND_NO_AUTO_REOPEN",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0016",
+      "legacy_title": "JPG/PNG 与数学试卷回归",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [],
+      "v3_task_ids": [],
+      "status_change": false,
+      "disposition": "PRESERVE_OR_SUSPEND_NO_AUTO_REOPEN",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0017",
+      "legacy_title": "旋转、UVDoc、多栏、表格和公式专项能力矩阵",
+      "legacy_phase": "P0",
+      "v2_1_task_ids": [
+        "P2W-R3-03",
+        "P2W-R3-02",
+        "P2W-R3-04",
+        "P2W-R1-06",
+        "P2W-R2-02",
+        "P2W-R2-03",
+        "P2W-R3-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-03",
+        "P2W-U3-04",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0101",
+      "legacy_title": "PDF 文件预检",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-S2-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0102",
+      "legacy_title": "PDFium 页面几何与渲染",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-S2-01",
+        "P2W-R3-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0103",
+      "legacy_title": "pdf-inspector Adapter",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-S2-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0104",
+      "legacy_title": "原生文字质量评分",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-S2-02"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0105",
+      "legacy_title": "原生文字转 Layout IR",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-S2-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0106",
+      "legacy_title": "图片和矢量对象提取",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-S2-01"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0107",
+      "legacy_title": "简单阅读顺序与段落聚合",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-R1-01",
+        "P2W-R1-06",
+        "P2W-R2-01",
+        "P2W-R2-02",
+        "P2W-R2-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0108",
+      "legacy_title": "样式归一化与字体映射",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-R1-01",
+        "P2W-R1-06",
+        "P2W-R2-01",
+        "P2W-R2-02"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0109",
+      "legacy_title": "基础 DOCX Planner/Builder",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-R1-01",
+        "P2W-R1-06",
+        "P2W-R2-01",
+        "P2W-R2-02"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0110",
+      "legacy_title": "电子 PDF 端到端作业",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-S2-04",
+        "P2W-R1-01",
+        "P2W-R1-06",
+        "P2W-R2-01",
+        "P2W-R2-02"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-05",
+        "P2W-U4-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0111",
+      "legacy_title": "电子 PDF 黄金回归",
+      "legacy_phase": "P1",
+      "v2_1_task_ids": [
+        "P2W-R1-07",
+        "P2W-R1-08"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U2-01",
+        "P2W-U2-03",
+        "P2W-U3-06"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0201",
+      "legacy_title": "Paddle 布局能力 Adapter",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0202",
+      "legacy_title": "页面复杂度与路由评分",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-02",
+        "P2W-S2-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U4-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0203",
+      "legacy_title": "区域切分与覆盖合并",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02",
+        "P2W-U3-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0204",
+      "legacy_title": "高质量区域裁剪",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-05",
+        "P2W-R3-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0205",
+      "legacy_title": "Paddle 文字 OCR 能力 Adapter",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-05",
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0206",
+      "legacy_title": "OCR 坐标归一化",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0207",
+      "legacy_title": "隐藏文字层检测与去重",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-02",
+        "P2W-S2-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0208",
+      "legacy_title": "栅格文字替换为可编辑段落",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0209",
+      "legacy_title": "普通配图与内部文字元数据",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02",
+        "P2W-U3-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0210",
+      "legacy_title": "混合页面融合",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0211",
+      "legacy_title": "混合 PDF 端到端与回归",
+      "legacy_phase": "P2",
+      "v2_1_task_ids": [
+        "P2W-S2-04",
+        "P2W-R1-07",
+        "P2W-R1-08"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U2-01",
+        "P2W-U2-03",
+        "P2W-U3-06",
+        "P2W-U4-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0301",
+      "legacy_title": "PP-OCRv6 Medium 升级策略",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0302",
+      "legacy_title": "PP-StructureV3 表格 Adapter",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R3-02",
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-03",
+        "P2W-U3-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0303",
+      "legacy_title": "表格质量与图片降级",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R2-05",
+        "P2W-R3-05",
+        "P2W-R3-02",
+        "P2W-R1-05",
+        "P2W-R3-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U2-03",
+        "P2W-U3-02",
+        "P2W-U3-03",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0304",
+      "legacy_title": "PP-FormulaNet Adapter",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R3-03",
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U2-03",
+        "P2W-U3-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0305",
+      "legacy_title": "公式 OMML 与回渲染",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R2-05",
+        "P2W-R3-05",
+        "P2W-R3-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-03",
+        "P2W-U3-02",
+        "P2W-U3-04",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0306",
+      "legacy_title": "化学与复杂图形保留规则",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R3-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-03",
+        "P2W-U3-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0307",
+      "legacy_title": "扫描页快速流水线",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R1-07",
+        "P2W-R1-08",
+        "P2W-R2-07",
+        "P2W-R3-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U2-01",
+        "P2W-U2-03",
+        "P2W-U3-06"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0308",
+      "legacy_title": "扫描页专项融合",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06",
+        "P2W-R2-07",
+        "P2W-R3-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-06"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0309",
+      "legacy_title": "扫描 PDF 回归集",
+      "legacy_phase": "P3",
+      "v2_1_task_ids": [
+        "P2W-R2-07",
+        "P2W-R3-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U3-06"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0401",
+      "legacy_title": "MonkeyOCRv2 网关 Adapter",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06",
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0402",
+      "legacy_title": "Monkey 标签与内容归一化",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-S2-05",
+        "P2W-R3-01",
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0403",
+      "legacy_title": "Monkey 坐标归一化",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-S2-05",
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0404",
+      "legacy_title": "复杂页升级策略",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0405",
+      "legacy_title": "几何权威仲裁",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-S2-06",
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0406",
+      "legacy_title": "Monkey End-to-End 内容候选",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0407",
+      "legacy_title": "系统置信度计算",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0408",
+      "legacy_title": "OvisOCR2 内容复核 Adapter",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-S2-05",
+        "P2W-R3-01",
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06",
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0409",
+      "legacy_title": "复核触发和冲突融合",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0410",
+      "legacy_title": "GPU 队列与客户端背压",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R4-04",
+        "P2W-R4-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U4-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0411",
+      "legacy_title": "Monkey/Ovis 影子模式",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R1-02",
+        "P2W-R1-03",
+        "P2W-R1-04",
+        "P2W-R1-07",
+        "P2W-R3-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U1-04",
+        "P2W-U2-01",
+        "P2W-U2-02",
+        "P2W-U2-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0412",
+      "legacy_title": "复杂页回归门禁",
+      "legacy_phase": "P4",
+      "v2_1_task_ids": [
+        "P2W-R3-05",
+        "P2W-R2-07",
+        "P2W-R3-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-03",
+        "P2W-U3-05",
+        "P2W-U3-06"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0501",
+      "legacy_title": "文档层级聚合",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-01",
+        "P2W-R1-06",
+        "P2W-R2-01",
+        "P2W-R2-02",
+        "P2W-R1-02",
+        "P2W-R1-05",
+        "P2W-R3-01",
+        "P2W-R1-04",
+        "P2W-R2-03",
+        "P2W-R2-04",
+        "P2W-R3-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-02",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0502",
+      "legacy_title": "题号识别器",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-04",
+        "P2W-R2-01",
+        "P2W-R2-03",
+        "P2W-R2-04",
+        "P2W-R3-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U3-01",
+        "P2W-U3-02",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0503",
+      "legacy_title": "大题/小题/子题层级",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-04",
+        "P2W-R2-01",
+        "P2W-R2-03",
+        "P2W-R2-04",
+        "P2W-R3-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U3-01",
+        "P2W-U3-02",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0504",
+      "legacy_title": "选项识别与布局",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-04",
+        "P2W-R2-01",
+        "P2W-R2-03",
+        "P2W-R2-04",
+        "P2W-R3-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U3-01",
+        "P2W-U3-02",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0505",
+      "legacy_title": "图片去重与统一资产",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-S2-03",
+        "P2W-R2-04",
+        "P2W-R2-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-02",
+        "P2W-U3-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0506",
+      "legacy_title": "题图锚定评分",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R2-04",
+        "P2W-R2-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U3-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0507",
+      "legacy_title": "图题和跨页关系",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-04",
+        "P2W-R2-01",
+        "P2W-R2-03",
+        "P2W-R2-04",
+        "P2W-R3-04",
+        "P2W-R2-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U3-01",
+        "P2W-U3-02",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0508",
+      "legacy_title": "高级 DOCX Layout Planner",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-01",
+        "P2W-R1-02",
+        "P2W-R1-05",
+        "P2W-R1-06",
+        "P2W-R3-01",
+        "P2W-R2-05",
+        "P2W-R3-05",
+        "P2W-R3-02",
+        "P2W-R2-02",
+        "P2W-R2-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-02",
+        "P2W-U3-03",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0509",
+      "legacy_title": "题图稳定容器",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R2-04",
+        "P2W-R2-05"
+      ],
+      "v3_task_ids": [
+        "P2W-U3-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0510",
+      "legacy_title": "Word 原生表格输出",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-05",
+        "P2W-R3-02",
+        "P2W-R3-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U2-03",
+        "P2W-U3-03",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0511",
+      "legacy_title": "Word 公式输出",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R3-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-03",
+        "P2W-U3-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0512",
+      "legacy_title": "分页和 keep 规则",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R3-04",
+        "P2W-R1-06",
+        "P2W-R2-02",
+        "P2W-R2-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U3-01",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0513",
+      "legacy_title": "页眉页脚与正式页码",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-01",
+        "P2W-R1-06",
+        "P2W-R2-01",
+        "P2W-R2-02",
+        "P2W-R2-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-01",
+        "P2W-U1-03",
+        "P2W-U2-02",
+        "P2W-U2-03",
+        "P2W-U3-01",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0514",
+      "legacy_title": "完整 DOCX 端到端",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R1-06",
+        "P2W-R2-02",
+        "P2W-R2-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-03",
+        "P2W-U3-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0515",
+      "legacy_title": "试卷黄金回归",
+      "legacy_phase": "P5",
+      "v2_1_task_ids": [
+        "P2W-R2-07",
+        "P2W-R3-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U3-06"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0601",
+      "legacy_title": "Issue 生成器",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R2-05",
+        "P2W-R3-05",
+        "P2W-R2-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-03",
+        "P2W-U2-04",
+        "P2W-U3-02",
+        "P2W-U3-05"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0602",
+      "legacy_title": "内容与结构 QA",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R1-08",
+        "P2W-R3-07",
+        "P2W-R2-05",
+        "P2W-R3-05",
+        "P2W-R2-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U2-03",
+        "P2W-U2-04",
+        "P2W-U3-02",
+        "P2W-U3-05",
+        "P2W-U3-06"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0603",
+      "legacy_title": "DOCX 包和重新打开检查",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R1-08",
+        "P2W-R3-07",
+        "P2W-R4-08"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U3-06",
+        "P2W-U5-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0604",
+      "legacy_title": "DOCX 回渲染 Adapter",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R1-08",
+        "P2W-R3-07",
+        "P2W-R4-08"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U3-06",
+        "P2W-U5-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0605",
+      "legacy_title": "结构化视觉比较",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R1-08",
+        "P2W-R3-07",
+        "P2W-R2-07",
+        "P2W-R4-08"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U3-06",
+        "P2W-U5-01"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0606",
+      "legacy_title": "审校 API",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R2-06",
+        "P2W-R4-06",
+        "P2W-R4-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-04",
+        "P2W-U4-04",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0607",
+      "legacy_title": "审校 UI",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R4-07",
+        "P2W-R4-10"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-04",
+        "P2W-U4-04",
+        "P2W-U5-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0608",
+      "legacy_title": "人工修正与锁定",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R2-06",
+        "P2W-R4-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-04",
+        "P2W-U4-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0609",
+      "legacy_title": "区域重识别",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R2-06",
+        "P2W-R4-07"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-04",
+        "P2W-U4-04"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0610",
+      "legacy_title": "质量和转换报告",
+      "legacy_phase": "P6",
+      "v2_1_task_ids": [
+        "P2W-R1-08",
+        "P2W-R3-07",
+        "P2W-R1-07",
+        "P2W-R2-06",
+        "P2W-R2-07",
+        "P2W-R4-07",
+        "P2W-R4-11"
+      ],
+      "v3_task_ids": [
+        "P2W-U1-02",
+        "P2W-U2-01",
+        "P2W-U2-03",
+        "P2W-U2-04",
+        "P2W-U3-06",
+        "P2W-U4-03",
+        "P2W-U4-04",
+        "P2W-U4-05",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0701",
+      "legacy_title": "性能基准与剖析",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-04",
+        "P2W-R4-11"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-03",
+        "P2W-U4-05",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0702",
+      "legacy_title": "缓存和去重",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-02"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0703",
+      "legacy_title": "并发与背压优化",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0704",
+      "legacy_title": "取消、恢复与断点",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-03"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0705",
+      "legacy_title": "模型网关安全加固",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-05",
+        "P2W-R4-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U4-04",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0706",
+      "legacy_title": "数据清理与隐私测试",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-06"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-04",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0707",
+      "legacy_title": "客户端打包",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-09",
+        "P2W-R4-10"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-01",
+        "P2W-U4-05",
+        "P2W-U5-02"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0708",
+      "legacy_title": "统一模型网关部署",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-05",
+        "P2W-R4-12"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-01",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0709",
+      "legacy_title": "观测与运维",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-12",
+        "P2W-R4-04"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-03",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0710",
+      "legacy_title": "SBOM、许可证和供应链",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-06",
+        "P2W-R4-09",
+        "P2W-R4-12"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-01",
+        "P2W-U4-04",
+        "P2W-U4-05",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0711",
+      "legacy_title": "发布资格回归",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-08",
+        "P2W-R4-11",
+        "P2W-R4-12"
+      ],
+      "v3_task_ids": [
+        "P2W-U4-03",
+        "P2W-U4-05",
+        "P2W-U5-01",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    },
+    {
+      "legacy_id": "T0712",
+      "legacy_title": "用户与开发文档",
+      "legacy_phase": "P7",
+      "v2_1_task_ids": [
+        "P2W-R4-07",
+        "P2W-R4-09",
+        "P2W-R4-10",
+        "P2W-R4-12"
+      ],
+      "v3_task_ids": [
+        "P2W-U2-04",
+        "P2W-U4-01",
+        "P2W-U4-04",
+        "P2W-U4-05",
+        "P2W-U5-02",
+        "P2W-U5-03"
+      ],
+      "status_change": false,
+      "disposition": "PRESERVE_HISTORY_AND_MAP_SCOPE",
+      "note": "只迁移责任范围；T0015/T0016等既有接受不撤销，旧能力不重开。"
+    }
+  ],
+  "execution_gate": "All mapped future work remains inactive until a conclusive approved route; no deletion or disablement authorized",
+  "source_hashes": {
+    "v2_1_to_v3.json": "1f8ff7099e2af045e20b6d0df17e2073e48d87cd38a83a33a0eb1a1bbc8bdd0a",
+    "legacy97_to_v3.json": "38fb29f96ba2f07b18eda302a5a0dd908f9ab74c6fdd07347ec4c5f637f13b74"
+  }
+}

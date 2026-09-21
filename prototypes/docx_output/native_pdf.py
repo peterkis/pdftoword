@@ -40,8 +40,10 @@ def _abnormal_unicode(char: str) -> bool:
     )
 
 
-def parse_pages(selection: str | None, total: int) -> list[int]:
+def parse_pages(selection: str | None, total: int, *, page_limit: int = 3) -> list[int]:
     """Parse 1-based page selections, reject excess instead of silently truncating."""
+    if isinstance(page_limit, bool) or not isinstance(page_limit, int) or page_limit < 1:
+        raise DemoError("INVALID_PAGE_LIMIT")
     selected = []
     for part in (selection or f"1-{total}").split(","):
         try:
@@ -51,13 +53,15 @@ def parse_pages(selection: str | None, total: int) -> list[int]:
         if len(ends) == 1:
             selected.append(ends[0] - 1)
         elif len(ends) == 2 and 1 <= ends[0] <= ends[1] <= total:
-            if ends[1] - ends[0] >= 3:
-                raise DemoError("MAX_THREE_PAGES")
+            if ends[1] - ends[0] >= page_limit:
+                raise DemoError("MAX_THREE_PAGES" if page_limit == 3 else "PAGE_LIMIT_EXCEEDED")
             selected.extend(range(ends[0] - 1, ends[1]))
         else:
             raise DemoError("INVALID_PAGE_SELECTION")
-    if not 1 <= len(selected) <= 3 or len(set(selected)) != len(selected):
-        raise DemoError("MAX_THREE_DISTINCT_PAGES")
+    if not 1 <= len(selected) <= page_limit or len(set(selected)) != len(selected):
+        raise DemoError(
+            "MAX_THREE_DISTINCT_PAGES" if page_limit == 3 else "DISTINCT_PAGE_LIMIT_EXCEEDED"
+        )
     if any(i < 0 or i >= total for i in selected):
         raise DemoError("PAGE_OUT_OF_RANGE")
     return selected
@@ -82,7 +86,13 @@ def cluster_regions(boxes: list[list[float]], gap: float = 10) -> list[list[floa
 
 
 def extract(
-    job: Path, ir: Json, source: Path, selection: str | None, raster_only: bool = False
+    job: Path,
+    ir: Json,
+    source: Path,
+    selection: str | None,
+    raster_only: bool = False,
+    *,
+    page_limit: int = 3,
 ) -> None:
     """Extract native text/font/bbox and local figure crops, never performing OCR."""
     extracted = PdfInspectorBackend().extract(source) if not raster_only else {}
@@ -93,7 +103,8 @@ def extract(
                 raise DemoError("PDF_PASSWORD_REQUIRED_UNSUPPORTED")
             if not len(document):
                 raise DemoError("PDF_EMPTY_DOCUMENT")
-            selected = parse_pages(selection, len(document))
+            selected = parse_pages(selection, len(document), page_limit=page_limit)
+            ir["metadata"]["page_limit"] = page_limit
             ir["source"]["page_count"] = len(document)
             ir["metadata"]["selected_pages_1based"] = [i + 1 for i in selected]
             for index in selected:

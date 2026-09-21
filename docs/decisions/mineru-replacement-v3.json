@@ -1,0 +1,125 @@
+{
+  "schema_version": "p2w-route/3.0",
+  "decision_id": "U1-CLOSURE-20260921-SCOPE-V2",
+  "status": "PENDING",
+  "route": "INCONCLUSIVE",
+  "evidence": [
+    "tasks/reports/P2W-U1_SELECTION_CLOSURE_SCOPE_V2.md",
+    "docs/PRODUCT_REQUIREMENTS.md"
+  ],
+  "comparison_receipt": "tmp/docx-demo/u1-selection-closure-20260921/scope-v2/comparison.json",
+  "c_required": false,
+  "approved_by": null,
+  "approved_at": null,
+  "input_output_profile": {
+    "primary_types": [
+      "native_pdf",
+      "scan_pdf",
+      "mixed_pdf",
+      "jpg_png"
+    ],
+    "flowing_editable_docx": true,
+    "allow_natural_repagination": true,
+    "preserve_layout_relations": true,
+    "platform_milestones": [
+      "mac_internal_beta",
+      "windows11_word_desktop"
+    ],
+    "source_auxiliary_policy": "PRESERVE_NECESSARY_CONTENT_OR_EXPLICIT_PROFILE",
+    "limits": "25 core source pages / G1-G4; observed A override12/9 pages is experimental, not production capacity approval",
+    "business_document_types": [
+      "exam",
+      "contract",
+      "manual",
+      "general_document"
+    ],
+    "excluded_business_types": [
+      "magazine",
+      "online_periodical"
+    ],
+    "layout_goal": "Restore original layout and typesetting as closely as possible while preserving content and editable structure",
+    "repagination_policy": "Report source-layout deviations; natural pagination is not a layout-acceptance exemption."
+  },
+  "primary_parser": null,
+  "primary_renderer": null,
+  "gap_decisions": {
+    "layout": {
+      "required": true,
+      "reason": "In-scope exams expand12 pages to34/34/33 with fragmented content and displaced question figures; magazine six-column evidence excluded.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE_SCOPE_V2.md"
+      ]
+    },
+    "tables": {
+      "required": true,
+      "reason": "Separate source tables merged in upstream result; Word column widths and table semantics defective.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE_SCOPE_V2.md"
+      ]
+    },
+    "formulas": {
+      "required": true,
+      "reason": "Raw LaTeX in cells and weak verified editable structure; full formula preservation not established.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE_SCOPE_V2.md"
+      ]
+    },
+    "relations": {
+      "required": true,
+      "reason": "In-scope question/figure associations and source-page table boundaries need verified preservation; magazine/cover defects excluded.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE_SCOPE_V2.md"
+      ]
+    },
+    "continuation": {
+      "required": true,
+      "reason": "Cross-source merge and scan continuation require explicit physical-page-aware integrity checks.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE_SCOPE_V2.md"
+      ]
+    }
+  },
+  "first_batch_max_gap_buckets": 3,
+  "stop_developing": [
+    "Additional batch3 model reruns",
+    "Parallel production implementations of four route candidates",
+    "Broad MinerU fork or generic protocol platform",
+    "Unproven default replacement"
+  ],
+  "retained_modules": [
+    "Existing native/raster/replay entry points",
+    "Source asset preservation and provenance",
+    "Existing Flow/Writer as unchanged fallback, not selected winner",
+    "Sealed experiment adapters and evidence"
+  ],
+  "rollback_profile": "Existing reconstruction-v2; no default switch occurred",
+  "known_limits": [
+    "Original local SDK4.0.4/trusted V1 deployment NOT_RUN",
+    "Official backend3.4.4 cannot prove intended self-hosted version behavior",
+    "Contract and operating/technical manual dedicated samples NOT_COVERED",
+    "In-scope multicolumn slot NOT_COVERED after magazine exclusion",
+    "Complex formula scoring/geometry alignment incomplete",
+    "Only one in-scope partial manual repair diagnostic; completion cost unknown",
+    "Human acceptance PENDING"
+  ],
+  "evidence_sufficient": false,
+  "first_batch_gap_candidates": [
+    "tables",
+    "formulas",
+    "layout"
+  ],
+  "deferred_gaps": [
+    "relations",
+    "continuation"
+  ],
+  "gap_activation": "NONE_WHILE_ROUTE_INCONCLUSIVE",
+  "next_action": {
+    "status": "STOP_INCONCLUSIVE",
+    "minimum_evidence": "First identify intended deployment/version and authorize its bounded validation; use an in-scope contract/manual sample and an existing exam/table case, maximum two cases with separately fixed budget. No magazine testing or full matrix rerun.",
+    "U2_allowed": false
+  },
+  "supersedes": "U1-CLOSURE-20260921",
+  "requirements": "docs/PRODUCT_REQUIREMENTS.md",
+  "probe_c_reason": "No verified content-ready case with layout as sole decisive gap; G1 upstream merged tables and G2/G3/G4 editable formula/table defects remain. Existing A does not establish Flow gains on identical MinerU content. Skip bounded probe, not permanent rejection.",
+  "maintenance_surface": "Keep existing entry points and sealed evidence; no new magazine-specific layout/rendering code, no production provider replacement."
+}

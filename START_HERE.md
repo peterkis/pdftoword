@@ -5,6 +5,8 @@
 ## 第一次交给 Coding Agent 时
 
 先读 `AGENTS.md` 与 `README.md`，按根文件的任务表读取相关规范、当前阶段与 Ticket 依赖。
+涉及需求、选样、验收或路线选择时，先读用户确认的[项目最终需求](docs/PRODUCT_REQUIREMENTS.md)；
+旧启动提示和历史范围不能覆盖该目标。
 本机安装与 FRP 连接见 [本机调试](docs/25_LOCAL_DEVELOPMENT.md)。
 
 ## 推荐启动指令

@@ -422,6 +422,7 @@ def convert(
     synthetic: bool = False,
     content_provider: str = "ovis-pp",
     auto_profile: str = "legacy_ovis_pp",
+    page_limit: int = 3,
 ) -> Path:
     """Convert authorized local input using a finite native or explicit live route."""
     validate_input(source)
@@ -469,7 +470,7 @@ def convert(
         if target.suffix.lower() == ".pdf":
             from .native_pdf import extract
 
-            extract(job, ir, target, selection, raster_only=mode == "raster")
+            extract(job, ir, target, selection, raster_only=mode == "raster", page_limit=page_limit)
         else:
             if selection not in {None, "1"}:
                 raise DemoError("IMAGE_HAS_ONE_PAGE")

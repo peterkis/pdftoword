@@ -132,6 +132,17 @@ def test_page_limits(selection: str, total: int) -> None:
         parse_pages(selection, total)
 
 
+def test_explicit_page_limit_preserves_default_and_duplicate_guard() -> None:
+    assert parse_pages(None, 12, page_limit=12) == list(range(12))
+    assert parse_pages("1,3-10", 10, page_limit=9) == [0, *range(2, 10)]
+    for selection, limit in [(None, 11), ("1,1", 12), ("13", 12)]:
+        with pytest.raises(DemoError):
+            parse_pages(selection, 12, page_limit=limit)
+    for invalid in (0, -1, True):
+        with pytest.raises(DemoError, match="INVALID_PAGE_LIMIT"):
+            parse_pages("1", 12, page_limit=invalid)
+
+
 def test_point_roundtrip_and_overlap_area() -> None:
     bbox = [10.0, 20.0, 110.0, 160.0]
     assert transform(transform(bbox, 0.5, 0.25), 2, 4) == bbox

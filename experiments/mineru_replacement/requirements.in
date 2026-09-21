@@ -1,0 +1,4 @@
+# Requested experiment pins, NOT an installed/transitive lock receipt.
+# Resolve only on the authorized target, into a NEW environment.
+mineru==4.0.4
+docvortex==0.4.17

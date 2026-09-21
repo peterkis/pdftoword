@@ -1,0 +1,5 @@
+"""Isolated experiment using the repository's canonical acceptance-tool namespace."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))

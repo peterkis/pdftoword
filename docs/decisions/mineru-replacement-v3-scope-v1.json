@@ -1,0 +1,107 @@
+{
+  "schema_version": "p2w-route/3.0",
+  "decision_id": "U1-CLOSURE-20260921",
+  "status": "PENDING",
+  "route": "INCONCLUSIVE",
+  "evidence": [
+    "tasks/reports/P2W-U1_SELECTION_CLOSURE.md",
+    "tasks/reports/P2W-U1-01_BATCH3_COMPARISON.md"
+  ],
+  "comparison_receipt": "tmp/docx-demo/u1-selection-closure-20260921/comparison.json",
+  "c_required": false,
+  "approved_by": null,
+  "approved_at": null,
+  "input_output_profile": {
+    "primary_types": [
+      "native_pdf",
+      "scan_pdf",
+      "mixed_pdf",
+      "jpg_png"
+    ],
+    "flowing_editable_docx": true,
+    "allow_natural_repagination": true,
+    "preserve_layout_relations": true,
+    "platform_milestones": [
+      "mac_internal_beta",
+      "windows11_word_desktop"
+    ],
+    "source_auxiliary_policy": "PRESERVE_NECESSARY_CONTENT_OR_EXPLICIT_PROFILE",
+    "limits": "Observed batch3: 29 selected pages, six groups; explicit 12/9-page A override authorized. No production capacity approval."
+  },
+  "primary_parser": null,
+  "primary_renderer": null,
+  "gap_decisions": {
+    "layout": {
+      "required": true,
+      "reason": "Observed loss of columns, source pagination, image/text proportions and page relationship placement.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE.md"
+      ]
+    },
+    "tables": {
+      "required": true,
+      "reason": "Separate source tables merged in upstream result; Word column widths and table semantics defective.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE.md"
+      ]
+    },
+    "formulas": {
+      "required": true,
+      "reason": "Raw LaTeX in cells and weak verified editable structure; full formula preservation not established.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE.md"
+      ]
+    },
+    "relations": {
+      "required": true,
+      "reason": "Question/figure/caption relationships absent or not verified; cannot silently synthesize them.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE.md"
+      ]
+    },
+    "continuation": {
+      "required": true,
+      "reason": "Cross-source merge and scan continuation require explicit physical-page-aware integrity checks.",
+      "evidence": [
+        "tasks/reports/P2W-U1_SELECTION_CLOSURE.md"
+      ]
+    }
+  },
+  "first_batch_max_gap_buckets": 3,
+  "stop_developing": [
+    "Additional batch3 model reruns",
+    "Parallel production implementations of four route candidates",
+    "Broad MinerU fork or generic protocol platform",
+    "Unproven default replacement"
+  ],
+  "retained_modules": [
+    "Existing native/raster/replay entry points",
+    "Source asset preservation and provenance",
+    "Existing Flow/Writer as unchanged fallback, not selected winner",
+    "Sealed experiment adapters and evidence"
+  ],
+  "rollback_profile": "Existing reconstruction-v2; no default switch occurred",
+  "known_limits": [
+    "Original local SDK4.0.4 and trusted V1 deployment NOT_RUN",
+    "Official API backend reported3.4.4 cannot establish local SDK behavior",
+    "No content-ready layout-only decisive case established for COMPOSE in bounded closure",
+    "Repair trials are partial and not automatic outputs",
+    "Human acceptance pending"
+  ],
+  "evidence_sufficient": false,
+  "first_batch_gap_candidates": [
+    "tables",
+    "formulas",
+    "layout"
+  ],
+  "deferred_gaps": [
+    "relations",
+    "continuation"
+  ],
+  "gap_activation": "NONE_WHILE_ROUTE_INCONCLUSIVE",
+  "next_action": {
+    "status": "STOP_INCONCLUSIVE",
+    "minimum_evidence": "Before reopening route selection, authorize and identify the intended deployment/version; at most two targeted real cases and offline re-export, with separately fixed request budget. No rerun of the full matrix.",
+    "U2_allowed": false
+  }
+}
