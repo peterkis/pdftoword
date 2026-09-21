@@ -1,3 +1,14 @@
+# 当前执行入口：PDF2Word v3.1（2026-09-21）
+
+本轮实际 PLAN_DIR：`/Users/petervans/Plans/PDF2Word_Development_Plan_v3.1_20260921/`。
+入口 `START_HERE.md` → `prompts/00_START.md`；本轮只执行 **P2W-F1-01**，
+下一建议 F2-01，不自动执行。当前需求以 `docs/PRODUCT_REQUIREMENTS.md` 为准。
+[本轮报告](../../tasks/reports/P2W-F1-01_REPORT.md)。下方旧入口与
+[U1 收尾](../../tasks/reports/P2W-U1_SELECTION_CLOSURE_SCOPE_V2.md)保留作历史；
+U1 INCONCLUSIVE/PENDING、SDK NOT_RUN、probe_c=false 均不改写。
+
+---
+
 # 当前计划：PDF2Word Reconstruction V2.1
 
 2026-09-18 按用户指令切换到仓库外独立目录

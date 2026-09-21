@@ -80,6 +80,57 @@ def text_column_widths(
     ]
 
 
+def inline_text_spans(block: Json, items: list[Json]) -> dict[int, list[Json]]:
+    """Bind exact source offsets to runs; never guess offsets from repeated substrings."""
+    text = block["content"].get("plain_text", "")
+    literal = [
+        item.get("source_text") if "omml" in item or "asset_id" in item else item.get("text")
+        for item in items
+    ]
+    aligned = (
+        all(isinstance(value, str) for value in literal)
+        and "".join(value for value in literal if isinstance(value, str)) == text
+    )
+    runs = block["content"].get("runs", [])
+    measured = aligned and bool(runs) and "".join(r["text"] for r in runs) == text
+    result = {}
+    offset = 0
+    for index, item in enumerate(items):
+        value = literal[index]
+        if "omml" not in item and "asset_id" not in item:
+            end = offset + len(item["text"])
+            spans = []
+            cursor = 0
+            if measured:
+                for ri, source in enumerate(runs):
+                    stop = cursor + len(source["text"])
+                    left, right = max(offset, cursor), min(end, stop)
+                    if left < right:
+                        spans.append(
+                            {
+                                "text": text[left:right],
+                                "source_range": [left, right],
+                                "source_run_index": ri,
+                                "source_ref": source["source_ref"],
+                                "style_basis": "source_run",
+                            }
+                        )
+                    cursor = stop
+            if not spans:
+                spans = [
+                    {
+                        "text": item["text"],
+                        "source_range": [offset, end] if aligned else None,
+                        "source_run_index": None,
+                        "source_ref": block["id"],
+                        "style_basis": "inherited_output_style",
+                    }
+                ]
+            result[index] = spans
+        offset += len(value) if isinstance(value, str) else 0
+    return result
+
+
 def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None) -> Json:
     """Consume validated IR only; never query a model or overwrite auto output."""
     validate(ir)
@@ -359,7 +410,9 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             close_marker(source_record)
             return
         if b["id"] in parts:
-            for item in parts[b["id"]]:
+            text_spans = inline_text_spans(b, parts[b["id"]])
+            source_record["inline_text_spans"] = []
+            for part_index, item in enumerate(parts[b["id"]]):
                 if "omml" in item:
                     math = etree.fromstring(
                         item["omml"].encode(),
@@ -377,7 +430,48 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                 else:
                     if unrendered_math(item["text"]):
                         raise DemoError("UNRENDERED_MATH_REQUIRES_REVIEW")
-                    para.add_run(item["text"])
+                    for span in text_spans[part_index]:
+                        run = para.add_run(span["text"])
+                        ri = span["source_run_index"]
+                        if ri is not None:
+                            source_run = content["runs"][ri]
+                            spec = (
+                                node["runs"][b["id"]][ri]
+                                if node
+                                else {
+                                    "ascii": source_run["font_family"]
+                                    or font_info["latin"]
+                                    or "Arial",
+                                    "hAnsi": source_run["font_family"]
+                                    or font_info["latin"]
+                                    or "Arial",
+                                    "eastAsia": source_run["font_family"]
+                                    or font_info["east_asia"]
+                                    or "sans-serif",
+                                    **source_run,
+                                    "font_size_pt": source_run["font_size_pt"] or 11,
+                                }
+                            )
+                            set_run_style(run, spec)
+                        elif node:
+                            planned_style = ir["output_styles"][node["style_id"]]
+                            set_run_style(
+                                run,
+                                {
+                                    "ascii": planned_style["latin_font"],
+                                    "hAnsi": planned_style["latin_font"],
+                                    "eastAsia": planned_style["east_asia_font"],
+                                    "font_size_pt": planned_style["font_size_pt"],
+                                    "inherit_base": ir.get("planning", {})
+                                    .get("profile_settings", {})
+                                    .get("editable_styles", False)
+                                    and not any("lock" in f for f in b["flags"]),
+                                    "inherit_fonts": True,
+                                },
+                            )
+                        source_record["inline_text_spans"].append(
+                            {k: v for k, v in span.items() if k != "text"}
+                        )
                     counts["editable_text_char_count"] += len(item["text"].strip())
             close_marker(source_record)
             return
