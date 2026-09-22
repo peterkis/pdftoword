@@ -1,3 +1,12 @@
+## F2-03 显式候选入口（2026-09-21）
+
+当前已接入 `--output-profile fidelity-v3.1`（输出配置，不是识别路由），默认仍为原有输出。
+CLI `convert` / `replay` 可显式选择；`replay-job --source-job <已有作业> --output-profile fidelity-v3.1`
+支持已有 auto/reviewed 的零模型派生，`--style-profile <JSON>` 可覆盖本地样式。
+上传页有同名选择，已有任务可点击“当前任务用候选配置重导出”；审校继续写 reviewed。
+见 [F2-03 报告](../../tasks/reports/P2W-F2-03_REPORT.md)。F1-04 局部收益与 B 结构缺口保持，
+没有切默认、引入新模型或改写 U1 裁决。本轮只执行 F2-03，后续按明确指令推进。
+
 # 当前执行入口：PDF2Word v3.1（2026-09-21）
 
 本轮实际 PLAN_DIR：`/Users/petervans/Plans/PDF2Word_Development_Plan_v3.1_20260921/`。

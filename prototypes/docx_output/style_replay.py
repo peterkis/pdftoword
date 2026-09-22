@@ -7,17 +7,31 @@ import shutil
 from pathlib import Path
 
 from .common import DemoError, Json, digest, new_job, read, safe_path, save, validate
+from .output_profiles import output_settings, select_output_profile
 from .pipeline import finish
 from .planning.flow import plan_flow
+from .render_replay import verify_source
 from .renderers.flow import FlowRenderer
 from .structure_processors.base import StructureCandidate
 from .structure_processors.docvortex import DocVortexStructureProcessor
 
 
-def export_style(source: Path, output_root: Path, profile: Json, source_sha256: str) -> Path:
+def export_style(
+    source: Path,
+    output_root: Path,
+    profile: Json,
+    source_sha256: str,
+    *,
+    output_profile: str = "legacy",
+    revision: str = "auto",
+) -> Path:
     """Verify the exact frozen IR and each declared asset before creating output."""
     source = source.resolve()
-    layout_path = safe_path(source, "layout.auto.json")
+    if revision not in {"auto", "reviewed"}:
+        raise DemoError("INVALID_REVISION")
+    if output_root.resolve().is_relative_to(source):
+        raise DemoError("OUTPUT_INSIDE_SOURCE")
+    layout_path = safe_path(source, f"layout.{revision}.json")
     if digest(layout_path) != source_sha256:
         raise DemoError("STYLE_SOURCE_SEAL_MISMATCH")
     ir = read(layout_path)
@@ -33,10 +47,20 @@ def export_style(source: Path, output_root: Path, profile: Json, source_sha256: 
             and digest(safe_path(source, page["image_path"])) != page.get("image_sha256")
         ):
             raise DemoError("STYLE_SOURCE_IMAGE_SEAL_MISMATCH")
-    plan = plan_flow(ir, profile)
+    verify_source(source, ir, before)
+    select_output_profile(ir, output_profile)
+    ir["metadata"]["parent_output"] = {
+        "job_id": source.name,
+        "revision": revision,
+        "layout_sha256": source_sha256,
+        "source_model_call_count": ir["metrics"].get("model_call_count", 0),
+    }
+    ir["metrics"]["model_call_count"] = 0
+    plan = plan_flow(ir, {**(output_settings(ir) or {}), **profile})
     if plan.document["pages"] != ir["pages"] or plan.document["relations"] != ir["relations"]:
         raise DemoError("STYLE_SOURCE_MUTATED")
     job = new_job(output_root)
+    plan.document["document_id"] = job.name
     paths = {a["path"] for a in ir["assets"]} | {
         p["image_path"] for p in ir["provenance"].get("pages", {}).values() if "image_path" in p
     }
@@ -66,6 +90,9 @@ def export_style(source: Path, output_root: Path, profile: Json, source_sha256: 
             "model_calls": 0,
             "structure_calls": 0,
             "profile": profile,
+            "output_profile": output_profile,
+            "source_revision": revision,
+            "source_job_id": source.name,
             "output_docx_sha256": digest(job / "auto.docx"),
         },
     )

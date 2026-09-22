@@ -1,0 +1,12 @@
+{
+  "id": "fidelity-v3.1",
+  "label": "布局保真候选 v3.1",
+  "status": "candidate",
+  "settings": {
+    "editable_styles": true
+  },
+  "known_limits": [
+    "整页分页和原字体还原仍待验证",
+    "缺失的表格单元格结构和复合图归属不由输出配置补全"
+  ]
+}

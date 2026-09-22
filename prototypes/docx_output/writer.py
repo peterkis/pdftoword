@@ -149,6 +149,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
     available = 505.28
     flow = output_plan is not None
     flow_nodes: Json = {}
+    flow_figure_layouts: Json = {}
     flow_sections: Json = {}
     flow_block_sections: Json = {}
     paragraph_cache: Json = {}
@@ -158,6 +159,9 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             for source_page in planned["source_pages"]:
                 flow_sections[source_page] = planned
             for node in planned["nodes"]:
+                if "figure_layout" in node:
+                    for source_id in node["source_ids"]:
+                        flow_figure_layouts[source_id] = node["figure_layout"]
                 for leaf in node.get("children", [node]):
                     for source_id in leaf["source_ids"]:
                         flow_nodes[source_id] = leaf
@@ -279,7 +283,8 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             "page": b["page_index"] + 1,
             "bbox": b["bbox"],
             "kind": b["type"],
-            "fallback": b["content"]["kind"] == "image" and b["type"] != "figure",
+            "fallback": b["content"]["kind"] == "image"
+            and (b["type"] != "figure" or "native_diagram_image_fallback" in b["flags"]),
         }
         source_blocks.append(record)
         return record
@@ -310,7 +315,11 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
         image_hash = hashlib.sha256(image_bytes).hexdigest()
         paragraph.add_run().add_picture(io.BytesIO(image_bytes), width=Pt(actual))
         owner["images"].append(
-            {"sha256": image_hash, "bbox": a["source_bbox"], "fallback": owner["kind"] != "figure"}
+            {
+                "sha256": image_hash,
+                "bbox": a["source_bbox"],
+                "fallback": owner["kind"] != "figure" or owner["fallback"],
+            }
         )
         if formula:
             counts["formula_image_count"] += 1
@@ -405,7 +414,7 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
             picture(para, content["asset_id"], width, owner=source_record)
             if b["type"] == "figure":
                 counts["placed_figure_count"] += 1
-            else:
+            if source_record["fallback"]:
                 counts["fallback_region_count"] += 1
             close_marker(source_record)
             return
@@ -599,7 +608,11 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                 continue
             g = group_map[bid]
             pairs = g["pairs"]
-            cols = min(g.get("columns", 2 if g["kind"] == "option_grid" else 3), len(pairs))
+            layout = flow_figure_layouts.get(bid, {})
+            cols = min(
+                layout.get("columns", g.get("columns", 2 if g["kind"] == "option_grid" else 3)),
+                len(pairs),
+            )
             table = doc.add_table(rows=(len(pairs) + cols - 1) // cols, cols=cols)
             table.autofit = False
             for column in table.columns:

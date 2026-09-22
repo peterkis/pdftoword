@@ -55,7 +55,15 @@ namespace_packages = true
 # scripts/smoke_models.py is a pre-existing manual smoke tool that depends on
 # httpx (included in the dev group for Gate tools) and predates the typed
 # toolchain; it will be superseded by the P0-GATE-001 capability probing.
-exclude = ["smoke_models"]
+# mypy does not use .gitignore. Runtime evidence, downloaded references and
+# generated outputs are not maintained source modules; preserve them in place.
+# Anchor at the repository root so tests/tmp/ and similarly named source stay checked.
+exclude = [
+    '^tmp/',
+    '^(outputs|artifacts|build|dist)/',
+    '^data/jobs/',
+    '^scripts/smoke_models\.py$',
+]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true

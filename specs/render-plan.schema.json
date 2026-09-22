@@ -401,6 +401,41 @@
             "text_groups",
             "figure_groups"
           ]
+        },
+        "figure_layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "columns",
+            "basis",
+            "reason",
+            "figure_ids"
+          ],
+          "properties": {
+            "columns": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "basis": {
+              "enum": [
+                "source_based",
+                "estimated",
+                "existing_group"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "figure_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
         }
       }
     },

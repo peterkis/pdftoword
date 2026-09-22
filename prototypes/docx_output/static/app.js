@@ -47,7 +47,7 @@ function show(){
   $('operations').textContent=JSON.stringify(operations,null,2);
   const qa=revision==='reviewed'?data.qa_reviewed:data.qa;
   const outcome=qa?.pages?.find(x=>x.page_index===pageIndex);
-  $('qa').textContent=qa?`主识别 ${layout.metadata.content_provider||layout.provenance.replay?.content_provider||"既有路径"} · 模型请求 ${qa.model_call_count} · 可编辑字符 ${qa.editable_text_char_count} · 图域 ${qa.placed_figure_count} · 原生公式 ${qa.omml_formula_count} · 公式图片 ${qa.formula_image_count} · ${qa.render_status} · 内容待人工审阅${outcome?` · 本页几何 ${outcome.selected_geometry_provider||"保留原有几何"} · 布局 ${outcome.layout_status} · 输出 ${outcome.renderer} · 人工 ${outcome.human_acceptance} · 问题 ${outcome.issue_codes.join(", ")||"无新增"}${outcome.renderer_fallback?" · 输出器已按能力回退":""}`:""}`: '待保存的人工修正预览';
+  $('qa').textContent=qa?`输出 ${qa.output_profile?.label||"原有输出"} · ${({COMPLETE:"已导出，待复核",PARTIAL:"部分完成，需复核",FAILED:"转换失败"})[qa.execution_status]||qa.execution_status} · 主识别 ${layout.metadata.content_provider||layout.provenance.replay?.content_provider||"既有路径"} · 模型请求 ${qa.model_call_count} · 可编辑字符 ${qa.editable_text_char_count} · 图域 ${qa.placed_figure_count} · 原生公式 ${qa.omml_formula_count} · 公式图片 ${qa.formula_image_count} · ${qa.render_status} · 内容待人工审阅${qa.output_profile?.known_limits?.length?` · 候选限制：${qa.output_profile.known_limits.join("；")}`:""}${outcome?` · 本页几何 ${outcome.selected_geometry_provider||"保留原有几何"} · 布局仲裁 ${outcome.layout_status} · 输出 ${outcome.renderer} · 人工 ${outcome.human_acceptance} · 问题 ${outcome.issue_codes.join(", ")||"无新增"}${outcome.renderer_fallback?" · 输出器已按能力回退":""}`:""}`: '待保存的人工修正预览';
 }
 function choose(b){
   selected=b;$('selected').textContent=b.id+' · 选中块的坐标来自 '+b.geometry_source+(b.flags.includes('text_geometry_unknown_full_page_reference')?' · 文字精确坐标未知，橙框仅表示整页来源':'');
@@ -75,7 +75,8 @@ async function wait(){
   if(s.state==='失败')throw new Error(s.code||'任务失败');
   await refresh();if(s.job_id)await openJob(s.job_id);
 }
-on('replay',async()=>{await api('/api/replay',{content_provider:$('replay-provider').value});await wait();});on('refresh',refresh);
+on('replay',async()=>{await api('/api/replay',{content_provider:$('replay-provider').value,output_profile:$('output-profile').value});await wait();});on('refresh',refresh);
+on('candidate-replay',async()=>{if(!jobId)return;if(preview)throw new Error('请先保存修正，再重导出');await api('/api/replay-job/'+jobId,{revision,output_profile:'fidelity-v3.1'});await wait();});
 $('jobs').onchange=()=>openJob($('jobs').value).catch(message);
 $('pages').onchange=()=>{pageIndex=Number($('pages').value);selected=null;show();};
 $('revision').onchange=()=>{const next=$('revision').value;if(!data?.[next]){$('revision').value=revision;message('还未保存此版本');return;}revision=next;preview=revision==='reviewed'&&unsavedPreview;layout=data[revision];selected=null;$('text').value='';show();};
@@ -92,7 +93,7 @@ function syncUploadMode(){
 }
 $('upload').elements.mode.onchange=syncUploadMode;
 syncUploadMode();
-$('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
+$('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));form.set('output_profile',$('output-profile').value);for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
 on('edit',()=>operation({action:'text',text:$('text').value}));
 on('split',()=>operation({action:'split',offset:[...$('text').value.slice(0,$('text').selectionStart)].length}));on('merge',()=>operation({action:'merge'}));
 on('up',()=>operation({action:'move',delta:-1}));on('down',()=>operation({action:'move',delta:1}));

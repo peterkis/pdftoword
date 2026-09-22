@@ -14,6 +14,7 @@ from ..structure_processors.bridge import json_hash
 from ..structure_processors.conservation import continuation_rejection
 from ..structure_processors.docvortex import locked
 from .columns import column_sections
+from .figure_rows import plan_figure_rows
 from .render_plan import RenderPlan
 from .style_profile import style_profile, weighted_sizes
 from .styles import local_families, run_styles, styles
@@ -318,6 +319,7 @@ def plan_flow(
         for section in output["sections"]
     ]
     column_sections(document, output)
+    plan_figure_rows(source, output)
     keep_confirmed_captions(source, output)
     plan = FlowPlan(document, output)
     validate(document)

@@ -28,6 +28,10 @@ from .formula import unrendered_math
 from .geometry.candidate import attach
 from .geometry.native_adapter import adapt as native_geometry
 from .input_analysis import PDFIUM_LOCK, PdfInspectorBackend, observe_page, open_pdf
+from .native_background import neutral_backgrounds
+from .native_diagram import attach_captions, diagram_regions
+from .native_grid import ruled_regions
+from .native_merged import merged_regions
 from .structure import QUESTION, image_content
 
 
@@ -158,11 +162,18 @@ def extract(
                     save(job / f"observation-{index}.json", observation.record())
                     info["native_backend"] = observation.backend
                     info["page_geometry"] = g.record()
-                    attach(p, native_geometry(observation.record(), index, {
-                        "observation_sha256": digest(job / f"observation-{index}.json"),
-                        "backend": observation.backend.get("backend"),
-                        "backend_version": observation.backend.get("version"),
-                    }))
+                    attach(
+                        p,
+                        native_geometry(
+                            observation.record(),
+                            index,
+                            {
+                                "observation_sha256": digest(job / f"observation-{index}.json"),
+                                "backend": observation.backend.get("backend"),
+                                "backend_version": observation.backend.get("version"),
+                            },
+                        ),
+                    )
                     path_boxes = []
                     image_boxes = []
                     for obj in observation.objects:
@@ -241,6 +252,65 @@ def extract(
                             index,
                         )
                         continue
+                    grid_rejections: list[Json] = []
+                    grids = ruled_regions(
+                        list(observation.objects),
+                        chars,
+                        glyph_evidence=observation.glyph_evidence,
+                        rejections=grid_rejections,
+                    )
+                    merged_rejections: list[Json] = []
+                    merged = merged_regions(
+                        list(observation.objects),
+                        chars,
+                        observation.glyph_evidence,
+                        merged_rejections,
+                    )
+                    info["merged_table_rejections"] = merged_rejections
+                    grids.extend(merged)
+                    diagram_rejections: list[Json] = []
+                    diagrams = diagram_regions(
+                        list(observation.objects),
+                        chars,
+                        observation.glyph_evidence,
+                        diagram_rejections,
+                    )
+                    regions = [*grids, *diagrams]
+                    conflicts = set()
+                    for ai, a in enumerate(regions):
+                        for bi, b in enumerate(regions[ai + 1 :], ai + 1):
+                            if (
+                                set(a["path_ids"]) & set(b["path_ids"])
+                                or set(a["native_run_ids"]) & set(b["native_run_ids"])
+                                or intersection(a["bbox"], b["bbox"]) > 0
+                            ):
+                                conflicts.update([ai, bi])
+                    if conflicts:
+                        info["region_ownership_conflicts"] = [
+                            regions[i]["bbox"] for i in sorted(conflicts)
+                        ]
+                    accepted = [r for i, r in enumerate(regions) if i not in conflicts]
+                    grids = [r for r in grids if r in accepted]
+                    diagrams = [r for r in diagrams if r in accepted]
+                    info["native_diagram_rejections"] = diagram_rejections
+                    info["native_diagram_regions"] = diagrams
+                    info["ruled_grid_rejections"] = grid_rejections
+                    grid_paths = {oid for grid in [*grids, *diagrams] for oid in grid["path_ids"]}
+                    grid_runs = {
+                        rid for grid in [*grids, *diagrams] for rid in grid["native_run_ids"]
+                    }
+                    background_proof = neutral_backgrounds(
+                        source,
+                        index,
+                        list(observation.objects),
+                        observation.glyph_evidence,
+                        [*grids, *diagrams],
+                    )
+                    info["neutral_background_proof"] = background_proof
+                    grid_paths.update(background_proof["path_ids"])
+                    grid_bounds = [o["bbox"] for o in observation.objects if o["id"] in grid_paths]
+                    path_boxes = [b for b in path_boxes if b not in grid_bounds]
+                    info["ruled_grid_fallbacks"] = grids
                     # Path envelopes may be page/table borders, not actual ink coverage.
                     # Never let these ambiguous containers suppress valid native text.
                     ambiguous_paths = [
@@ -270,7 +340,7 @@ def extract(
                         if internal:
                             figures[fi] = union([f, *internal])
                     # Containment does not prove that native text belongs to a figure.
-                    visible_chars = chars
+                    visible_chars = [c for c in chars if c["source_id"] not in grid_runs]
                     image_text_overlap = any(
                         intersection(c["bbox"], bounds) > 0 for bounds in image_boxes for c in chars
                     )
@@ -392,6 +462,56 @@ def extract(
                             "native_run_ids": [c["source_id"] for c in row],
                             "backend": "pdf-inspector",
                         }
+                    for gi, grid in enumerate(grids):
+                        bid = f"p{index}-ruled-grid{gi}"
+                        members = [c for c in chars if c["source_id"] in grid["native_run_ids"]]
+                        evidence = {**grid, "native_runs": members, "backend": "pdf-inspector"}
+                        b = block(
+                            bid,
+                            index,
+                            grid["bbox"],
+                            "\n".join(c["text"] for c in members),
+                            "native_pdf",
+                            "table",
+                            evidence,
+                        )
+                        aid = crop(job, ir, p, grid["bbox"], bid)
+                        b.update(content=image_content(aid), render_policy="preserve_image")
+                        b["flags"].append("ruled_grid_image_fallback")
+                        p["blocks"].append(b)
+                        ir["provenance"][bid] = evidence
+                        issue(
+                            ir,
+                            "NATIVE_RULED_GRID_IMAGE_FALLBACK",
+                            "完整线网格及逐格文字归属已核对，局部统一保图；原生候选保留，单元格不可编辑。",
+                            [bid],
+                            index,
+                        )
+                    for di, diagram in enumerate(diagrams):
+                        bid = f"p{index}-native-diagram{di}"
+                        members = [c for c in chars if c["source_id"] in diagram["native_run_ids"]]
+                        evidence = {**diagram, "native_runs": members, "backend": "pdf-inspector"}
+                        b = block(
+                            bid,
+                            index,
+                            diagram["bbox"],
+                            "\n".join(c["text"] for c in members),
+                            "native_pdf",
+                            "figure",
+                            evidence,
+                        )
+                        aid = crop(job, ir, p, diagram["bbox"], bid)
+                        b.update(content=image_content(aid), render_policy="preserve_image")
+                        b["flags"].append("native_diagram_image_fallback")
+                        p["blocks"].append(b)
+                        ir["provenance"][bid] = evidence
+                        issue(
+                            ir,
+                            "NATIVE_DIAGRAM_IMAGE_FALLBACK",
+                            "分类框、方向连接与图内文字已按源证据统一保图；图内文字不可编辑。",
+                            [bid],
+                            index,
+                        )
                     for fi, f in enumerate(figures):
                         bid = f"p{index}-figure{fi}"
                         aid = crop(job, ir, p, f, bid)
@@ -417,6 +537,7 @@ def extract(
                             )
                     p["blocks"].sort(key=lambda b: (b["bbox"][1], b["bbox"][0]))
                     p["reading_order"] = [b["id"] for b in p["blocks"]]
+                    attach_captions(ir, p)
                     p["routing_decision"] = (
                         "NEEDS_ROUTE_REVIEW" if reason else "NATIVE_LIMITED_SUPPORTED"
                     )

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import ctypes
+import itertools
 import math
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from importlib.metadata import version
@@ -16,6 +17,7 @@ import pdf_inspector
 import pypdfium2 as pdfium  # type: ignore[import-untyped]
 
 from .common import DemoError, Json, box_valid, digest, validate_input
+from .native_glyphs import bind_runs, read_glyphs
 
 PDFIUM_LOCK = threading.RLock()
 
@@ -221,6 +223,7 @@ class NativeObservation:
     text_runs: tuple[Json, ...]
     objects: tuple[Json, ...]
     backend: Json
+    glyph_evidence: Json | None = None
 
     def record(self) -> Json:
         """Return a versioned private observation sidecar."""
@@ -230,6 +233,7 @@ class NativeObservation:
             "text_runs": list(self.text_runs),
             "objects": list(self.objects),
             "backend": self.backend,
+            **({"glyph_evidence": self.glyph_evidence} if self.glyph_evidence is not None else {}),
         }
 
 
@@ -260,10 +264,29 @@ def object_evidence(native: Any) -> Iterator[tuple[Any, tuple[float, ...], int]]
     yield from walk(None, identity, 0)
 
 
+def _stroke_width_pt(
+    obj: Any, to_page: Callable[[float, float], tuple[float, float]]
+) -> float | None:
+    """Expose stroke radius only for similarity transforms, never guess anisotropic ink."""
+    width = ctypes.c_float()
+    if not pdfium.raw.FPDFPageObj_GetStrokeWidth(obj, width):
+        return None
+    a, b, c, d, e, f = obj.get_matrix().get()
+    origin = to_page(e, f)
+    px, py = to_page(a + e, b + f), to_page(c + e, d + f)
+    vx = (px[0] - origin[0], px[1] - origin[1])
+    vy = (py[0] - origin[0], py[1] - origin[1])
+    sx, sy = math.hypot(*vx), math.hypot(*vy)
+    if min(sx, sy) <= 0 or abs(sx - sy) > 1e-5 or abs(vx[0] * vy[0] + vx[1] * vy[1]) > 1e-5:
+        return None
+    return float(width.value * sx)
+
+
 def observe_page(native: Any, index: int, extracted: Json) -> NativeObservation:
     """Detach object and text evidence; called with the PDFium mutex held."""
     g = geometry_of(native)
     objects = []
+    object_refs: dict[int, Json] = {}
     for oi, (obj, ancestor, depth) in enumerate(object_evidence(native)):
         raw = list(obj.get_bounds())
 
@@ -283,6 +306,7 @@ def observe_page(native: Any, index: int, extracted: Json) -> NativeObservation:
                 certainty = "unknown_quad"
         row: Json = {
             "id": f"p{index}-obj{oi}",
+            "paint_order": oi,
             "type": obj.type,
             "raw_bbox_pdf": raw,
             "quad_pt": points,
@@ -294,6 +318,114 @@ def observe_page(native: Any, index: int, extracted: Json) -> NativeObservation:
             "clip": "unknown",
             "visibility": "unknown",
         }
+        # Only two-point, solid, stroked paths can witness a ruled-grid edge.
+        # Curves, fills and dashed paths remain envelope-only evidence.
+        if obj.type == pdfium.raw.FPDF_PAGEOBJ_PATH:
+            fill, stroke = ctypes.c_int(), ctypes.c_int()
+            red, green, blue, alpha = (ctypes.c_uint() for _ in range(4))
+            if (
+                pdfium.raw.FPDFPath_CountSegments(obj) == 2
+                and pdfium.raw.FPDFPath_GetDrawMode(obj, fill, stroke)
+                and fill.value == 0
+                and stroke.value
+                and pdfium.raw.FPDFPageObj_GetDashCount(obj) == 0
+                and pdfium.raw.FPDFPageObj_GetStrokeColor(obj, red, green, blue, alpha)
+                and alpha.value == 255
+                and (
+                    min(red.value, green.value, blue.value) < 245
+                    or red.value == green.value == blue.value == 255
+                )
+            ):
+                segments = [pdfium.raw.FPDFPath_GetPathSegment(obj, i) for i in range(2)]
+                if [pdfium.raw.FPDFPathSegment_GetType(s) for s in segments] == [2, 0]:
+                    a, b, c, d, e, f = obj.get_matrix().get()
+                    line = []
+                    for segment in segments:
+                        sx, sy = ctypes.c_float(), ctypes.c_float()
+                        if not pdfium.raw.FPDFPathSegment_GetPoint(segment, sx, sy):
+                            break
+                        line.append(
+                            list(
+                                to_page(
+                                    a * sx.value + c * sy.value + e,
+                                    b * sx.value + d * sy.value + f,
+                                )
+                            )
+                        )
+                    if len(line) == 2:
+                        if (stroke_size := _stroke_width_pt(obj, to_page)) is not None:
+                            row["stroke_width_pt"] = stroke_size
+                        row["stroke_rgba"] = [red.value, green.value, blue.value, alpha.value]
+                        row["line_cap"] = pdfium.raw.FPDFPageObj_GetLineCap(obj)
+                        if red.value == green.value == blue.value == 255:
+                            row["white_line"] = line
+                        else:
+                            row["solid_line"] = line
+        if obj.type == pdfium.raw.FPDF_PAGEOBJ_PATH:
+            fill, stroke = ctypes.c_int(), ctypes.c_int()
+            rgba = [ctypes.c_uint() for _ in range(4)]
+            if (
+                pdfium.raw.FPDFPath_CountSegments(obj) == 5
+                and pdfium.raw.FPDFPath_GetDrawMode(obj, fill, stroke)
+                and (
+                    (
+                        fill.value in (1, 2)
+                        and not stroke.value
+                        and pdfium.raw.FPDFPageObj_GetFillColor(obj, *rgba)
+                    )
+                    or (
+                        fill.value == 0
+                        and stroke.value
+                        and pdfium.raw.FPDFPageObj_GetDashCount(obj) == 0
+                        and pdfium.raw.FPDFPageObj_GetStrokeColor(obj, *rgba)
+                        and min(v.value for v in rgba[:3]) < 245
+                    )
+                )
+                and rgba[3].value == 255
+            ):
+                segments = [pdfium.raw.FPDFPath_GetPathSegment(obj, i) for i in range(5)]
+                if [pdfium.raw.FPDFPathSegment_GetType(s) for s in segments] == [
+                    2,
+                    0,
+                    0,
+                    0,
+                    0,
+                ] and pdfium.raw.FPDFPathSegment_GetClose(segments[-1]):
+                    a, b, c, d, e, f = obj.get_matrix().get()
+                    vertices = []
+                    for segment in segments:
+                        sx, sy = ctypes.c_float(), ctypes.c_float()
+                        if not pdfium.raw.FPDFPathSegment_GetPoint(segment, sx, sy):
+                            break
+                        vertices.append(
+                            list(
+                                to_page(
+                                    a * sx.value + c * sy.value + e, b * sx.value + d * sy.value + f
+                                )
+                            )
+                        )
+                    if len(vertices) == 5 and vertices[0] == vertices[-1]:
+                        rect = envelope(vertices)
+                        corners = {
+                            (rect[0], rect[1]),
+                            (rect[2], rect[1]),
+                            (rect[2], rect[3]),
+                            (rect[0], rect[3]),
+                        }
+                        if (
+                            box_valid(rect)
+                            and {tuple(p) for p in vertices[:4]} == corners
+                            and all(
+                                a[0] == b[0] or a[1] == b[1]
+                                for a, b in itertools.pairwise(vertices)
+                            )
+                        ):
+                            if not stroke.value:
+                                row.update(fill_rect=rect, fill_rgba=[v.value for v in rgba])
+                            else:
+                                if (stroke_size := _stroke_width_pt(obj, to_page)) is not None:
+                                    row["stroke_width_pt"] = stroke_size
+                                row.update(stroke_rect=rect, stroke_rgba=[v.value for v in rgba])
         if obj.type == pdfium.raw.FPDF_PAGEOBJ_TEXT:
             mode = pdfium.raw.FPDFTextObj_GetTextRenderMode(obj)
             red, green, blue, alpha = (ctypes.c_uint() for _ in range(4))
@@ -313,6 +445,7 @@ def observe_page(native: Any, index: int, extracted: Json) -> NativeObservation:
                 row["visibility"] = "painted"  # Occlusion remains unknown.
             elif mode in (0, 4) and ok and min(red.value, green.value, blue.value) >= 245:
                 row["visibility"] = "white_paint"
+        object_refs[ctypes.cast(obj.raw, ctypes.c_void_p).value or 0] = row
         objects.append(row)
     runs = []
     left, b, _, _ = g.visible_box
@@ -335,8 +468,17 @@ def observe_page(native: Any, index: int, extracted: Json) -> NativeObservation:
             and 0 <= run["bbox"][1] < run["bbox"][3] <= g.height + 1
         )
         runs.append(run)
+    glyphs = read_glyphs(native, g, object_refs)
     return NativeObservation(
-        g, tuple(runs), tuple(objects), {k: v for k, v in extracted.items() if k != "items"}
+        g,
+        tuple(runs),
+        tuple(objects),
+        {k: v for k, v in extracted.items() if k != "items"},
+        {
+            "basis": "pdfium_tight_glyph_exact_nonspace_binding",
+            "glyphs": glyphs,
+            "runs": bind_runs(runs, glyphs),
+        },
     )
 
 

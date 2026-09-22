@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from prototypes.docx_output.common import JOBS, DemoError, job_path, read
+from prototypes.docx_output.output_profiles import OUTPUT_PROFILES
 from prototypes.docx_output.pipeline import convert, export, replay
 from prototypes.docx_output.render import render
 from prototypes.docx_output.replay import DEFAULT_RUN
@@ -25,7 +26,15 @@ def main() -> int:
     r.add_argument("--repeat-index", type=int, default=1)
     r.add_argument("--output-root", type=Path, default=JOBS)
     r.add_argument("--content-provider", choices=["ovis", "ovis-pp", "pp"], default="ovis-pp")
+    r.add_argument("--output-profile", choices=OUTPUT_PROFILES, default="legacy")
+    frozen = sub.add_parser("replay-job", help="已有作业零模型候选重导出")
+    frozen.add_argument("--source-job", type=Path, required=True)
+    frozen.add_argument("--revision", choices=["auto", "reviewed"], default="auto")
+    frozen.add_argument("--output-profile", choices=["fidelity-v3.1"], required=True)
+    frozen.add_argument("--output-root", type=Path, default=JOBS)
+    frozen.add_argument("--style-profile", type=Path, help="可选本地样式参数 JSON")
     c = sub.add_parser("convert")
+    c.add_argument("--output-profile", choices=OUTPUT_PROFILES, default="legacy")
     c.add_argument("--input", type=Path, required=True)
     c.add_argument("--content-provider", choices=["ovis", "ovis-pp", "pp"], default="ovis-pp")
     c.add_argument(
@@ -79,13 +88,19 @@ def main() -> int:
     s = sub.add_parser("serve")
     s.add_argument("--host", choices=["127.0.0.1"], default="127.0.0.1")
     s.add_argument("--port", type=int, default=8765)
+    s.add_argument("--output-root", type=Path, default=JOBS)
     args = parser.parse_args()
     try:
         if args.command == "serve":
             import uvicorn
             from prototypes.docx_output.server import create_app
 
-            uvicorn.run(create_app(args.port), host=args.host, port=args.port, access_log=False)
+            uvicorn.run(
+                create_app(args.port, args.output_root),
+                host=args.host,
+                port=args.port,
+                access_log=False,
+            )
         elif args.command == "status":
             job = job_path(args.job_id, args.output_root)
             revision = "reviewed" if (job / "qa.reviewed.json").is_file() else "auto"
@@ -102,6 +117,7 @@ def main() -> int:
                                 "visual_review_status",
                                 "model_call_count",
                                 "pages",
+                                "output_profile",
                             )
                         },
                     },
@@ -120,6 +136,23 @@ def main() -> int:
                     args.source_job, args.revision, args.output_root, source_seal=args.source_seal
                 ).resolve()
             )
+        elif args.command == "replay-job":
+            from prototypes.docx_output.common import digest
+            from prototypes.docx_output.style_replay import export_style
+
+            source_ir = read(args.source_job / f"layout.{args.revision}.json")
+            job = export_style(
+                args.source_job,
+                args.output_root,
+                {
+                    **source_ir.get("planning", {}).get("profile_settings", {}),
+                    **(read(args.style_profile) if args.style_profile else {}),
+                },
+                digest(args.source_job / f"layout.{args.revision}.json"),
+                output_profile=args.output_profile,
+                revision=args.revision,
+            )
+            print((job / "auto.docx").resolve())
         elif args.command == "replay":
             job = replay(
                 args.run_dir,
@@ -127,6 +160,7 @@ def main() -> int:
                 args.repeat_index,
                 args.output_root,
                 args.content_provider,
+                output_profile=args.output_profile,
             )
             print((job / "auto.docx").resolve())
         elif args.command == "execute-route":
@@ -158,6 +192,7 @@ def main() -> int:
                 args.content_provider,
                 auto_profile=args.auto_profile,
                 page_limit=args.page_limit,
+                output_profile=args.output_profile,
             )
             print((job / ("route-plan.json" if args.dry_run_route else "auto.docx")).resolve())
         elif args.command == "render":

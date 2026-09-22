@@ -29,6 +29,7 @@ from .common import (
     validate_input,
 )
 from .implementation import implementation_identity
+from .output_profiles import OUTPUT_PROFILES, output_settings, select_output_profile
 from .planning.render_plan import RenderPlan
 from .renderers.base import DocxRenderer
 from .renderers.legacy import LegacyRenderer
@@ -107,7 +108,24 @@ def finish(
         else structure_processor.process(copy.deepcopy(ir))
     )
     ir = candidate.document
-    if render_plan is not None:
+    candidate_settings = output_settings(ir)
+    if candidate_settings is not None:
+        from .planning.flow import plan_flow
+        from .renderers.flow import FlowRenderer
+
+        if render_plan is not None and render_plan.document != ir:
+            raise DemoError("FLOW_PLAN_DOCUMENT_MISMATCH")
+        plan = (
+            render_plan
+            if render_plan is not None
+            and render_plan.output_layout.get("mode") == "flow_v1"
+            and ir.get("planning", {}).get("profile_settings") == candidate_settings
+            else plan_flow(ir, candidate_settings)
+        )
+        ir = plan.document
+        candidate.document = ir
+        renderer = FlowRenderer()
+    elif render_plan is not None:
         plan = render_plan
         if plan.document != ir:
             raise DemoError("FLOW_PLAN_DOCUMENT_MISMATCH")
@@ -136,6 +154,7 @@ def finish(
                 "version": structure_processor.version,
                 "implementation": implementation_identity(structure_processor, "process"),
             },
+            "output_profile": ir["metadata"].get("output_profile", {"id": "legacy"}),
             "ir_version": ir["schema_version"],
             "plan_version": plan.as_dict()["schema_version"],
             "effective_renderer": stats.get("effective_renderer", renderer.name),
@@ -259,6 +278,9 @@ def finish(
     )
     if ir["metadata"].get("auto_route", {}).get("pending_regions", 0):
         qa["execution_status"] = "PARTIAL"
+    qa["output_profile"] = ir["metadata"].get(
+        "output_profile", {"id": "legacy", "label": "原有输出"}
+    )
     save(job / f"layout.{revision}.json", ir)
     save(job / ("qa.json" if revision == "auto" else "qa.reviewed.json"), qa)
     save(
@@ -354,10 +376,13 @@ def replay(
     repeat: int = 1,
     output_root: Path = JOBS,
     content_provider: str = "ovis-pp",
+    output_profile: str = "legacy",
 ) -> Path:
     """Produce a real Word document from sealed historical responses with zero HTTP."""
     if content_provider not in {"pp", "ovis", "ovis-pp"}:
         raise DemoError("INVALID_CONTENT_PROVIDER")
+    if output_profile not in OUTPUT_PROFILES:
+        raise DemoError("UNKNOWN_OUTPUT_PROFILE")
     providers = (
         ("ovis",)
         if content_provider == "ovis"
@@ -371,6 +396,7 @@ def replay(
     try:
         validate_input(source)
         ir = layout(job, source, 1)
+        select_output_profile(ir, output_profile)
         ir["provenance"]["replay"] = provenance
         ir["metrics"]["model_call_count"] = 0
         save(
@@ -423,9 +449,12 @@ def convert(
     content_provider: str = "ovis-pp",
     auto_profile: str = "legacy_ovis_pp",
     page_limit: int = 3,
+    output_profile: str = "legacy",
 ) -> Path:
     """Convert authorized local input using a finite native or explicit live route."""
     validate_input(source)
+    if output_profile not in OUTPUT_PROFILES:
+        raise DemoError("UNKNOWN_OUTPUT_PROFILE")
     if content_provider not in {"ovis", "ovis-pp", "pp"}:
         raise DemoError("INVALID_CONTENT_PROVIDER")
     from .layout_route import profile_settings
@@ -450,6 +479,7 @@ def convert(
         raise DemoError("SCAN_CONFIRMATION_REQUIRED")
     job = new_job(output_root)
     ir = layout(job, source, 1)
+    select_output_profile(ir, output_profile)
     ir["metrics"]["model_call_count"] = 0
     manifest: Json = {
         "requests": [],

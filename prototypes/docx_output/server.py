@@ -185,7 +185,38 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
             raise DemoError("INVALID_REPLAY_SELECTION")
         return start(
             lambda: replay(
-                DEFAULT_RUN, variant, repeat, output_root, data.get("content_provider", "ovis-pp")
+                DEFAULT_RUN,
+                variant,
+                repeat,
+                output_root,
+                data.get("content_provider", "ovis-pp"),
+                output_profile=data.get("output_profile", "legacy"),
+            )
+        )
+
+    @app.post("/api/replay-job/{job_id}")
+    async def replay_existing_job(job_id: str, request: Request) -> Json:
+        from .common import digest
+        from .style_replay import export_style
+
+        source = job_path(job_id, output_root)
+        data = await request.json()
+        revision = data.get("revision", "auto")
+        if revision not in {"auto", "reviewed"}:
+            raise DemoError("INVALID_REVISION")
+        if data.get("output_profile") != "fidelity-v3.1":
+            raise DemoError("UNKNOWN_OUTPUT_PROFILE")
+        layout_file = source / f"layout.{revision}.json"
+        ir = read(layout_file)
+        source_hash = digest(layout_file)
+        return start(
+            lambda: export_style(
+                source,
+                output_root,
+                ir.get("planning", {}).get("profile_settings", {}),
+                source_hash,
+                output_profile="fidelity-v3.1",
+                revision=revision,
             )
         )
 
@@ -193,7 +224,7 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
     async def upload(request: Request) -> Json:
         if lock.locked():
             raise HTTPException(409, "JOB_BUSY")
-        form = await request.form(max_files=1, max_fields=10, max_part_size=MAX_BYTES)
+        form = await request.form(max_files=1, max_fields=11, max_part_size=MAX_BYTES)
         file = form.get("file")
         if not isinstance(file, UploadFile):
             raise DemoError("INPUT_MISSING")
@@ -233,6 +264,7 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                         confirm_scan=form.get("confirm_scan") == "true",
                         content_provider=str(form.get("content_provider", "ovis-pp")),
                         auto_profile=str(form.get("auto_profile", "legacy_ovis_pp")),
+                        output_profile=str(form.get("output_profile", "legacy")),
                         ovis=form.get("ovis") == "true",
                         monkey=form.get("monkey") == "true",
                     )
@@ -251,16 +283,21 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         if not (job / "route-plan.json").is_file():
             return {"available": False}
         plan = read(job / "route-plan.json")
-        result_pages = (read(job / "region-results.json")["pages"]
-                        if (job / "region-results.json").exists() else plan["pages"])
+        result_pages = (
+            read(job / "region-results.json")["pages"]
+            if (job / "region-results.json").exists()
+            else plan["pages"]
+        )
         return {
             "available": True,
             "plan_hash": plan["plan_hash"],
             "request_budget": plan["request_budget"],
             "profile": plan["profile"],
-            "layout_requests": (read(job / "layout-results.json")["tasks"]
-                                if (job / "layout-results.json").exists() else
-                                plan.get("layout_requests", [])),
+            "layout_requests": (
+                read(job / "layout-results.json")["tasks"]
+                if (job / "layout-results.json").exists()
+                else plan.get("layout_requests", [])
+            ),
             "provider_aliases": plan["provider_aliases"],
             "status": plan["status"],
             "executed": (job / "route-execution.json").exists() or plan["job_id"] != job.name,
@@ -361,12 +398,19 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
             raise HTTPException(409, "JOB_BUSY")
         try:
             comparison = compare_renderers(
-                job_path(job_id, output_root), data.get("revision", "auto"), output_root,
-                source_seal=(job_path(data["source_seal_job_id"], output_root) / "comparison.json"
-                             if data.get("source_seal_job_id") else None),
+                job_path(job_id, output_root),
+                data.get("revision", "auto"),
+                output_root,
+                source_seal=(
+                    job_path(data["source_seal_job_id"], output_root) / "comparison.json"
+                    if data.get("source_seal_job_id")
+                    else None
+                ),
             )
-            return {"comparison_id": comparison.name,
-                    "comparison": read(comparison / "comparison.json")}
+            return {
+                "comparison_id": comparison.name,
+                "comparison": read(comparison / "comparison.json"),
+            }
         finally:
             lock.release()
 

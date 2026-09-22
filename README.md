@@ -139,6 +139,17 @@ uv run ruff check .    # lint
 uv run mypy .          # 类型检查
 ```
 
+`mypy .` 检查维护中的源码与测试。`pyproject.toml` 仅将仓库根目录的
+`tmp/`、`outputs/`、`artifacts/`、`build/`、`dist/`、`data/jobs/` 排除出递归扫描；
+这些目录保存运行产物、历史证据或下载参考代码，不能作为正式 Python 模块检查。
+已有手动工具例外精确限定为 `scripts/smoke_models.py`，不会排除同名前缀的新源码。
+嵌套源码目录（如 `tests/tmp/`）仍受检查，本地与 CI 使用同一配置。
+
+历史证据及被报告引用的脚本保留原路径；需要归档时保存带路径和 SHA-256 清单的
+压缩副本，并核验归档内容，不通过搬走证据或删除旧脚本使检查变绿。
+仓库根目录 `.mypy_cache/`、`.ruff_cache/`、`.pytest_cache/` 是可重建工具缓存；
+确认对应检查已停止后可清理，后续运行会重建。不要将 `tmp/` 整体当作缓存删除。
+
 ### 配置与秘密
 
 模型服务地址等敏感配置只放 `.env.local`（已被忽略，永不提交）；仓库内
