@@ -7,7 +7,8 @@ import secrets
 import shutil
 import threading
 import uuid
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -67,10 +68,28 @@ class BodyLimit:
         await self.app(scope, bounded, send)
 
 
-def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
+def create_app(port: int = 8765, output_root: Path = JOBS, *, runtime: bool = False) -> FastAPI:
     """Create one local session, one worker, and no permissive CORS policy."""
+    queue = None
+    if runtime:
+        from .runtime_queue import RuntimeQueue
+
+        queue = RuntimeQueue(output_root)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            if queue is not None:
+                queue.close()
+
     app = FastAPI(
-        docs_url=None, redoc_url=None, openapi_url=None, default_response_class=EvidenceJSONResponse
+        lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        default_response_class=EvidenceJSONResponse,
     )
     app.add_middleware(BodyLimit)
     token = secrets.token_urlsafe(32)
@@ -98,7 +117,28 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
             and not secrets.compare_digest(request.cookies.get("demo_session", ""), token)
         ):
             return JSONResponse({"detail": "SESSION_REQUIRED"}, status_code=403)
-        response: Response = await call_next(request)
+        if (
+            runtime
+            and request.method == "POST"
+            and (
+                request.url.path == "/api/replay"
+                or request.url.path.startswith("/api/route/")
+                or request.url.path.startswith("/api/compare-renderers/")
+                or request.url.path.startswith("/api/render/")
+            )
+        ):
+            return JSONResponse({"detail": "RUNTIME_OFFLINE_SCOPE_ONLY"}, status_code=403)
+        try:
+            with (
+                queue.exclusive_output()
+                if queue is not None
+                and request.method == "POST"
+                and request.url.path.startswith(("/api/review/", "/api/preview/"))
+                else nullcontext()
+            ):
+                response: Response = await call_next(request)
+        except DemoError as exc:
+            return JSONResponse({"detail": str(exc)}, status_code=409)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; "
             "connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'"
@@ -110,6 +150,17 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
     @app.exception_handler(DemoError)
     async def demo_error(request: Request, exc: DemoError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=400)
+
+    @app.exception_handler(OSError)
+    async def io_error(request: Request, exc: OSError) -> JSONResponse:
+        import errno
+
+        code = {
+            errno.ENOSPC: "DISK_FULL",
+            errno.EACCES: "DIRECTORY_PERMISSION_DENIED",
+            errno.EPERM: "FILE_LOCKED_OR_PERMISSION_DENIED",
+        }.get(exc.errno or 0, "LOCAL_IO_FAILED")
+        return JSONResponse({"detail": code}, status_code=409)
 
     @app.get("/")
     def index() -> HTMLResponse:
@@ -123,12 +174,14 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
 
     @app.get("/api/session")
     def session() -> JSONResponse:
-        response = JSONResponse({"token": token})
+        response = JSONResponse({"token": token, "runtime": runtime})
         response.set_cookie("demo_session", token, httponly=True, samesite="strict")
         return response
 
     @app.get("/api/status")
     def status() -> Json:
+        if queue is not None:
+            return queue.status()
         snapshot = dict(state)
         if state["busy"] and output_root.exists():
             new = [p for p in output_root.glob("demo-*") if p.name not in state.get("previous", [])]
@@ -138,6 +191,18 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                     snapshot.update(read(current / "state.json"))
         snapshot.pop("previous", None)
         return snapshot
+
+    @app.post("/api/runtime/cancel/{operation_id}")
+    def cancel_runtime(operation_id: str) -> Json:
+        if queue is None:
+            raise HTTPException(404)
+        return queue.cancel(operation_id)
+
+    @app.post("/api/runtime/retry/{operation_id}")
+    def retry_runtime(operation_id: str) -> Json:
+        if queue is None:
+            raise HTTPException(404)
+        return queue.retry(operation_id)
 
     @app.get("/api/jobs")
     def jobs() -> Json:
@@ -209,6 +274,8 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
         layout_file = source / f"layout.{revision}.json"
         ir = read(layout_file)
         source_hash = digest(layout_file)
+        if queue is not None:
+            return {"accepted": True, **queue.submit_export(source, revision)}
         return start(
             lambda: export_style(
                 source,
@@ -251,6 +318,15 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                 str(form.get("mode", "auto")),
                 str(form.get("pages", "")).strip() or None,
             )
+
+            if queue is not None:
+                if mode != "native" or str(form.get("output_profile")) != "fidelity-v3.1":
+                    raise DemoError("RUNTIME_OFFLINE_SCOPE_ONLY")
+                if any(form.get(k) == "true" for k in ("allow_model_calls", "ovis", "monkey")):
+                    raise DemoError("RUNTIME_OFFLINE_SCOPE_ONLY")
+                result = queue.submit_native(source, pages)
+                shutil.rmtree(directory)
+                return {"accepted": True, **result}
 
             def convert_upload() -> Path:
                 try:
@@ -460,6 +536,9 @@ def create_app(port: int = 8765, output_root: Path = JOBS) -> FastAPI:
                     job / "review-history" / f"{uuid.uuid4().hex}.json",
                     read(job / "overrides.json"),
                 )
+            for name in ("~$reviewed.docx", "~$viewed.docx"):
+                if (job / name).exists():
+                    raise DemoError("WORD_DOCUMENT_OPEN_CLOSE_AND_RETRY")
             finish(job, ir, "reviewed")
             save(job / "overrides.json", data)
             finish_preview(job)

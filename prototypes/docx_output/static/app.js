@@ -1,8 +1,11 @@
 'use strict';
 const $ = id => document.getElementById(id);
+let runtimeMode=false;
 let token='', jobId='', data=null, layout=null, selected=null, operations=[];
 let pageIndex=0, revision='auto', preview=false, unsavedPreview=false;
-function message(error){$('error').textContent=error ? String(error.message || error) : '';}
+function message(error){const raw=error ? String(error.message || error) : '';const friendly={DISK_FULL:'磁盘空间不足，请释放空间后显式重试。',OUTPUT_ASSET_DAMAGED:'已保存资产校验失败，保留原作业，请检查文件。',DIRECTORY_PERMISSION_DENIED:'数据目录没有写入权限。',WORD_DOCUMENT_OPEN_CLOSE_AND_RETRY:'请关闭 Word 中的 reviewed.docx 后重新保存。',RUNTIME_OFFLINE_SCOPE_ONLY:'当前运行候选仅支持原生PDF及保存结果离线导出。',REMOTE_RECOVERY_UNSUPPORTED:'远端提交状态未知，已保留任务ID，不会自动重发。',QUEUE_CAPACITY_REACHED:'等待队列已满，请等现有作业结束。'};$('error').textContent=friendly[raw]||raw;}
+function showRuntime(s){if(!runtimeMode)return;$('runtime-list').replaceChildren();for(const row of s.operations||[]){const li=document.createElement('li');li.textContent=row.operation_id+' · '+row.status+' · '+(row.message||'')+(row.missing_pages?.length?'；缺页 '+row.missing_pages.join(','):'');for(const [label,action,allowed] of [['取消','cancel',['QUEUED','RUNNING']],['显式重新执行','retry',['FAILED','INTERRUPTED','CANCELLED']]]){if(!allowed.includes(row.status))continue;const b=document.createElement('button');b.textContent=label;b.onclick=async()=>{try{await api('/api/runtime/'+action+'/'+row.operation_id,{});await wait();}catch(e){message(e);}};li.append(b);}$('runtime-list').append(li);}}
+
 async function api(path, body, form=false){
   const options=body===undefined ? {} : {method:'POST',headers:{'X-Demo-Session':token},body:form?body:JSON.stringify(body)};
   if(body!==undefined&&!form) options.headers['Content-Type']='application/json';
@@ -70,8 +73,8 @@ async function operation(op){
   const id=selected?.id;show();const b=layout.pages.flatMap(p=>p.blocks).find(b=>b.id===id);if(b)choose(b);
 }
 async function wait(){
-  let s=await api('/api/status');$('status').textContent=s.state;
-  while(s.busy){await new Promise(r=>setTimeout(r,800));s=await api('/api/status');$('status').textContent=s.state;}
+  let s=await api('/api/status');$('status').textContent=s.state;showRuntime(s);
+  while(s.busy){await new Promise(r=>setTimeout(r,800));s=await api('/api/status');$('status').textContent=s.state;showRuntime(s);}
   if(s.state==='失败')throw new Error(s.code||'任务失败');
   await refresh();if(s.job_id)await openJob(s.job_id);
 }
@@ -93,7 +96,7 @@ function syncUploadMode(){
 }
 $('upload').elements.mode.onchange=syncUploadMode;
 syncUploadMode();
-$('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));form.set('output_profile',$('output-profile').value);for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
+$('upload').onsubmit=async event=>{event.preventDefault();message('');try{const form=new FormData($('upload'));if(runtimeMode)form.set('mode','native');form.set('output_profile',$('output-profile').value);for(const name of ['allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey'])form.set(name,$('upload').elements[name].checked?'true':'false');await api('/api/upload',form,true);await wait();}catch(e){message(e);}};
 on('edit',()=>operation({action:'text',text:$('text').value}));
 on('split',()=>operation({action:'split',offset:[...$('text').value.slice(0,$('text').selectionStart)].length}));on('merge',()=>operation({action:'merge'}));
 on('up',()=>operation({action:'move',delta:-1}));on('down',()=>operation({action:'move',delta:1}));
@@ -138,4 +141,4 @@ function point(event){const rect=$('overlay').getBoundingClientRect();const p=la
 $('overlay').onpointerdown=e=>{if(!selected)return;drag=point(e);$('overlay').setPointerCapture(e.pointerId);};
 $('overlay').onpointermove=e=>{if(!drag)return;const end=point(e);const b=[Math.min(drag[0],end[0]),Math.min(drag[1],end[1]),Math.max(drag[0],end[0]),Math.max(drag[1],end[1])];$('bbox').value=b.map(n=>n.toFixed(2)).join(', ');for(const [k,v] of Object.entries({x:b[0],y:b[1],width:b[2]-b[0],height:b[3]-b[1]}))$('region').setAttribute(k,v);};
 $('overlay').onpointerup=()=>{drag=null;};
-(async()=>{const session=await api('/api/session');token=session.token;await refresh();if($('jobs').value)await openJob($('jobs').value);})().catch(message);
+(async()=>{const session=await api('/api/session');token=session.token;runtimeMode=!!session.runtime;if(runtimeMode){$('runtime-panel').hidden=false;$('output-profile').value='fidelity-v3.1';$('output-profile').disabled=true;$('replay').hidden=true;$('replay-provider').closest('label').hidden=true;const form=$('upload');form.elements.mode.value='native';syncUploadMode();form.elements.mode.disabled=true;for(const name of ['auto_profile','content_provider','allow_model_calls','confirm_no_auth','confirm_scan','ovis','monkey']){form.elements[name].disabled=true;form.elements[name].closest('label').hidden=true;}$('render').hidden=true;await wait();}await refresh();if($('jobs').value)await openJob($('jobs').value);})().catch(message);

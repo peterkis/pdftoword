@@ -20,7 +20,9 @@ from . import VERSION
 
 Json = dict[str, Any]
 ROOT = Path(__file__).resolve().parents[2]
-PRIVATE = ROOT / "tmp/docx-demo"
+PRIVATE = (
+    Path(os.environ.get("P2W_PRIVATE_ROOT", str(ROOT / "tmp/docx-demo"))).expanduser().absolute()
+)
 JOBS = PRIVATE / "jobs"
 MAX_BYTES = 25 * 1024 * 1024
 
@@ -54,7 +56,7 @@ def private_dir(path: Path) -> None:
     absolute = path.absolute()
     if not absolute.is_relative_to(PRIVATE) or ".." in absolute.parts:
         raise DemoError("PRIVATE_STORAGE_REQUIRED")
-    safe_path(ROOT, str(absolute.relative_to(ROOT)))
+    safe_path(Path(absolute.anchor), str(absolute.relative_to(absolute.anchor)))
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
     for p in [path, *path.parents]:
         if p == PRIVATE.parent:

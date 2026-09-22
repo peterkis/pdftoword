@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import posixpath
 import unicodedata
+import uuid
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -664,7 +666,13 @@ def build(job: Path, ir: Json, revision: str, *, output_plan: Json | None = None
                 done.update(pair.values())
     if marker_ends:
         raise DemoError("SOURCE_RANGE_NOT_CLOSED")
-    doc.save(str(path))
+    pending = path.with_name("." + path.name + "." + uuid.uuid4().hex + ".pending")
+    try:
+        doc.save(str(pending))
+        pending.chmod(0o600)
+        os.replace(pending, path)
+    finally:
+        pending.unlink(missing_ok=True)
     path.chmod(0o600)
     save(
         job / f"source-map.{revision}.json",
